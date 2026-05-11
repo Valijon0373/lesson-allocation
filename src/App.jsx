@@ -411,7 +411,7 @@ function App() {
   const renderDashboard = () => (
     <section className="space-y-6">
       <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-white shadow-xl">
-        <p className="text-sm uppercase tracking-wider text-indigo-100">Boshqaruv paneli</p>
+        <p className="text-sm uppercase tracking-wider text-indigo-100">Dashboard</p>
         <h1 className="mt-2 text-3xl font-bold">Nizom monitoring platformasi</h1>
         <p className="mt-2 text-indigo-50">
           Jami {TOTAL_MAX_SCORE} ball bo'yicha progress, hujjatlar holati va reyting.

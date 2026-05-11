@@ -406,6 +406,10 @@ export default function Teachers({ dark }) {
               </button>
             </div>
             <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Login</label>
+                <input value={modal.row.login} readOnly className={`w-full rounded-lg border px-4 py-3 text-base ${input}`} />
+              </div>
               <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={credentialsDraft.password} onChange={(e) => setCredentialsDraft((p) => ({ ...p, password: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Yangi parol kiriting" /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">

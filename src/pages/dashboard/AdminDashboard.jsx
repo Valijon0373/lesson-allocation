@@ -226,7 +226,7 @@ export default function AdminDashboard() {
 
   const mainTitle =
     activeNav === "dashboard"
-      ? "Boshqaruv paneli"
+      ? "Dashboard"
       : getDashboardNavLabel(activeNav)
 
   return (
@@ -242,8 +242,8 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3">
             <img src={logoImg} alt="" className="h-10 w-10 rounded-full border object-cover" />
             <div>
-              <p className="text-lg font-bold leading-tight">UrSPI Administrator</p>
-              <p className={`text-xs ${dark ? "text-slate-400" : "text-slate-500"}`}>Boshqaruv paneli</p>
+              <p className="text-lg font-bold leading-tight">UrSPI Admin</p>
+              <p className={`text-xs ${dark ? "text-slate-400" : "text-slate-500"}`}>Dashboard</p>
             </div>
           </div>
         </div>

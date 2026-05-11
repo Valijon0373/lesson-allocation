@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 
 export const DASHBOARD_NAV = [
-  { id: "dashboard", label: "Boshqaruv paneli", Icon: LayoutDashboard },
+  { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
   {
     id: "fakultetlar",
     label: "Fakultetlar",
