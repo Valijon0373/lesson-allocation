@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import bgVideo from "./assets/bg.mp4"
 import logoImg from "./assets/logo.jpg"
 import Footer from "./components/Footer.jsx"
-import MethodologyTypewriter from "./components/MethodologyTypewriter.jsx"
+import HomeHeroBrand from "./components/HomeHeroBrand.jsx"
 import Navbar from "./components/Navbar.jsx"
 
 const TOTAL_MAX_SCORE = 110
@@ -554,9 +554,11 @@ function App() {
         />
         <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-6 pt-[calc(4.25rem+1rem)] sm:px-6 sm:pt-[calc(4.75rem+1rem)] lg:px-8">
         {!currentUser ? (
-          <section className="flex min-h-[calc(100svh-7rem)] flex-col justify-center overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-8 shadow-2xl shadow-slate-950/50 backdrop-blur-sm md:p-12 lg:p-16">
-            <MethodologyTypewriter />
-          </section>
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-4 sm:py-6">
+            <section className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 overflow-hidden rounded-3xl border border-white/15 bg-white/10 px-6 py-8 shadow-2xl shadow-slate-950/40 backdrop-blur-md sm:px-8 sm:py-10 md:gap-8 md:py-11">
+              <HomeHeroBrand />
+            </section>
+          </div>
         ) : activePage === "dashboard" ? (
           renderDashboard()
         ) : (
@@ -771,11 +773,8 @@ function App() {
                 className="h-[88px] w-[88px] rounded-full border border-slate-200 object-cover shadow-sm"
               />
               <h2 id="login-dialog-title" className="mt-5 text-2xl font-bold tracking-tight text-slate-900">
-                UrSPI Admin
+                Tizimga Kirish
               </h2>
-              <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
-                Admin foydalanuvchining hissobini kiriting
-              </p>
             </div>
 
             <form className="mt-8 space-y-5" onSubmit={handleLogin}>
