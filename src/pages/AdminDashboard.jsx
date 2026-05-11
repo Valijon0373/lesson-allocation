@@ -43,23 +43,16 @@ const STATS = {
   fakultetlar: 5,
   kafedralar: 15,
   foydalanuvchilar: 302,
+  oqituvchilar: 0,
+  mezonlar: 0,
 }
 
-const RATING_SLICES = [
-  { stars: 5, pct: 98, color: "#14b8a6" },
-  { stars: 4, pct: 1.5, color: "#22c55e" },
-  { stars: 3, pct: 0.3, color: "#eab308" },
-  { stars: 2, pct: 0.1, color: "#f97316" },
-  { stars: 1, pct: 0.1, color: "#ef4444" },
-]
-
-const CATEGORY_BARS = [
-  { label: "Umumiy", value: 5 },
-  { label: "Kasbiy kompetensiya", value: 5 },
-  { label: "Pedagogik mahorat", value: 5 },
-  { label: "Tadqiqot faoliyati", value: 5 },
-  { label: "Ijodkorlik", value: 5 },
-]
+const ENTITY_COLORS = {
+  fakultetlar: "#3b82f6",
+  kafedralar: "#10b981",
+  oqituvchilar: "#8b5cf6",
+  mezonlar: "#f59e0b",
+}
 
 const MAVJUD_FAKULTETLAR = [
   { id: "f-1", nameUz: "Filologiya Fakulteti", nameRu: "Факультет филологии" },
@@ -209,7 +202,33 @@ export default function AdminDashboard() {
     }
   }, [profileOpen])
 
-  const pieStyle = useMemo(() => ({ background: pieGradient(RATING_SLICES) }), [])
+  const entityStats = useMemo(
+    () => [
+      { key: "fakultetlar", label: "Fakultetlar", value: STATS.fakultetlar, color: ENTITY_COLORS.fakultetlar },
+      { key: "kafedralar", label: "Kafedralar", value: STATS.kafedralar, color: ENTITY_COLORS.kafedralar },
+      { key: "oqituvchilar", label: "O'qituvchilar", value: STATS.oqituvchilar, color: ENTITY_COLORS.oqituvchilar },
+      { key: "mezonlar", label: "Mezonlar", value: STATS.mezonlar, color: ENTITY_COLORS.mezonlar },
+    ],
+    []
+  )
+
+  const entityTotal = useMemo(() => entityStats.reduce((sum, s) => sum + (Number.isFinite(s.value) ? s.value : 0), 0), [entityStats])
+
+  const pieSlices = useMemo(() => {
+    const total = entityTotal
+    if (total <= 0) return entityStats.map((s) => ({ ...s, pct: 0 }))
+    return entityStats.map((s) => ({ ...s, pct: (s.value / total) * 100 }))
+  }, [entityStats, entityTotal])
+
+  const pieStyle = useMemo(() => ({ background: pieGradient(pieSlices) }), [pieSlices])
+
+  const maxBar = useMemo(() => Math.max(0, ...entityStats.map((s) => s.value ?? 0)), [entityStats])
+  const barTicks = useMemo(() => {
+    const max = maxBar
+    if (max <= 0) return [0, 1, 2, 3, 4, 5]
+    const step = Math.max(1, Math.ceil(max / 5))
+    return [0, 1, 2, 3, 4, 5].map((i) => i * step)
+  }, [maxBar])
 
   const mainTitle =
     activeNav === "dashboard"
@@ -262,7 +281,10 @@ export default function AdminDashboard() {
           })}
         </nav>
         <div className={`p-4 text-xs ${dark ? "text-slate-500" : "text-slate-400"}`}>
-          <Link to="/" className={`font-medium hover:underline ${dark ? "text-teal-400" : "text-teal-600"}`}>
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-lg border border-red-500 px-3 py-2 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500 hover:text-white"
+          >
             Platformaga qaytish
           </Link>
         </div>
@@ -357,7 +379,7 @@ export default function AdminDashboard() {
           <div className="mx-auto w-full max-w-6xl">
             {activeNav === "dashboard" && (
               <div className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <article
                     className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
                   >
@@ -373,8 +395,14 @@ export default function AdminDashboard() {
                   <article
                     className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
                   >
-                    <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Foydalanuvchilar</p>
-                    <p className="mt-2 text-3xl font-bold text-violet-600">{STATS.foydalanuvchilar}</p>
+                    <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>O&apos;qituvchilar</p>
+                    <p className="mt-2 text-3xl font-bold text-violet-600">{STATS.oqituvchilar}</p>
+                  </article>
+                  <article
+                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                  >
+                    <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Mezonlar</p>
+                    <p className="mt-2 text-3xl font-bold text-blue-600">{STATS.mezonlar}</p>
                   </article>
                 </div>
 
@@ -382,20 +410,23 @@ export default function AdminDashboard() {
                   <article
                     className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
                   >
-                    <h2 className="text-lg font-semibold">Reytinglar taqsimoti</h2>
+                    <h2 className="text-lg font-semibold">Bo&apos;limlar ulushi</h2>
                     <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
                       <div
                         className="relative h-48 w-48 shrink-0 rounded-full shadow-inner ring-4 ring-white/10"
                         style={pieStyle}
                       />
                       <div className="w-full max-w-xs space-y-2">
-                        {RATING_SLICES.map((s) => (
-                          <div key={s.stars} className="flex items-center justify-between text-sm">
+                        {pieSlices.map((s) => (
+                          <div key={s.key} className="flex items-center justify-between text-sm">
                             <span className="flex items-center gap-2">
                               <span className="h-3 w-3 rounded-sm" style={{ background: s.color }} />
-                              {s.stars} yulduz
+                              {s.label}
                             </span>
-                            <span className="font-semibold">{s.pct}%</span>
+                            <span className="font-semibold tabular-nums">
+                              {Math.round(s.pct)}%{" "}
+                              <span className={`${dark ? "text-slate-400" : "text-slate-500"} font-medium`}>({s.value})</span>
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -405,22 +436,22 @@ export default function AdminDashboard() {
                   <article
                     className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
                   >
-                    <h2 className="text-lg font-semibold">Kategoriyalar bo&apos;yicha o&apos;rtacha reytinglar</h2>
+                    <h2 className="text-lg font-semibold">Bo&apos;limlar bo&apos;yicha sonlar</h2>
                     <div className="mt-4 flex justify-between gap-1 border-b pb-1 text-[10px] font-medium text-slate-400">
-                      {[0, 1, 2, 3, 4, 5].map((t) => (
+                      {barTicks.map((t) => (
                         <span key={t} className="w-0 flex-1 text-center">
                           {t}
                         </span>
                       ))}
                     </div>
                     <div className="flex h-52 items-end justify-between gap-2 border-l border-slate-200 pl-2 pt-2 dark:border-slate-600">
-                      {CATEGORY_BARS.map((c) => (
-                        <div key={c.label} className="flex min-w-0 flex-1 flex-col items-center justify-end">
+                      {entityStats.map((c) => (
+                        <div key={c.key} className="flex min-w-0 flex-1 flex-col items-center justify-end">
                           <div
                             className="w-full max-w-10 rounded-t-md"
                             style={{
-                              height: `${Math.max(8, (c.value / 5) * 168)}px`,
-                              backgroundColor: TEAL,
+                              height: `${Math.max(8, maxBar > 0 ? (c.value / maxBar) * 168 : 8)}px`,
+                              backgroundColor: c.color,
                             }}
                             title={`${c.label}: ${c.value}`}
                           />
@@ -428,9 +459,9 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                     <div className="mt-3 flex justify-between gap-1 px-0">
-                      {CATEGORY_BARS.map((c) => (
+                      {entityStats.map((c) => (
                         <p
-                          key={c.label}
+                          key={c.key}
                           className="min-w-0 flex-1 -rotate-[35deg] text-center text-[9px] leading-tight text-slate-600 sm:text-[10px] dark:text-slate-400"
                         >
                           {c.label}
