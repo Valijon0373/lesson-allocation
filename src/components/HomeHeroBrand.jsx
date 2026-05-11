@@ -77,8 +77,6 @@ export default function HomeHeroBrand() {
           className="flex items-baseline justify-center gap-[0.03em] font-black leading-[0.82] tracking-[-0.07em] antialiased"
           style={{
             fontSize: "clamp(5.5rem, 28vw, 14rem)",
-            fontFamily:
-              'system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
           }}
         >
           <span
@@ -104,8 +102,6 @@ export default function HomeHeroBrand() {
             style={{
               color: BRAND,
               fontSize: "clamp(0.65rem, 3vw, 1.05rem)",
-              fontFamily:
-                'system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
             }}
           >
             Ballik tizimga

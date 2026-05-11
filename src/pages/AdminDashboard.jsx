@@ -1,14 +1,35 @@
 import { useEffect, useMemo, useState } from "react"
+import {
+  ChevronDown,
+  Eye,
+  GraduationCap,
+  Landmark,
+  LayoutDashboard,
+  Menu,
+  Moon,
+  Pencil,
+  Plus,
+  Search,
+  SquarePen,
+  Trash2,
+  User,
+} from "lucide-react"
 import { Link } from "react-router-dom"
 import logoImg from "../assets/logo.jpg"
 
 const TEAL = "#14b8a6"
 const TEAL_BG = "bg-teal-500"
 const NAV = [
-  { id: "dashboard", label: "Dashboard", icon: "grid" },
-  { id: "fakultetlar", label: "Fakultetlar", icon: "building" },
-  { id: "kafedralar", label: "Kafedralar", icon: "cap" },
-  { id: "foydalanuvchilar", label: "Foydalanuvchilar", icon: "user" },
+  { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
+  {
+    id: "fakultetlar",
+    label: "Fakultetlar",
+    Icon: Landmark,
+    iconStroke: 1.25,
+    inactiveClassLight: "text-slate-700",
+  },
+  { id: "kafedralar", label: "Kafedralar", Icon: GraduationCap },
+  { id: "foydalanuvchilar", label: "Foydalanuvchilar", Icon: User },
 ]
 
 const STATS = {
@@ -33,35 +54,106 @@ const CATEGORY_BARS = [
   { label: "Ijodkorlik", value: 5 },
 ]
 
-function NavIcon({ name }) {
-  const cls = "h-5 w-5 shrink-0"
-  switch (name) {
-    case "grid":
-      return (
-        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 3.75a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25z" />
-        </svg>
-      )
-    case "building":
-      return (
-        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6v12H3V9z" />
-        </svg>
-      )
-    case "cap":
-      return (
-        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm6 0a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm6 0a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" />
-        </svg>
-      )
-    default:
-      return (
-        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-        </svg>
-      )
-  }
-}
+const MAVJUD_FAKULTETLAR = [
+  { id: "f-1", nameUz: "Filologiya Fakulteti", nameRu: "Факультет филологии" },
+  { id: "f-2", nameUz: "Pedagogika Fakulteti", nameRu: "Факультет Педагогики" },
+  { id: "f-3", nameUz: "Aniq va tabiiy fanlar Fakulteti", nameRu: "Факультет точных и естественных наук" },
+  { id: "f-4", nameUz: "Ijtimoiy va amaliy fanlar Fakulteti", nameRu: "Факультет социальных и прикладных наук" },
+  { id: "f-5", nameUz: "Boshlang'ich ta'lim Fakulteti", nameRu: "Факультет начального образования" },
+]
+
+const KAFEDRALAR_ROYXATI = [
+  {
+    id: "k-1",
+    nameUz: "Rus tili va adabiyoti kafedrasi",
+    nameRu: "Кафедра русского языка и литературы",
+    fakultet: "Filologiya Fakulteti",
+  },
+  {
+    id: "k-2",
+    nameUz: "O'zbek tili va adabiyoti kafedrasi",
+    nameRu: "Кафедра узбекского языка и литературы",
+    fakultet: "Filologiya Fakulteti",
+  },
+  {
+    id: "k-3",
+    nameUz: "Xorijiy tillar va tilshunoslik kafedrasi",
+    nameRu: "Кафедра иностранных языков и лингвистики",
+    fakultet: "Filologiya Fakulteti",
+  },
+  {
+    id: "k-4",
+    nameUz: "Pedagogika nazariyasi va tarix kafedrasi",
+    nameRu: "Кафедра теории и истории педагогики",
+    fakultet: "Pedagogika Fakulteti",
+  },
+  {
+    id: "k-5",
+    nameUz: "Psixologiya kafedrasi",
+    nameRu: "Кафедра психологии",
+    fakultet: "Pedagogika Fakulteti",
+  },
+  {
+    id: "k-6",
+    nameUz: "Maxsus pedagogika va inklyuziv ta'lim kafedrasi",
+    nameRu: "Кафедра специальной педагогики и инклюзивного образования",
+    fakultet: "Pedagogika Fakulteti",
+  },
+  {
+    id: "k-7",
+    nameUz: "Matematika va informatika o'qitish metodikasi kafedrasi",
+    nameRu: "Кафедра методики преподавания математики и информатики",
+    fakultet: "Aniq va tabiiy fanlar Fakulteti",
+  },
+  {
+    id: "k-8",
+    nameUz: "Fizika va astronomiya kafedrasi",
+    nameRu: "Кафедра физики и астрономии",
+    fakultet: "Aniq va tabiiy fanlar Fakulteti",
+  },
+  {
+    id: "k-9",
+    nameUz: "Kimyo va biologiya kafedrasi",
+    nameRu: "Кафедра химии и биологии",
+    fakultet: "Aniq va tabiiy fanlar Fakulteti",
+  },
+  {
+    id: "k-10",
+    nameUz: "Tarix va ijtimoiy fanlar kafedrasi",
+    nameRu: "Кафедра истории и общественных наук",
+    fakultet: "Ijtimoiy va amaliy fanlar Fakulteti",
+  },
+  {
+    id: "k-11",
+    nameUz: "Geografiya va ekologiya ta'limi kafedrasi",
+    nameRu: "Кафедра географического и экологического образования",
+    fakultet: "Ijtimoiy va amaliy fanlar Fakulteti",
+  },
+  {
+    id: "k-12",
+    nameUz: "Jismoniy tarbiya va sport kafedrasi",
+    nameRu: "Кафедра физического воспитания и спорта",
+    fakultet: "Ijtimoiy va amaliy fanlar Fakulteti",
+  },
+  {
+    id: "k-13",
+    nameUz: "Boshlang'ich ta'lim metodikasi kafedrasi",
+    nameRu: "Кафедра методики начального образования",
+    fakultet: "Boshlang'ich ta'lim Fakulteti",
+  },
+  {
+    id: "k-14",
+    nameUz: "Maktabgacha ta'lim kafedrasi",
+    nameRu: "Кафедра дошкольного образования",
+    fakultet: "Boshlang'ich ta'lim Fakulteti",
+  },
+  {
+    id: "k-15",
+    nameUz: "Bolalar rivojlanishi va ergonomika kafedrasi",
+    nameRu: "Кафедра развития детей и эргономики",
+    fakultet: "Boshlang'ich ta'lim Fakulteti",
+  },
+]
 
 function pieGradient(slices) {
   let acc = 0
@@ -117,20 +209,25 @@ export default function AdminDashboard() {
         <nav className="flex flex-1 flex-col gap-1 p-3">
           {NAV.map((item) => {
             const active = activeNav === item.id
+            const NavItemIcon = item.Icon
+            const stroke = item.iconStroke ?? 1.5
+            const inactiveLight = item.inactiveClassLight ?? "text-slate-600"
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setActiveNav(item.id)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
                   active
-                    ? `${TEAL_BG} text-white shadow-md shadow-teal-900/20`
-                    : dark
-                      ? "text-slate-300 hover:bg-slate-700/80"
-                      : "text-slate-600 hover:bg-slate-50"
+                    ? `font-medium ${TEAL_BG} text-white shadow-md shadow-teal-900/20`
+                    : `font-medium ${dark ? "text-slate-300 hover:bg-slate-700/80" : `${inactiveLight} hover:bg-slate-50`}`
                 }`}
               >
-                <NavIcon name={item.icon} />
+                <NavItemIcon
+                  className={`h-5 w-5 shrink-0 ${active ? "" : "opacity-95"}`}
+                  strokeWidth={stroke}
+                  aria-hidden
+                />
                 {item.label}
               </button>
             )
@@ -165,9 +262,7 @@ export default function AdminDashboard() {
               onClick={() => setSidebarOpen((v) => !v)}
               aria-label="Menyu"
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
+              <Menu className="h-6 w-6" strokeWidth={1.5} aria-hidden />
             </button>
             <h1 className="text-lg font-semibold">{mainTitle}</h1>
           </div>
@@ -178,13 +273,7 @@ export default function AdminDashboard() {
               className={`rounded-lg p-2 ${dark ? "hover:bg-slate-700" : "hover:bg-slate-100"}`}
               aria-label="Tungi rejim"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
-                />
-              </svg>
+              <Moon className="h-5 w-5" strokeWidth={1.5} aria-hidden />
             </button>
             <div className="flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
@@ -193,111 +282,303 @@ export default function AdminDashboard() {
               <div className="hidden text-sm sm:block">
                 <p className="font-medium leading-none">admin</p>
               </div>
-              <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-              </svg>
+              <ChevronDown className="h-4 w-4 opacity-50" strokeWidth={2} aria-hidden />
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {activeNav === "dashboard" && (
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <article
-                  className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
-                >
-                  <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Fakultetlar</p>
-                  <p className="mt-2 text-3xl font-bold text-blue-600">{STATS.fakultetlar}</p>
-                </article>
-                <article
-                  className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
-                >
-                  <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Kafedralar</p>
-                  <p className="mt-2 text-3xl font-bold text-emerald-600">{STATS.kafedralar}</p>
-                </article>
-                <article
-                  className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
-                >
-                  <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Foydalanuvchilar</p>
-                  <p className="mt-2 text-3xl font-bold text-violet-600">{STATS.foydalanuvchilar}</p>
-                </article>
-              </div>
+        <main className="flex-1 overflow-auto p-6 md:p-8">
+          <div className="mx-auto w-full max-w-6xl">
+            {activeNav === "dashboard" && (
+              <div className="space-y-6">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <article
+                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                  >
+                    <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Fakultetlar</p>
+                    <p className="mt-2 text-3xl font-bold text-blue-600">{STATS.fakultetlar}</p>
+                  </article>
+                  <article
+                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                  >
+                    <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Kafedralar</p>
+                    <p className="mt-2 text-3xl font-bold text-emerald-600">{STATS.kafedralar}</p>
+                  </article>
+                  <article
+                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                  >
+                    <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Foydalanuvchilar</p>
+                    <p className="mt-2 text-3xl font-bold text-violet-600">{STATS.foydalanuvchilar}</p>
+                  </article>
+                </div>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <article
-                  className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
-                >
-                  <h2 className="text-lg font-semibold">Reytinglar taqsimoti</h2>
-                  <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
-                    <div
-                      className="relative h-48 w-48 shrink-0 rounded-full shadow-inner ring-4 ring-white/10"
-                      style={pieStyle}
-                    />
-                    <div className="w-full max-w-xs space-y-2">
-                      {RATING_SLICES.map((s) => (
-                        <div key={s.stars} className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2">
-                            <span className="h-3 w-3 rounded-sm" style={{ background: s.color }} />
-                            {s.stars} yulduz
-                          </span>
-                          <span className="font-semibold">{s.pct}%</span>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <article
+                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                  >
+                    <h2 className="text-lg font-semibold">Reytinglar taqsimoti</h2>
+                    <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
+                      <div
+                        className="relative h-48 w-48 shrink-0 rounded-full shadow-inner ring-4 ring-white/10"
+                        style={pieStyle}
+                      />
+                      <div className="w-full max-w-xs space-y-2">
+                        {RATING_SLICES.map((s) => (
+                          <div key={s.stars} className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <span className="h-3 w-3 rounded-sm" style={{ background: s.color }} />
+                              {s.stars} yulduz
+                            </span>
+                            <span className="font-semibold">{s.pct}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </article>
+
+                  <article
+                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                  >
+                    <h2 className="text-lg font-semibold">Kategoriyalar bo&apos;yicha o&apos;rtacha reytinglar</h2>
+                    <div className="mt-4 flex justify-between gap-1 border-b pb-1 text-[10px] font-medium text-slate-400">
+                      {[0, 1, 2, 3, 4, 5].map((t) => (
+                        <span key={t} className="w-0 flex-1 text-center">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex h-52 items-end justify-between gap-2 border-l border-slate-200 pl-2 pt-2 dark:border-slate-600">
+                      {CATEGORY_BARS.map((c) => (
+                        <div key={c.label} className="flex min-w-0 flex-1 flex-col items-center justify-end">
+                          <div
+                            className="w-full max-w-10 rounded-t-md"
+                            style={{
+                              height: `${Math.max(8, (c.value / 5) * 168)}px`,
+                              backgroundColor: TEAL,
+                            }}
+                            title={`${c.label}: ${c.value}`}
+                          />
                         </div>
                       ))}
                     </div>
-                  </div>
-                </article>
-
-                <article
-                  className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
-                >
-                  <h2 className="text-lg font-semibold">Kategoriyalar bo&apos;yicha o&apos;rtacha reytinglar</h2>
-                  <div className="mt-4 flex justify-between gap-1 border-b pb-1 text-[10px] font-medium text-slate-400">
-                    {[0, 1, 2, 3, 4, 5].map((t) => (
-                      <span key={t} className="w-0 flex-1 text-center">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex h-52 items-end justify-between gap-2 border-l border-slate-200 pl-2 pt-2 dark:border-slate-600">
-                    {CATEGORY_BARS.map((c) => (
-                      <div key={c.label} className="flex min-w-0 flex-1 flex-col items-center justify-end">
-                        <div
-                          className="w-full max-w-10 rounded-t-md"
-                          style={{
-                            height: `${Math.max(8, (c.value / 5) * 168)}px`,
-                            backgroundColor: TEAL,
-                          }}
-                          title={`${c.label}: ${c.value}`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex justify-between gap-1 px-0">
-                    {CATEGORY_BARS.map((c) => (
-                      <p
-                        key={c.label}
-                        className="min-w-0 flex-1 -rotate-[35deg] text-center text-[9px] leading-tight text-slate-600 sm:text-[10px] dark:text-slate-400"
-                      >
-                        {c.label}
-                      </p>
-                    ))}
-                  </div>
-                </article>
+                    <div className="mt-3 flex justify-between gap-1 px-0">
+                      {CATEGORY_BARS.map((c) => (
+                        <p
+                          key={c.label}
+                          className="min-w-0 flex-1 -rotate-[35deg] text-center text-[9px] leading-tight text-slate-600 sm:text-[10px] dark:text-slate-400"
+                        >
+                          {c.label}
+                        </p>
+                      ))}
+                    </div>
+                  </article>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeNav === "fakultetlar" && (
-            <Placeholder dark={dark} title="Fakultetlar" />
-          )}
-          {activeNav === "kafedralar" && (
-            <Placeholder dark={dark} title="Kafedralar" />
-          )}
-          {activeNav === "foydalanuvchilar" && (
-            <Placeholder dark={dark} title="Foydalanuvchilar" />
-          )}
+            {activeNav === "fakultetlar" && <FakultetlarPanel dark={dark} />}
+            {activeNav === "kafedralar" && <KafedralarPanel dark={dark} />}
+            {activeNav === "foydalanuvchilar" && <Placeholder dark={dark} title="Foydalanuvchilar" />}
+          </div>
         </main>
+      </div>
+    </div>
+  )
+}
+
+function KafedralarPanel({ dark }) {
+  const [searchDraft, setSearchDraft] = useState("")
+  const [searchApplied, setSearchApplied] = useState("")
+
+  const filtered = useMemo(() => {
+    const q = searchApplied.trim().toLowerCase()
+    if (!q) return KAFEDRALAR_ROYXATI
+    return KAFEDRALAR_ROYXATI.filter(
+      (row) =>
+        row.nameUz.toLowerCase().includes(q) ||
+        row.fakultet.toLowerCase().includes(q)
+    )
+  }, [searchApplied])
+
+  const cardBase = dark
+    ? "border-slate-600 bg-slate-800"
+    : "border-slate-200 bg-white shadow-sm"
+  const subtitle = dark ? "text-slate-400" : "text-slate-500"
+  const title = dark ? "text-slate-100" : "text-slate-900"
+  const meta = dark ? "text-slate-500" : "text-slate-400"
+  const inputWrap = dark
+    ? "border-slate-600 bg-slate-800/80 text-slate-100 placeholder:text-slate-500"
+    : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
+
+  return (
+    <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className={`text-xl font-bold tracking-tight ${title}`}>Kafedralar Ro&apos;yxati</h2>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+          >
+            <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
+            Qo'shish
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${dark ? "text-slate-500" : "text-slate-400"}`}
+              strokeWidth={2}
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") setSearchApplied(searchDraft)
+              }}
+              placeholder="Kafedra qidirish..."
+              className={`w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${inputWrap}`}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setSearchApplied(searchDraft)}
+            className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-5 py-2.5 text-sm font-semibold transition-colors sm:min-w-[7.5rem] ${
+              dark
+                ? "border-blue-500/90 text-blue-400 hover:bg-slate-700/80"
+                : "border-blue-600 text-blue-600 hover:bg-blue-50"
+            }`}
+          >
+            Qidirish
+          </button>
+        </div>
+
+        <ul className="flex flex-col gap-3">
+          {filtered.map((row) => (
+            <li
+              key={row.id}
+              className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-4 sm:px-5 ${cardBase}`}
+            >
+              <div className="min-w-0 flex-1">
+                <p className={`font-bold leading-snug ${title}`}>{row.nameUz}</p>
+                <p className={`mt-1.5 text-xs ${meta}`}>Fakultet: {row.fakultet}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    dark
+                      ? "border-blue-500/80 text-blue-400 hover:bg-slate-700/80"
+                      : "border-blue-600 text-blue-600 hover:bg-blue-50"
+                  }`}
+                >
+                  <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Ko'rish
+                </button>
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    dark
+                      ? "border-emerald-500/80 text-emerald-400 hover:bg-slate-700/80"
+                      : "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                  }`}
+                >
+                  <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Tahrirlash
+                </button>
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    dark
+                      ? "border-red-500/80 text-red-400 hover:bg-slate-700/80"
+                      : "border-red-600 text-red-600 hover:bg-red-50"
+                  }`}
+                >
+                  <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  O'chirish
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {filtered.length === 0 && (
+          <p className={`text-center text-sm ${subtitle}`}>Qidiruv bo&apos;yicha natija topilmadi.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function FakultetlarPanel({ dark }) {
+  const cardBase = dark
+    ? "border-slate-600 bg-slate-800"
+    : "border-slate-200 bg-white shadow-sm"
+  const title = dark ? "text-slate-100" : "text-slate-900"
+
+  return (
+    <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className={`text-xl font-bold tracking-tight ${title}`}>Mavjud Fakultetlar</h2>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+          >
+            <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
+            Qo'shish
+          </button>
+        </div>
+
+        <ul className="flex flex-col gap-3">
+          {MAVJUD_FAKULTETLAR.map((fac) => (
+            <li
+              key={fac.id}
+              className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-4 sm:px-5 ${cardBase}`}
+            >
+              <div className="min-w-0 flex-1">
+                <p className={`font-bold leading-snug ${title}`}>{fac.nameUz}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    dark
+                      ? "border-blue-500/80 text-blue-400 hover:bg-slate-700/80"
+                      : "border-blue-600 text-blue-600 hover:bg-blue-50"
+                  }`}
+                >
+                  <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Ko'rish
+                </button>
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    dark
+                      ? "border-emerald-500/80 text-emerald-400 hover:bg-slate-700/80"
+                      : "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                  }`}
+                >
+                  <SquarePen className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Tahrirlash
+                </button>
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    dark
+                      ? "border-red-500/80 text-red-400 hover:bg-slate-700/80"
+                      : "border-red-600 text-red-600 hover:bg-red-50"
+                  }`}
+                >
+                  <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  O'chirish
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )
