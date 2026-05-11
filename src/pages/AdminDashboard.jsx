@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ChevronDown,
+  ClipboardCheck,
   Eye,
+  FileText,
   GraduationCap,
   Landmark,
   LayoutDashboard,
+  LogOut,
   Menu,
   Moon,
   Pencil,
@@ -13,6 +16,7 @@ import {
   SquarePen,
   Trash2,
   User,
+  Users,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import logoImg from "../assets/logo.jpg"
@@ -29,7 +33,10 @@ const NAV = [
     inactiveClassLight: "text-slate-700",
   },
   { id: "kafedralar", label: "Kafedralar", Icon: GraduationCap },
+  { id: "lavozim", label: "Lavozim", Icon: FileText },
   { id: "foydalanuvchilar", label: "Foydalanuvchilar", Icon: User },
+  { id: "oqituvchilar", label: "O'qituvchilar", Icon: Users },
+  { id: "mezonlar", label: "Mezonlar", Icon: ClipboardCheck },
 ]
 
 const STATS = {
@@ -171,6 +178,8 @@ export default function AdminDashboard() {
   )
   const [activeNav, setActiveNav] = useState("dashboard")
   const [dark, setDark] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef(null)
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)")
@@ -180,6 +189,25 @@ export default function AdminDashboard() {
     mq.addEventListener("change", onChange)
     return () => mq.removeEventListener("change", onChange)
   }, [])
+
+  useEffect(() => {
+    if (!profileOpen) return
+    const onDown = (e) => {
+      if (e.key === "Escape") setProfileOpen(false)
+    }
+    const onClick = (e) => {
+      const root = profileRef.current
+      if (!root) return
+      if (root.contains(e.target)) return
+      setProfileOpen(false)
+    }
+    window.addEventListener("keydown", onDown)
+    window.addEventListener("mousedown", onClick)
+    return () => {
+      window.removeEventListener("keydown", onDown)
+      window.removeEventListener("mousedown", onClick)
+    }
+  }, [profileOpen])
 
   const pieStyle = useMemo(() => ({ background: pieGradient(RATING_SLICES) }), [])
 
@@ -275,14 +303,52 @@ export default function AdminDashboard() {
             >
               <Moon className="h-5 w-5" strokeWidth={1.5} aria-hidden />
             </button>
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
-                AD
-              </span>
-              <div className="hidden text-sm sm:block">
-                <p className="font-medium leading-none">admin</p>
-              </div>
-              <ChevronDown className="h-4 w-4 opacity-50" strokeWidth={2} aria-hidden />
+            <div className="relative" ref={profileRef}>
+              <button
+                type="button"
+                onClick={() => setProfileOpen((v) => !v)}
+                className={`flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors ${
+                  dark ? "hover:bg-slate-700/80" : "hover:bg-slate-100"
+                }`}
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
+                  AD
+                </span>
+                <div className="hidden text-sm sm:block">
+                  <p className="font-medium leading-none">admin</p>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 opacity-50 transition-transform ${profileOpen ? "rotate-180" : ""}`}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </button>
+
+              {profileOpen && (
+                <div
+                  role="menu"
+                  className={`absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-2xl border shadow-lg ${
+                    dark ? "border-slate-700 bg-slate-800 text-slate-100" : "border-slate-200 bg-white text-slate-800"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileOpen(false)
+                      window.location.assign("/")
+                    }}
+                    className={`flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                      dark ? "hover:bg-slate-700/70" : "hover:bg-slate-50"
+                    } text-red-600`}
+                  >
+                    <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                    Chiqish
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -378,7 +444,10 @@ export default function AdminDashboard() {
 
             {activeNav === "fakultetlar" && <FakultetlarPanel dark={dark} />}
             {activeNav === "kafedralar" && <KafedralarPanel dark={dark} />}
+            {activeNav === "lavozim" && <Placeholder dark={dark} title="Lavozim" />}
             {activeNav === "foydalanuvchilar" && <Placeholder dark={dark} title="Foydalanuvchilar" />}
+            {activeNav === "oqituvchilar" && <Placeholder dark={dark} title="O'qituvchilar" />}
+            {activeNav === "mezonlar" && <Placeholder dark={dark} title="Mezonlar" />}
           </div>
         </main>
       </div>
