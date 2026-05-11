@@ -1,45 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ChevronDown,
-  CircleCheck,
-  ClipboardCheck,
-  CircleX,
-  Eye,
-  FileText,
-  GraduationCap,
-  Landmark,
-  LayoutDashboard,
   LogOut,
   Menu,
   Moon,
-  Pencil,
-  Plus,
-  Search,
-  SquarePen,
-  Trash2,
-  User,
-  Users,
 } from "lucide-react"
 import { Link } from "react-router-dom"
-import logoImg from "../assets/logo.jpg"
+import logoImg from "../../assets/logo.jpg"
+import DashboardNav, { getDashboardNavLabel } from "../../components/dashboard/DashboardNav"
+import Faculties from "./Faculties"
+import Departments from "./Departments"
+import Positions from "./Positions"
+import Users from "./Users"
+import Teachers from "./Teachers"
+import Criteria from "./Criteria"
 
 const TEAL = "#14b8a6"
 const TEAL_BG = "bg-teal-500"
-const NAV = [
-  { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
-  {
-    id: "fakultetlar",
-    label: "Fakultetlar",
-    Icon: Landmark,
-    iconStroke: 1.25,
-    inactiveClassLight: "text-slate-700",
-  },
-  { id: "kafedralar", label: "Kafedralar", Icon: GraduationCap },
-  { id: "lavozim", label: "Lavozim", Icon: FileText },
-  { id: "foydalanuvchilar", label: "Foydalanuvchilar", Icon: User },
-  { id: "oqituvchilar", label: "O'qituvchilar", Icon: Users },
-  { id: "mezonlar", label: "Mezonlar", Icon: ClipboardCheck },
-]
 
 const STATS = {
   fakultetlar: 5,
@@ -249,8 +226,8 @@ export default function AdminDashboard() {
 
   const mainTitle =
     activeNav === "dashboard"
-      ? "Admin Dashboard"
-      : NAV.find((n) => n.id === activeNav)?.label ?? "Admin"
+      ? "Boshqaruv paneli"
+      : getDashboardNavLabel(activeNav)
 
   return (
     <div
@@ -265,38 +242,12 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3">
             <img src={logoImg} alt="" className="h-10 w-10 rounded-full border object-cover" />
             <div>
-              <p className="text-lg font-bold leading-tight">UrSPI Admin</p>
-              <p className={`text-xs ${dark ? "text-slate-400" : "text-slate-500"}`}>Admin Panel</p>
+              <p className="text-lg font-bold leading-tight">UrSPI Administrator</p>
+              <p className={`text-xs ${dark ? "text-slate-400" : "text-slate-500"}`}>Boshqaruv paneli</p>
             </div>
           </div>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 p-3">
-          {NAV.map((item) => {
-            const active = activeNav === item.id
-            const NavItemIcon = item.Icon
-            const stroke = item.iconStroke ?? 1.5
-            const inactiveLight = item.inactiveClassLight ?? "text-slate-600"
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveNav(item.id)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
-                  active
-                    ? `font-medium ${TEAL_BG} text-white shadow-md shadow-teal-900/20`
-                    : `font-medium ${dark ? "text-slate-300 hover:bg-slate-700/80" : `${inactiveLight} hover:bg-slate-50`}`
-                }`}
-              >
-                <NavItemIcon
-                  className={`h-5 w-5 shrink-0 ${active ? "" : "opacity-95"}`}
-                  strokeWidth={stroke}
-                  aria-hidden
-                />
-                {item.label}
-              </button>
-            )
-          })}
-        </nav>
+        <DashboardNav dark={dark} activeNav={activeNav} onChange={setActiveNav} tealBgClass={TEAL_BG} />
         <div className={`p-4 text-xs ${dark ? "text-slate-500" : "text-slate-400"}`}>
           <Link
             to="/"
@@ -490,12 +441,12 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {activeNav === "fakultetlar" && <FakultetlarPanel dark={dark} />}
-            {activeNav === "kafedralar" && <KafedralarPanel dark={dark} />}
-            {activeNav === "lavozim" && <LavozimlarPanel dark={dark} />}
-            {activeNav === "foydalanuvchilar" && <Placeholder dark={dark} title="Foydalanuvchilar" />}
-            {activeNav === "oqituvchilar" && <Placeholder dark={dark} title="O'qituvchilar" />}
-            {activeNav === "mezonlar" && <Placeholder dark={dark} title="Mezonlar" />}
+            {activeNav === "fakultetlar" && <Faculties dark={dark} />}
+            {activeNav === "kafedralar" && <Departments dark={dark} />}
+            {activeNav === "lavozim" && <Positions dark={dark} />}
+            {activeNav === "foydalanuvchilar" && <Users dark={dark} />}
+            {activeNav === "oqituvchilar" && <Teachers dark={dark} />}
+            {activeNav === "mezonlar" && <Criteria dark={dark} />}
           </div>
         </main>
       </div>
@@ -503,7 +454,7 @@ export default function AdminDashboard() {
   )
 }
 
-function KafedralarPanel({ dark }) {
+function KafedralarPanel_UNUSED({ dark }) {
   const [rows, setRows] = useState(() => KAFEDRALAR_ROYXATI)
   const [searchDraft, setSearchDraft] = useState("")
   const [searchApplied, setSearchApplied] = useState("")
@@ -923,10 +874,8 @@ function KafedralarPanel({ dark }) {
   )
 }
 
-function LavozimlarPanel({ dark }) {
+function LavozimlarPanel_UNUSED({ dark }) {
   const [rows, setRows] = useState(() => LAVOZIMLAR_ROYXATI)
-  const [searchDraft, setSearchDraft] = useState("")
-  const [searchApplied, setSearchApplied] = useState("")
   const [modal, setModal] = useState({
     open: false,
     type: /** @type {null | "view" | "edit" | "delete" | "create"} */ (null),
@@ -937,19 +886,10 @@ function LavozimlarPanel({ dark }) {
   const [notice, setNotice] = useState({ open: false, message: "", variant: /** @type {"success" | "danger"} */ ("success") })
   const noticeTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
 
-  const filtered = useMemo(() => {
-    const q = searchApplied.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((row) => row.nameUz.toLowerCase().includes(q))
-  }, [rows, searchApplied])
-
   const cardBase = dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white shadow-sm"
   const subtitle = dark ? "text-slate-400" : "text-slate-500"
   const title = dark ? "text-slate-100" : "text-slate-900"
   const meta = dark ? "text-slate-500" : "text-slate-400"
-  const inputWrap = dark
-    ? "border-slate-600 bg-slate-800/80 text-slate-100 placeholder:text-slate-500"
-    : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
 
   const input = dark
     ? "border-slate-600 bg-slate-900/40 text-slate-100 placeholder:text-slate-600"
@@ -1023,37 +963,8 @@ function LavozimlarPanel({ dark }) {
           </button>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-          <div className="relative min-w-0 flex-1">
-            <Search
-              className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${dark ? "text-slate-500" : "text-slate-400"}`}
-              strokeWidth={2}
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") setSearchApplied(searchDraft)
-              }}
-              placeholder="Lavozim qidirish..."
-              className={`w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${inputWrap}`}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setSearchApplied(searchDraft)}
-            className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-5 py-2.5 text-sm font-semibold transition-colors sm:min-w-[7.5rem] ${
-              dark ? "border-blue-500/90 text-blue-400 hover:bg-slate-700/80" : "border-blue-600 text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            Qidirish
-          </button>
-        </div>
-
         <ul className="flex flex-col gap-3">
-          {filtered.map((row) => (
+          {rows.map((row) => (
             <li key={row.id} className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-4 sm:px-5 ${cardBase}`}>
               <div className="min-w-0 flex-1">
                 <p className={`font-bold leading-snug ${title}`}>{row.nameUz}</p>
@@ -1097,7 +1008,7 @@ function LavozimlarPanel({ dark }) {
           ))}
         </ul>
 
-        {filtered.length === 0 && <p className={`text-center text-sm ${subtitle}`}>Qidiruv bo&apos;yicha natija topilmadi.</p>}
+        {rows.length === 0 && <p className={`text-center text-sm ${subtitle}`}>Hozircha lavozim yo&apos;q.</p>}
       </div>
 
       <Modal open={modal.open} onClose={closeModal} dark={dark}>
@@ -1284,7 +1195,7 @@ function LavozimlarPanel({ dark }) {
   )
 }
 
-function FakultetlarPanel({ dark }) {
+function FakultetlarPanel_UNUSED({ dark }) {
   const [rows, setRows] = useState(() => MAVJUD_FAKULTETLAR)
   const [modal, setModal] = useState({
     open: false,

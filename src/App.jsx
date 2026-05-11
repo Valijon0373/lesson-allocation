@@ -18,7 +18,7 @@ const USERS = [
 ]
 
 const ROLE_LABELS = {
-  admin: "Admin",
+  admin: "Administrator",
   head: "Kafedra mudiri",
   dean: "Dekan",
   teacher: "O'qituvchi",
@@ -411,7 +411,7 @@ function App() {
   const renderDashboard = () => (
     <section className="space-y-6">
       <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-white shadow-xl">
-        <p className="text-sm uppercase tracking-wider text-indigo-100">Dashboard</p>
+        <p className="text-sm uppercase tracking-wider text-indigo-100">Boshqaruv paneli</p>
         <h1 className="mt-2 text-3xl font-bold">Nizom monitoring platformasi</h1>
         <p className="mt-2 text-indigo-50">
           Jami {TOTAL_MAX_SCORE} ball bo'yicha progress, hujjatlar holati va reyting.
@@ -460,7 +460,7 @@ function App() {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="mb-2 text-sm font-medium text-slate-600">
-              Progress ({activeTeacher?.fullName})
+              Ko'rsatkich ({activeTeacher?.fullName})
             </p>
             <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
               <div className="h-full bg-indigo-600" style={{ width: `${myPercent}%` }} />
@@ -490,7 +490,7 @@ function App() {
             </article>
 
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">Reyting (Ranking)</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
               <div className="mt-3 space-y-2">
                 {ranking.map((item, index) => (
                   <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">

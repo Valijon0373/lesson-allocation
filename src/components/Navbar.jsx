@@ -25,7 +25,7 @@ export default function Navbar({
                     : "border border-white/25 bg-white/20 text-white/90 shadow-inner shadow-white/5"
                 }`}
               >
-                Dashboard
+                Boshqaruv paneli
               </button>
               <button
                 type="button"
