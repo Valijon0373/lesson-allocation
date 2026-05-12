@@ -142,36 +142,28 @@ export default function Criteria({ dark }) {
   const [notice, setNotice] = useState({ open: false, message: "" })
   const noticeTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
 
-  const [actionsMenu, setActionsMenu] = useState(/** @type {{ key: string, top: number, left: number } | null} */ (null))
+  const [openActionsFor, setOpenActionsFor] = useState(/** @type {string | null} */ (null))
+
+  const [criterionModal, setCriterionModal] = useState({
+    open: false,
+    type: /** @type {null | "view" | "edit" | "delete"} */ (null),
+    row: /** @type {DashboardCriterion | null} */ (null),
+  })
+  const [editCriterionDraft, setEditCriterionDraft] = useState({
+    sectionId: "",
+    title: "",
+    maxScore: "5",
+  })
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ sections, criteria }))
   }, [sections, criteria])
 
-  useEffect(() => {
-    if (!actionsMenu) return
-    const onMouseDown = (e) => {
-      const t = /** @type {Node | null} */ (e.target)
-      if (t && typeof (/** @type {Element} */ (t)).closest === "function" && (/** @type {Element} */ (t)).closest("[data-criterion-actions]")) {
-        return
-      }
-      setActionsMenu(null)
-    }
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setActionsMenu(null)
-    }
-    document.addEventListener("mousedown", onMouseDown)
-    window.addEventListener("keydown", onKeyDown)
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown)
-      window.removeEventListener("keydown", onKeyDown)
-    }
-  }, [actionsMenu])
-
   const rows = criteria
 
   const cardBase = dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white shadow-sm"
   const subtitle = dark ? "text-slate-400" : "text-slate-500"
+  const meta = dark ? "text-slate-500" : "text-slate-400"
   const titleClr = dark ? "text-slate-100" : "text-slate-900"
   const input = dark
     ? "border-slate-600 bg-slate-900/40 text-slate-100 placeholder:text-slate-600"
@@ -252,25 +244,58 @@ export default function Criteria({ dark }) {
     }, 1300)
   }
 
-  const criterionActionsKey = (sectionId, rowId) => `${sectionId}:${rowId}`
+  const closeCriterionModal = () =>
+    setCriterionModal({ open: false, type: null, row: null })
 
-  const toggleCriterionActionsMenu = (e, sectionId, rowId) => {
-    const key = criterionActionsKey(sectionId, rowId)
-    if (actionsMenu?.key === key) {
-      setActionsMenu(null)
-      return
-    }
-    const rect = e.currentTarget.getBoundingClientRect()
-    const menuWidth = 256
-    const centered = rect.left + rect.width / 2 - menuWidth / 2
-    const left = Math.min(Math.max(8, centered), window.innerWidth - menuWidth - 8)
-    setActionsMenu({ key, top: rect.bottom + 6, left })
+  const sectionTitleById = (sectionId) => sections.find((s) => s.id === sectionId)?.title ?? "—"
+
+  const openViewCriterion = (row) => {
+    setCriterionModal({ open: true, type: "view", row })
   }
 
-  const deleteCriterionRow = (rowId) => {
-    if (!window.confirm("Bu mezonni o'chirishni tasdiqlaysizmi?")) return
-    setCriteria((prev) => prev.filter((c) => c.id !== rowId))
-    setActionsMenu(null)
+  const openEditCriterion = (row) => {
+    setEditCriterionDraft({
+      sectionId: row.sectionId,
+      title: row.title,
+      maxScore: String(row.maxScore),
+    })
+    setCriterionModal({ open: true, type: "edit", row })
+  }
+
+  const openDeleteCriterion = (row) => {
+    setCriterionModal({ open: true, type: "delete", row })
+  }
+
+  const onSaveCriterionEdit = () => {
+    const row = criterionModal.row
+    if (!row?.id) return
+    const title = editCriterionDraft.title.trim()
+    const maxScore = Number(editCriterionDraft.maxScore)
+    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) return
+    if (!sections.some((s) => s.id === editCriterionDraft.sectionId)) return
+
+    setCriteria((prev) =>
+      prev.map((c) =>
+        c.id === row.id
+          ? {
+              ...c,
+              sectionId: editCriterionDraft.sectionId,
+              title,
+              maxScore: Math.round(maxScore),
+            }
+          : c
+      )
+    )
+    closeCriterionModal()
+    showNotice("Mezon yangilandi")
+    setOpenSection(editCriterionDraft.sectionId)
+  }
+
+  const onConfirmCriterionDelete = () => {
+    const row = criterionModal.row
+    if (!row?.id) return
+    setCriteria((prev) => prev.filter((c) => c.id !== row.id))
+    closeCriterionModal()
     showNotice("Mezon o'chirildi")
   }
 
@@ -507,22 +532,66 @@ export default function Criteria({ dark }) {
                                     {row.maxScore}
                                   </td>
                                   <td className={`border px-3 py-3 text-center align-middle ${dark ? "border-slate-600" : "border-slate-200"}`}>
-                                    <div className="flex items-center justify-center">
+                                    <div className="relative inline-flex">
                                       <button
                                         type="button"
-                                        data-criterion-actions
-                                        aria-expanded={actionsMenu?.key === criterionActionsKey(sec.id, row.id)}
-                                        aria-haspopup="menu"
-                                        aria-label="Amallar menyusi"
-                                        onClick={(e) => toggleCriterionActionsMenu(e, sec.id, row.id)}
-                                        className={`rounded-lg border p-2 shadow-sm transition-colors ${
-                                          dark
-                                            ? "border-slate-500 bg-slate-700/80 text-slate-100 hover:bg-slate-600"
-                                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                        onClick={() => setOpenActionsFor((prev) => (prev === row.id ? null : row.id))}
+                                        className={`inline-flex items-center justify-center rounded-lg border p-2.5 transition-colors ${
+                                          dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-300 text-slate-700 hover:bg-slate-100"
                                         }`}
+                                        aria-label="Amallar menyusi"
+                                        aria-expanded={openActionsFor === row.id}
                                       >
-                                        <SlidersHorizontal className="h-4 w-4" strokeWidth={2} aria-hidden />
+                                        <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
                                       </button>
+
+                                      {openActionsFor === row.id && (
+                                        <div
+                                          className={`absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border p-1 shadow-lg ${
+                                            dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
+                                          }`}
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setOpenActionsFor(null)
+                                              openViewCriterion(row)
+                                            }}
+                                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                                              dark ? "text-blue-400 hover:bg-slate-700/80" : "text-blue-700 hover:bg-blue-50"
+                                            }`}
+                                          >
+                                            <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                                            Ko'rish
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setOpenActionsFor(null)
+                                              openEditCriterion(row)
+                                            }}
+                                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                                              dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
+                                            }`}
+                                          >
+                                            <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                                            Tahrirlash
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setOpenActionsFor(null)
+                                              openDeleteCriterion(row)
+                                            }}
+                                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                                              dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
+                                            }`}
+                                          >
+                                            <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                                            O'chirish
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                   </td>
                                 </tr>
@@ -737,57 +806,138 @@ export default function Criteria({ dark }) {
         </div>
       </Modal>
 
-      {actionsMenu && (
-        <div
-          data-criterion-actions
-          role="menu"
-          className={`fixed z-[80] min-w-[16rem] overflow-hidden rounded-xl border py-1 shadow-xl ring-1 ${
-            dark ? "border-slate-600 bg-slate-800 ring-white/10" : "border-slate-200 bg-white ring-black/5"
-          }`}
-          style={{ top: actionsMenu.top, left: actionsMenu.left }}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            data-criterion-actions
-            className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium transition-colors ${
-              dark ? "text-blue-400 hover:bg-slate-700/70" : "text-blue-600 hover:bg-blue-50/90"
-            }`}
-            onClick={() => setActionsMenu(null)}
-          >
-            <Eye className="h-4 w-4 shrink-0 stroke-[2]" aria-hidden />
-            Ko'rish
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            data-criterion-actions
-            className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium transition-colors ${
-              dark ? "text-emerald-400 hover:bg-slate-700/70" : "text-emerald-800 hover:bg-emerald-50/90"
-            }`}
-            onClick={() => setActionsMenu(null)}
-          >
-            <Pencil className="h-4 w-4 shrink-0 stroke-[2]" aria-hidden />
-            Tahrirlash
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            data-criterion-actions
-            className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium transition-colors ${
-              dark ? "text-red-400 hover:bg-red-950/50" : "text-red-800 hover:bg-red-50"
-            }`}
-            onClick={() => {
-              const idx = actionsMenu.key.indexOf(":")
-              const rowId = idx === -1 ? "" : actionsMenu.key.slice(idx + 1)
-              if (rowId) deleteCriterionRow(rowId)
-            }}
-          >
-            <Trash2 className="h-4 w-4 shrink-0 stroke-[2]" aria-hidden />
-            O'chirish
-          </button>
-        </div>
-      )}
+      <Modal open={criterionModal.open} onClose={closeCriterionModal} dark={dark}>
+        {criterionModal.type === "view" && criterionModal.row && (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="text-2xl font-bold tracking-tight">Mezon ma'lumotlari</h3>
+              <button
+                type="button"
+                onClick={closeCriterionModal}
+                aria-label="Yopish"
+                className={`-mt-2 rounded-lg p-2 transition-colors ${dark ? "hover:bg-slate-700/70" : "hover:bg-slate-100"}`}
+              >
+                <CircleX className={`h-7 w-7 ${dark ? "text-white" : "text-slate-900"}`} strokeWidth={2.25} aria-hidden />
+              </button>
+            </div>
+            <div className="space-y-3 text-base">
+              <div>
+                <p className={`text-xs font-semibold ${meta}`}>Bo'lim:</p>
+                <p className="mt-1 font-semibold">{sectionTitleById(criterionModal.row.sectionId)}</p>
+              </div>
+              <div>
+                <p className={`text-xs font-semibold ${meta}`}>Mezon nomi:</p>
+                <p className="mt-1 font-semibold">{criterionModal.row.title}</p>
+              </div>
+              <div>
+                <p className={`text-xs font-semibold ${meta}`}>Maks. ball:</p>
+                <p className="mt-1 font-semibold tabular-nums">{criterionModal.row.maxScore}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {criterionModal.type === "edit" && criterionModal.row && (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="text-2xl font-bold tracking-tight">Mezonni tahrirlash</h3>
+              <button
+                type="button"
+                onClick={closeCriterionModal}
+                aria-label="Yopish"
+                className={`-mt-2 rounded-lg p-2 transition-colors ${dark ? "hover:bg-slate-700/70" : "hover:bg-slate-100"}`}
+              >
+                <CircleX className={`h-7 w-7 ${dark ? "text-white" : "text-slate-900"}`} strokeWidth={2.25} aria-hidden />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Bo'lim</label>
+                <select
+                  value={editCriterionDraft.sectionId || firstSectionId}
+                  onChange={(e) => setEditCriterionDraft((p) => ({ ...p, sectionId: e.target.value }))}
+                  className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
+                >
+                  {sections.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Mezon nomi</label>
+                <input
+                  value={editCriterionDraft.title}
+                  onChange={(e) => setEditCriterionDraft((p) => ({ ...p, title: e.target.value }))}
+                  className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                  placeholder="Masalan: ochiq darslar hisoboti"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Maks. ball</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={editCriterionDraft.maxScore}
+                  onChange={(e) => setEditCriterionDraft((p) => ({ ...p, maxScore: e.target.value }))}
+                  className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onSaveCriterionEdit}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+              >
+                Saqlash
+              </button>
+              <button
+                type="button"
+                onClick={closeCriterionModal}
+                className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${
+                  dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"
+                }`}
+              >
+                Bekor qilish
+              </button>
+            </div>
+          </div>
+        )}
+
+        {criterionModal.type === "delete" && criterionModal.row && (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="text-2xl font-bold tracking-tight">Mezonni o'chirishni tasdiqlaysizmi?</h3>
+              <button
+                type="button"
+                onClick={closeCriterionModal}
+                aria-label="Yopish"
+                className={`-mt-2 rounded-lg p-2 transition-colors ${dark ? "hover:bg-slate-700/70" : "hover:bg-slate-100"}`}
+              >
+                <CircleX className={`h-7 w-7 ${dark ? "text-white" : "text-slate-900"}`} strokeWidth={2.25} aria-hidden />
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <button
+                type="button"
+                onClick={onConfirmCriterionDelete}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600"
+              >
+                Ha
+              </button>
+              <button
+                type="button"
+                onClick={closeCriterionModal}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-blue-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-600"
+              >
+                Yo'q
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {notice.open && (
         <div className="pointer-events-none fixed left-1/2 top-4 z-[60] w-[min(92vw,34rem)] -translate-x-1/2">
