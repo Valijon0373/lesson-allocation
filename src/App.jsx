@@ -237,10 +237,10 @@ function App() {
 
   const renderDashboard = () => (
     <section className="space-y-6">
-      <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-white shadow-xl">
-        <p className="text-sm uppercase tracking-wider text-indigo-100">Dashboard</p>
+      <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-center text-white shadow-xl">
+        <p className="text-sm uppercase tracking-wider text-indigo-100">Statistika</p>
         <h1 className="mt-2 text-3xl font-bold">Nizom monitoring platformasi</h1>
-        <p className="mt-2 text-indigo-50">
+        <p className="mx-auto mt-2 max-w-3xl text-indigo-50">
           Jami {TOTAL_MAX_SCORE} ball bo'yicha progress, hujjatlar holati va reyting.
         </p>
       </header>
@@ -393,9 +393,9 @@ function App() {
           renderDashboard()
         ) : (
           <section className="space-y-6">
-            <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-white shadow-xl">
+            <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-center text-white shadow-xl">
               <h1 className="text-3xl font-bold">Mezonlar bo'limi</h1>
-              <p className="mt-2 text-indigo-100">
+              <p className="mx-auto mt-2 max-w-3xl text-indigo-100">
                 Har bir mezon uchun tavsif, maksimal ball, kerakli hujjatlar, upload va ekspert izohi.
               </p>
             </header>

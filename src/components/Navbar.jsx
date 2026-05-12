@@ -21,18 +21,18 @@ export default function Navbar({
                 onClick={() => onNavigate("dashboard")}
                 className={`rounded-lg px-5 py-2.5 text-sm font-semibold backdrop-blur-sm ${
                   activePage === "dashboard"
-                    ? "bg-indigo-600/95 text-white shadow-md shadow-indigo-900/25"
+                    ? "bg-white text-indigo-700 shadow-md shadow-slate-900/15"
                     : "border border-white/25 bg-white/20 text-white/90 shadow-inner shadow-white/5"
                 }`}
               >
-                Dashboard
+                Statistika
               </button>
               <button
                 type="button"
                 onClick={() => onNavigate("mezonlar")}
                 className={`rounded-lg px-5 py-2.5 text-sm font-semibold backdrop-blur-sm ${
                   activePage === "mezonlar"
-                    ? "bg-indigo-600/95 text-white shadow-md shadow-indigo-900/25"
+                    ? "bg-white text-indigo-700 shadow-md shadow-slate-900/15"
                     : "border border-white/25 bg-white/20 text-white/90 shadow-inner shadow-white/5"
                 }`}
               >

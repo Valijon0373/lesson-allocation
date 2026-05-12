@@ -11,7 +11,6 @@ import {
   FolderPlus,
   Pencil,
   Plus,
-  Search,
   Trash2,
 } from "lucide-react"
 import { CATEGORY_MAX, CRITERIA, DEMO_CRITERIA_EVAL } from "../../data/criteria.js"
@@ -153,10 +152,8 @@ export default function Criteria({ dark }) {
 
   const [openSection, setOpenSection] = useState(() => initial.sections[0]?.id ?? "")
   const [showAllInSection, setShowAllInSection] = useState(() => ({}))
-  const [searchDraft, setSearchDraft] = useState("")
   const [sectionDraft, setSectionDraft] = useState("all")
   const [statusDraft, setStatusDraft] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
   const [sectionFilter, setSectionFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
 
@@ -195,15 +192,12 @@ export default function Criteria({ dark }) {
   }`
 
   const filteredRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
     return rows.filter((r) => {
       if (sectionFilter !== "all" && r.sectionId !== sectionFilter) return false
       if (statusFilter !== "all" && r.status !== statusFilter) return false
-      if (!q) return true
-      const blob = `${r.title}`.toLowerCase()
-      return blob.includes(q)
+      return true
     })
-  }, [rows, searchQuery, sectionFilter, statusFilter])
+  }, [rows, sectionFilter, statusFilter])
 
   const bySectionId = useMemo(() => {
     const map = {}
@@ -214,7 +208,6 @@ export default function Criteria({ dark }) {
   }, [filteredRows, sections])
 
   const applyFilters = () => {
-    setSearchQuery(searchDraft)
     setSectionFilter(sectionDraft)
     setStatusFilter(statusDraft)
   }
@@ -384,15 +377,6 @@ export default function Criteria({ dark }) {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className={`relative flex min-w-[12rem] flex-1 items-center ${dark ? "text-slate-400" : "text-slate-500"}`}>
-            <Search className="pointer-events-none absolute left-3 h-4 w-4" strokeWidth={2} aria-hidden />
-            <input
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              placeholder="Qidirish..."
-              className={`w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
-            />
-          </div>
           <select
             value={sectionDraft}
             onChange={(e) => setSectionDraft(e.target.value)}
