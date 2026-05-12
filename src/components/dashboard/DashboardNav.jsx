@@ -2,6 +2,7 @@ import {
   ClipboardCheck,
   FileText,
   GraduationCap,
+  Info,
   Landmark,
   LayoutDashboard,
   User,
@@ -22,6 +23,7 @@ export const DASHBOARD_NAV = [
   { id: "foydalanuvchilar", label: "Foydalanuvchilar", Icon: User },
   { id: "oqituvchilar", label: "O'qituvchilar", Icon: Users },
   { id: "mezonlar", label: "Mezonlar", Icon: ClipboardCheck },
+  { id: "biz-haqimizda", label: "Biz haqimizda", Icon: Info },
 ]
 
 export function getDashboardNavLabel(activeNav) {

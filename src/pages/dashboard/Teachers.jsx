@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, LockKeyhole, Pencil, Plus, Trash2 } from "lucide-react"
+import { CircleCheck, CircleX, Eye, LockKeyhole, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react"
 
 const TEAL_BG = "bg-teal-500"
 const FAKULTETLAR = ["Pedagogika", "Filologiya", "Axborot texnologiyalari", "Iqtisodiyot"]
@@ -99,6 +99,9 @@ export default function Teachers({ dark }) {
   })
   const [searchDraft, setSearchDraft] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [fakultetFilter, setFakultetFilter] = useState("all")
+  const [kafedraFilter, setKafedraFilter] = useState("all")
+  const [openActionsFor, setOpenActionsFor] = useState(/** @type {string | null} */ (null))
   const [notice, setNotice] = useState({ open: false, message: "", variant: /** @type {"success" | "danger"} */ ("success") })
   const noticeTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
 
@@ -216,7 +219,13 @@ export default function Teachers({ dark }) {
     showNotice("Muvaffaqiyatli qo'shildi")
   }
 
+  const fakultetOptions = Array.from(new Set([...FAKULTETLAR, ...rows.map((row) => row.fakultet)]))
+  const kafedraOptions = Array.from(new Set([...KAFEDRALAR, ...rows.map((row) => row.kafedra)]))
+
   const filteredRows = rows.filter((row) => {
+    if (fakultetFilter !== "all" && row.fakultet !== fakultetFilter) return false
+    if (kafedraFilter !== "all" && row.kafedra !== kafedraFilter) return false
+
     const q = searchQuery.trim().toLowerCase()
     if (!q) return true
     return [row.fakultet, row.kafedra, row.fio, row.login].some((value) => value.toLowerCase().includes(q))
@@ -227,21 +236,55 @@ export default function Teachers({ dark }) {
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className={`text-xl font-bold tracking-tight ${title}`}>O'qituvchilar</h2>
-          <button
-            type="button"
-            onClick={openCreate}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
-          >
-            <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
-            Qo'shish
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                dark ? "border-emerald-500 text-emerald-300 hover:bg-slate-700/70" : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+              }`}
+            >
+              Excelga yuklash
+            </button>
+            <button
+              type="button"
+              onClick={openCreate}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+            >
+              <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
+              Qo'shish
+            </button>
+          </div>
         </div>
-        <div className="flex w-full flex-nowrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2">
+          <select
+            value={fakultetFilter}
+            onChange={(e) => setFakultetFilter(e.target.value)}
+            className={`w-full sm:w-auto sm:min-w-[11rem] rounded-lg border px-3 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
+          >
+            <option value="all">Barcha fakultetlar</option>
+            {fakultetOptions.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+          <select
+            value={kafedraFilter}
+            onChange={(e) => setKafedraFilter(e.target.value)}
+            className={`w-full sm:w-auto sm:min-w-[11rem] rounded-lg border px-3 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
+          >
+            <option value="all">Barcha kafedralar</option>
+            {kafedraOptions.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
           <input
             value={searchDraft}
             onChange={(e) => setSearchDraft(e.target.value)}
             placeholder="O'qituvchini izlash"
-            className={`min-w-0 flex-1 rounded-lg border px-4 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+            className={`min-w-[12rem] flex-1 rounded-lg border px-4 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
           />
           <button
             type="button"
@@ -258,6 +301,7 @@ export default function Teachers({ dark }) {
           <table className={`min-w-full border-collapse text-sm ${dark ? "border-slate-700" : "border-slate-200"}`}>
             <thead className={dark ? "bg-slate-900/40" : "bg-slate-50"}>
               <tr>
+                <th className={`border px-4 py-3 text-center text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>№</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Fakultet</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Kafedra</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>F.I.O</th>
@@ -266,60 +310,91 @@ export default function Teachers({ dark }) {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
+              {filteredRows.map((row, index) => (
                 <tr key={row.id}>
+                  <td className={`border px-4 py-3 text-center text-sm font-semibold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>
+                    {index + 1}
+                  </td>
                   <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"} ${subtitle}`}>{row.fakultet}</td>
                   <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"} ${subtitle}`}>{row.kafedra}</td>
                   <td className={`border px-4 py-3 text-sm font-semibold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>{row.fio}</td>
                   <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"}`}>
                     <span className={`font-bold ${title}`}>{row.login}</span>
                   </td>
-                  <td className={`border px-4 py-3 ${dark ? "border-slate-700" : "border-slate-200"}`}>
-                    <div className="flex flex-nowrap items-center justify-end gap-2 whitespace-nowrap">
+                  <td className={`border px-4 py-3 text-center ${dark ? "border-slate-700" : "border-slate-200"}`}>
+                    <div className="relative inline-flex">
                       <button
                         type="button"
-                        onClick={() => openCredentials(row)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                          dark
-                            ? "border-amber-500/80 text-amber-400 hover:bg-slate-700/80"
-                            : "border-amber-600 text-amber-600 hover:bg-amber-50"
+                        onClick={() => setOpenActionsFor((prev) => (prev === row.id ? null : row.id))}
+                        className={`inline-flex items-center justify-center rounded-lg border p-2.5 transition-colors ${
+                          dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-300 text-slate-700 hover:bg-slate-100"
                         }`}
+                        aria-label="Amallar menyusi"
+                        aria-expanded={openActionsFor === row.id}
                       >
-                        <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                        Parolni o'zgartirish
+                        <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => openView(row)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                          dark ? "border-blue-500/80 text-blue-400 hover:bg-slate-700/80" : "border-blue-600 text-blue-600 hover:bg-blue-50"
-                        }`}
-                      >
-                        <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                        Ko'rish
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openEdit(row)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                          dark
-                            ? "border-emerald-500/80 text-emerald-400 hover:bg-slate-700/80"
-                            : "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-                        }`}
-                      >
-                        <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                        Tahrirlash
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openDelete(row)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                          dark ? "border-red-500/80 text-red-400 hover:bg-slate-700/80" : "border-red-600 text-red-600 hover:bg-red-50"
-                        }`}
-                      >
-                        <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                        O'chirish
-                      </button>
+
+                      {openActionsFor === row.id && (
+                        <div
+                          className={`absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border p-1 shadow-lg ${
+                            dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionsFor(null)
+                              openCredentials(row)
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                              dark ? "text-amber-400 hover:bg-slate-700/80" : "text-amber-700 hover:bg-amber-50"
+                            }`}
+                          >
+                            <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                            Parolni o'zgartirish
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionsFor(null)
+                              openView(row)
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                              dark ? "text-blue-400 hover:bg-slate-700/80" : "text-blue-700 hover:bg-blue-50"
+                            }`}
+                          >
+                            <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                            Ko'rish
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionsFor(null)
+                              openEdit(row)
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                              dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
+                            }`}
+                          >
+                            <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                            Tahrirlash
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionsFor(null)
+                              openDelete(row)
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                              dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
+                            }`}
+                          >
+                            <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                            O'chirish
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>

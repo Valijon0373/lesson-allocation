@@ -14,6 +14,7 @@ import Positions from "./Positions"
 import Users from "./Users"
 import Teachers from "./Teachers"
 import Criteria from "./Criteria"
+import AboutUs from "./AboutUs"
 
 const TEAL = "#14b8a6"
 const TEAL_BG = "bg-teal-500"
@@ -447,6 +448,7 @@ export default function AdminDashboard() {
             {activeNav === "foydalanuvchilar" && <Users dark={dark} />}
             {activeNav === "oqituvchilar" && <Teachers dark={dark} />}
             {activeNav === "mezonlar" && <Criteria dark={dark} />}
+            {activeNav === "biz-haqimizda" && <AboutUs dark={dark} />}
           </div>
         </main>
       </div>
