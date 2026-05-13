@@ -241,7 +241,7 @@ function App() {
         <p className="text-sm uppercase tracking-wider text-indigo-100">Statistika</p>
         <h1 className="mt-2 text-3xl font-bold">Nizom monitoring platformasi</h1>
         <p className="mx-auto mt-2 max-w-3xl text-indigo-50">
-          Jami {TOTAL_MAX_SCORE} ball bo'yicha progress, hujjatlar holati va reyting.
+          Jami {TOTAL_MAX_SCORE} ball bo'yicha progress, hujjatlar holati{currentUser?.role === "teacher" ? "." : " va reyting."}
         </p>
       </header>
 
@@ -316,38 +316,60 @@ function App() {
               </div>
             </article>
 
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
-              <div className="mt-3 space-y-2">
-                {ranking.map((item, index) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                    <p className="text-sm text-slate-700">
-                      {index + 1}. {item.fullName}
-                    </p>
-                    <p className="text-sm font-bold text-indigo-700">{item.total} ball</p>
-                  </div>
-                ))}
-              </div>
-            </article>
+            {currentUser?.role !== "teacher" ? (
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
+                <div className="mt-3 space-y-2">
+                  {ranking.map((item, index) => (
+                    <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                      <p className="text-sm text-slate-700">
+                        {index + 1}. {item.fullName}
+                      </p>
+                      <p className="text-sm font-bold text-indigo-700">{item.total} ball</p>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ) : (
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
+                <div className="mt-3 space-y-2">
+                  {recentUploads.map((upload) => {
+                    const criterion = CRITERIA.find((c) => c.id === upload.criterionId)
+                    return (
+                      <div key={upload.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                        <p className="font-medium text-slate-800">{upload.fileName}</p>
+                        <p className="text-slate-500">{criterion?.title}</p>
+                      </div>
+                    )
+                  })}
+                  {recentUploads.length === 0 && (
+                    <p className="text-sm text-slate-500">Hozircha yuklangan fayl yo'q.</p>
+                  )}
+                </div>
+              </article>
+            )}
           </div>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
-            <div className="mt-3 space-y-2">
-              {recentUploads.map((upload) => {
-                const criterion = CRITERIA.find((c) => c.id === upload.criterionId)
-                return (
-                  <div key={upload.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                    <p className="font-medium text-slate-800">{upload.fileName}</p>
-                    <p className="text-slate-500">{criterion?.title}</p>
-                  </div>
-                )
-              })}
-              {recentUploads.length === 0 && (
-                <p className="text-sm text-slate-500">Hozircha yuklangan fayl yo'q.</p>
-              )}
-            </div>
-          </article>
+          {currentUser?.role !== "teacher" && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
+              <div className="mt-3 space-y-2">
+                {recentUploads.map((upload) => {
+                  const criterion = CRITERIA.find((c) => c.id === upload.criterionId)
+                  return (
+                    <div key={upload.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                      <p className="font-medium text-slate-800">{upload.fileName}</p>
+                      <p className="text-slate-500">{criterion?.title}</p>
+                    </div>
+                  )
+                })}
+                {recentUploads.length === 0 && (
+                  <p className="text-sm text-slate-500">Hozircha yuklangan fayl yo'q.</p>
+                )}
+              </div>
+            </article>
+          )}
         </>
       )}
     </section>
