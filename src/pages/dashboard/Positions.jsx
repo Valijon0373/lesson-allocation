@@ -1,14 +1,14 @@
-import { useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, Pencil, Plus, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { CircleCheck, CircleX, Eye, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  deletePosition,
+  fetchAllPositions,
+  fetchPositionById,
+  savePosition,
+  updatePosition,
+} from "../../api/positions"
 
 const TEAL_BG = "bg-teal-500"
-
-const LAVOZIMLAR_ROYXATI = [
-  { id: "l-1", nameUz: "Kafedra mudiri" },
-  { id: "l-2", nameUz: "Dekan o'rinbosari" },
-  { id: "l-3", nameUz: "Dotsent" },
-  { id: "l-4", nameUz: "Assistent" },
-]
 
 function Modal({ open, onClose, dark, children }) {
   if (!open) return null
@@ -30,7 +30,10 @@ function Modal({ open, onClose, dark, children }) {
 }
 
 export default function Positions({ dark }) {
-  const [rows, setRows] = useState(() => LAVOZIMLAR_ROYXATI)
+  const [rows, setRows] = useState(/** @type {import("../../api/positions").PositionRow[]} */ ([]))
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState("")
   const [modal, setModal] = useState({
     open: false,
     type: /** @type {null | "view" | "edit" | "delete" | "create"} */ (null),
@@ -62,7 +65,39 @@ export default function Positions({ dark }) {
     }, 1300)
   }
 
-  const openView = (row) => setModal({ open: true, type: "view", row })
+  const loadPositions = useCallback(async () => {
+    setLoading(true)
+    setLoadError("")
+    try {
+      const list = await fetchAllPositions()
+      setRows(list)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Lavozimlarni yuklab bo'lmadi"
+      setLoadError(message)
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPositions()
+  }, [loadPositions])
+
+  const openView = async (row) => {
+    setModal({ open: true, type: "view", row })
+    if (!row?.id) return
+
+    setBusy(true)
+    try {
+      const fresh = await fetchPositionById(row.id)
+      setModal({ open: true, type: "view", row: fresh })
+    } catch {
+      showNotice("Lavozim ma'lumotlarini yuklab bo'lmadi", "danger")
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const openEdit = (row) => {
     setEditDraft({ nameUz: row?.nameUz ?? "" })
@@ -76,31 +111,61 @@ export default function Positions({ dark }) {
     setModal({ open: true, type: "create", row: null })
   }
 
-  const onSaveEdit = () => {
+  const onSaveEdit = async () => {
     const row = modal.row
-    if (!row?.id) return
+    if (!row?.id || busy) return
     const nextName = editDraft.nameUz.trim()
     if (!nextName) return
-    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, nameUz: nextName } : r)))
-    closeModal()
-    showNotice("Muvaqqatli Tahrirlandi")
+
+    setBusy(true)
+    try {
+      const updated = await updatePosition(row.id, { nameUz: nextName })
+      setRows((prev) => prev.map((r) => (r.id === row.id ? updated : r)))
+      closeModal()
+      showNotice("Lavozim tahrirlandi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onConfirmDelete = () => {
+  const onConfirmDelete = async () => {
     const row = modal.row
-    if (!row?.id) return
-    setRows((prev) => prev.filter((r) => r.id !== row.id))
-    closeModal()
-    showNotice("Muvaqqatli O'chirildi", "danger")
+    if (!row?.id || busy) return
+
+    setBusy(true)
+    try {
+      await deletePosition(row.id)
+      setRows((prev) => prev.filter((r) => r.id !== row.id))
+      closeModal()
+      showNotice("Lavozim o'chirildi", "danger")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'chirib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onSaveCreate = () => {
+  const onSaveCreate = async () => {
+    if (busy) return
     const nextName = createDraft.nameUz.trim()
     if (!nextName) return
-    const newRow = { id: `l-${Date.now()}`, nameUz: nextName }
-    setRows((prev) => [newRow, ...prev])
-    closeModal()
-    showNotice("Muvaqqatli Qo'shildi")
+
+    setBusy(true)
+    try {
+      await savePosition({ nameUz: nextName })
+      await loadPositions()
+      closeModal()
+      showNotice("Lavozim qo'shildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Qo'shib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -111,59 +176,86 @@ export default function Positions({ dark }) {
           <button
             type="button"
             onClick={openCreate}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+            disabled={loading}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
           >
             <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
             Qo'shish
           </button>
         </div>
 
-        <ul className="flex flex-col gap-3">
-          {rows.map((row) => (
-            <li key={row.id} className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-4 sm:px-5 ${cardBase}`}>
-              <div className="min-w-0 flex-1">
-                <p className={`font-bold leading-snug ${title}`}>{row.nameUz}</p>
-                <p className={`mt-1.5 text-xs ${meta}`}>ID: {row.id}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                <button
-                  type="button"
-                  onClick={() => openView(row)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    dark ? "border-blue-500/80 text-blue-400 hover:bg-slate-700/80" : "border-blue-600 text-blue-600 hover:bg-blue-50"
-                  }`}
-                >
-                  <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                  Ko'rish
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openEdit(row)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    dark
-                      ? "border-emerald-500/80 text-emerald-400 hover:bg-slate-700/80"
-                      : "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-                  }`}
-                >
-                  <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                  Tahrirlash
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openDelete(row)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    dark ? "border-red-500/80 text-red-400 hover:bg-slate-700/80" : "border-red-600 text-red-600 hover:bg-red-50"
-                  }`}
-                >
-                  <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                  O'chirish
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {loading && (
+          <div className={`flex items-center justify-center gap-2 py-10 text-sm ${subtitle}`}>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+            Yuklanmoqda...
+          </div>
+        )}
 
-        {rows.length === 0 && <p className={`text-center text-sm ${subtitle}`}>Hozircha lavozim yo'q.</p>}
+        {!loading && loadError && (
+          <div className="py-6 text-center">
+            <p className={`text-sm ${subtitle}`}>{loadError}</p>
+            <button
+              type="button"
+              onClick={loadPositions}
+              className={`mt-3 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"
+              }`}
+            >
+              Qayta urinish
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && (
+          <ul className="flex flex-col gap-3">
+            {rows.map((row) => (
+              <li key={row.id} className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-4 sm:px-5 ${cardBase}`}>
+                <div className="min-w-0 flex-1">
+                  <p className={`font-bold leading-snug ${title}`}>{row.nameUz}</p>
+                  <p className={`mt-1.5 text-xs ${meta}`}>ID: {row.id}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => openView(row)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      dark ? "border-blue-500/80 text-blue-400 hover:bg-slate-700/80" : "border-blue-600 text-blue-600 hover:bg-blue-50"
+                    }`}
+                  >
+                    <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                    Ko'rish
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(row)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      dark
+                        ? "border-emerald-500/80 text-emerald-400 hover:bg-slate-700/80"
+                        : "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                    }`}
+                  >
+                    <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                    Tahrirlash
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openDelete(row)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      dark ? "border-red-500/80 text-red-400 hover:bg-slate-700/80" : "border-red-600 text-red-600 hover:bg-red-50"
+                    }`}
+                  >
+                    <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                    O'chirish
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {!loading && !loadError && rows.length === 0 && (
+          <p className={`text-center text-sm ${subtitle}`}>Hozircha lavozim yo'q.</p>
+        )}
       </div>
 
       <Modal open={modal.open} onClose={closeModal} dark={dark}>
@@ -181,14 +273,23 @@ export default function Positions({ dark }) {
               </button>
             </div>
             <div className="space-y-3 text-base">
-              <div>
-                <p className={`text-xs font-semibold ${meta}`}>Lavozim nomi:</p>
-                <p className="mt-1 font-semibold">{modal.row.nameUz}</p>
-              </div>
-              <div>
-                <p className={`text-xs font-semibold ${meta}`}>ID:</p>
-                <p className="mt-1 font-semibold">{modal.row.id}</p>
-              </div>
+              {busy ? (
+                <div className={`flex items-center gap-2 text-sm ${subtitle}`}>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Yuklanmoqda...
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className={`text-xs font-semibold ${meta}`}>Lavozim nomi:</p>
+                    <p className="mt-1 font-semibold">{modal.row.nameUz}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs font-semibold ${meta}`}>ID:</p>
+                    <p className="mt-1 font-semibold">{modal.row.id}</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -222,9 +323,10 @@ export default function Positions({ dark }) {
               <button
                 type="button"
                 onClick={onSaveEdit}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Saqlash
+                {busy ? "Saqlanmoqda..." : "Saqlash"}
               </button>
               <button
                 type="button"
@@ -256,9 +358,10 @@ export default function Positions({ dark }) {
               <button
                 type="button"
                 onClick={onConfirmDelete}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Ha
+                {busy ? "O'chirilmoqda..." : "Ha"}
               </button>
               <button
                 type="button"
@@ -299,9 +402,10 @@ export default function Positions({ dark }) {
               <button
                 type="button"
                 onClick={onSaveCreate}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Qo'shish
+                {busy ? "Qo'shilmoqda..." : "Qo'shish"}
               </button>
               <button
                 type="button"
@@ -344,4 +448,3 @@ export default function Positions({ dark }) {
     </div>
   )
 }
-

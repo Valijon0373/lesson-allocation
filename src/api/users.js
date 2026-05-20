@@ -1,0 +1,303 @@
+import { getPermissionLabelUz, normalizePermissionKey } from "../data/permissionLabels"
+import { apiRequest, unwrapPayload } from "./client"
+
+/**
+ * @typedef {{ id: string, fio: string, login: string, izoh: string, role: string, roles?: string[], permissions?: string[], status?: string }} UserRow
+ */
+
+const UI_ROLE_BY_API = {
+  ADMIN: "Admin",
+  // Ba'zi backendlarda oddiy user roli TEACHER/USER ko'rinishida bo'ladi
+  TEACHER: "Foydalanuvchi",
+  USER: "Foydalanuvchi",
+  // Ba'zi backendlarda komissiya roli MODERATOR/COMMISSION ko'rinishida keladi
+  MODERATOR: "Komissiya",
+  COMMISSION: "Komissiya",
+  KOMISSIYA: "Komissiya",
+}
+
+const API_ROLE_BY_UI = {
+  Admin: "ADMIN",
+  // Backend "TEACHER"ni tanimasa, ko'pincha "USER" ishlatiladi
+  "Foydalanuvchi": "USER",
+  // Backend "MODERATOR"ni tanimasa, ko'pincha "COMMISSION" ishlatiladi
+  Komissiya: "COMMISSION",
+}
+
+/** @param {unknown} role */
+export function mapApiRoleToUi(role) {
+  const key = String(role ?? "").toUpperCase()
+  return UI_ROLE_BY_API[key] ?? String(role ?? "")
+}
+
+/** @param {string} uiRole */
+export function mapUiRoleToApi(uiRole) {
+  return API_ROLE_BY_UI[uiRole] ?? String(uiRole ?? "").toUpperCase()
+}
+
+/**
+ * Backend ba'zida ruxsatlarni string, raqam yoki { code / name / authority } obyekt sifatida yuboradi.
+ * @param {unknown} raw
+ * @returns {string[]}
+ */
+export function normalizeUserPermissions(raw) {
+  if (raw == null) return []
+  if (typeof raw === "string" || typeof raw === "number") {
+    const s = String(raw).trim()
+    return s ? [s] : []
+  }
+  if (!Array.isArray(raw)) return []
+  const out = []
+  for (const p of raw) {
+    if (p == null) continue
+    if (typeof p === "string" || typeof p === "number") {
+      const s = String(p).trim()
+      if (s) out.push(s)
+      continue
+    }
+    if (typeof p === "object") {
+      const o = /** @type {Record<string, unknown>} */ (p)
+      const code =
+        o.code ??
+        o.name ??
+        o.permission ??
+        o.authority ??
+        o.permissionCode ??
+        o.permissionName ??
+        o.slug ??
+        o.id
+      if (code != null && typeof code !== "object") {
+        const s = String(code).trim()
+        if (s) out.push(s)
+      }
+    }
+  }
+  return out
+}
+
+/** @param {Record<string, unknown>} raw @returns {string[]} */
+function collectUserPermissionStrings(raw) {
+  const sources = [
+    raw.permissions,
+    raw.authorities,
+    raw.authorityList,
+    raw.grantedAuthorities,
+    raw.permissionList,
+    raw.userPermissions,
+    raw.rolePermissions,
+  ]
+  const merged = []
+  for (const s of sources) {
+    merged.push(...normalizeUserPermissions(s))
+  }
+  const lower = merged.map((p) => String(p).trim().toLowerCase()).filter(Boolean)
+  return [...new Set(lower)]
+}
+
+/**
+ * @param {unknown} item
+ * @returns {UserRow | null}
+ */
+export function mapUser(item) {
+  if (!item || typeof item !== "object") return null
+  const raw = /** @type {Record<string, unknown>} */ (item)
+  const login = raw.username ?? raw.login
+  if (login == null) return null
+  const id = raw.id ?? raw.userId ?? login
+
+  const roles = Array.isArray(raw.roles) ? raw.roles.map(String) : []
+  const primaryRole = roles[0] ?? raw.roleName ?? raw.role
+
+  return {
+    id: String(id),
+    fio: String(raw.fullName ?? raw.fio ?? ""),
+    login: String(login),
+    izoh: String(raw.description ?? raw.izoh ?? ""),
+    role: mapApiRoleToUi(primaryRole),
+    roles,
+    permissions: collectUserPermissionStrings(raw),
+    status: raw.status != null ? String(raw.status) : undefined,
+  }
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {UserRow[]}
+ */
+function mapUserList(payload) {
+  const data = unwrapPayload(payload)
+  const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
+  return list.map(mapUser).filter(Boolean)
+}
+
+/** @param {string} username @returns {Promise<UserRow>} */
+export async function fetchUserByUsername(username) {
+  const json = await apiRequest(`/api/users/${encodeURIComponent(username)}`)
+  const mapped = mapUser(unwrapPayload(json))
+  if (!mapped) throw new Error("Foydalanuvchi topilmadi")
+  return mapped
+}
+
+/** @returns {Promise<UserRow[]>} */
+export async function fetchAllUsers() {
+  const json = await apiRequest("/api/users/all")
+  const list = mapUserList(json)
+  // O'chirilgan foydalanuvchilar UI'da umuman ko'rinmasin.
+  return list.filter((u) => {
+    const s = String(u.status ?? "").toUpperCase()
+    if (!s) return true
+    return !(s.includes("DELETED") || s.includes("DELETE"))
+  })
+}
+
+/**
+ * @param {{ fio: string, login: string, password: string, izoh?: string, role: string }} body
+ * @returns {Promise<UserRow>}
+ */
+export async function saveUser(body) {
+  const json = await apiRequest("/api/users/save", {
+    method: "POST",
+    body: JSON.stringify({
+      fullName: body.fio,
+      username: body.login,
+      password: body.password,
+      description: body.izoh ?? "",
+      roleName: mapUiRoleToApi(body.role),
+    }),
+  })
+  const list = mapUserList(json)
+  if (list[0]) return list[0]
+  const one = mapUser(unwrapPayload(json))
+  if (one) return one
+  throw new Error("Foydalanuvchi saqlanmadi")
+}
+
+/**
+ * @param {string} username
+ * @param {{ fio: string, izoh?: string, role: string, password?: string }} body
+ */
+export async function updateUser(username, body) {
+  await apiRequest(`/api/users/edit/${encodeURIComponent(username)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      fullName: body.fio,
+      username,
+      password: body.password ?? "********",
+      description: body.izoh ?? "",
+      roleName: mapUiRoleToApi(body.role),
+    }),
+  })
+}
+
+/** @param {string} username */
+export async function deleteUser(username) {
+  await apiRequest(`/api/users/delete/${encodeURIComponent(username)}`, {
+    method: "DELETE",
+  })
+}
+
+/**
+ * Serverdan ruxsatlar ro'yxati (id/kod va ixtiyoriy yozuv).
+ * @returns {Promise<{ id: string, label: string }[]>}
+ */
+export async function fetchPermissionsCatalog() {
+  const json = await apiRequest("/api/users/permissions")
+  const data = unwrapPayload(json)
+  const list = Array.isArray(data) ? data : []
+  return list
+    .map((item) => {
+      if (typeof item === "string") {
+        const id = normalizePermissionKey(item)
+        return id ? { id, label: getPermissionLabelUz(id) } : null
+      }
+      if (!item || typeof item !== "object") return null
+      const o = /** @type {Record<string, unknown>} */ (item)
+      const rawCode = o.code ?? o.permission ?? o.authority ?? o.permissionCode ?? o.name
+      const rawId = o.id
+      const codeKey = normalizePermissionKey(rawCode ?? rawId)
+      if (!codeKey) return null
+      return { id: codeKey, label: getPermissionLabelUz(codeKey) }
+    })
+    .filter(Boolean)
+}
+
+/**
+ * @param {string} username
+ * @param {string[]} permissions — ruxsat kodlari (masalan: faculty_add)
+ */
+export async function setUserPermissions(username, permissions) {
+  const idsRaw = Array.isArray(permissions) ? permissions : permissions?.ids ?? []
+  const codesRaw = Array.isArray(permissions) ? permissions : permissions?.codes ?? permissions?.labels ?? []
+
+  const permissionIds = idsRaw
+    .map((x) => (typeof x === "number" ? x : String(x)))
+    .map((x) => (typeof x === "string" && /^\d+$/.test(x) ? Number(x) : x))
+    .filter((x) => typeof x === "number")
+
+  const permissionCodes = codesRaw.map(String).filter(Boolean)
+
+  await apiRequest("/api/users/set/permissions", {
+    method: "PUT",
+    body: JSON.stringify({
+      username,
+      // Turli backend implementatsiyalar uchun bir nechta nomlar bilan yuboramiz:
+      permissions: permissionCodes,
+      permissionNames: permissionCodes,
+      permissionCodes: permissionCodes,
+      permissionIds,
+    }),
+  })
+}
+
+/**
+ * @param {string} username
+ * @param {string[]} permissions
+ */
+export async function removeUserPermissions(username, permissions) {
+  const idsRaw = Array.isArray(permissions) ? permissions : permissions?.ids ?? []
+  const codesRaw = Array.isArray(permissions) ? permissions : permissions?.codes ?? permissions?.labels ?? []
+
+  const permissionIds = idsRaw
+    .map((x) => (typeof x === "number" ? x : String(x)))
+    .map((x) => (typeof x === "string" && /^\d+$/.test(x) ? Number(x) : x))
+    .filter((x) => typeof x === "number")
+
+  const permissionCodes = codesRaw.map(String).filter(Boolean)
+
+  await apiRequest("/api/users/remove/permissions", {
+    method: "PUT",
+    body: JSON.stringify({
+      username,
+      permissions: permissionCodes,
+      permissionNames: permissionCodes,
+      permissionCodes: permissionCodes,
+      permissionIds,
+    }),
+  })
+}
+
+/** @param {string} username */
+export async function disableUser(username) {
+  await apiRequest(`/api/users/disabled/${encodeURIComponent(username)}`, {
+    method: "PUT",
+  })
+}
+
+/**
+ * Login band emasligini tekshirish (backend qaytarmasidan oldin).
+ * @param {string} username
+ * @returns {Promise<boolean>} true bo'lsa odatda "bo'sh / ishlatish mumkin"
+ */
+export async function checkUsernameAvailable(username) {
+  const json = await apiRequest(`/api/users/check/username/${encodeURIComponent(username)}`)
+  const data = unwrapPayload(json)
+  if (typeof data === "boolean") return data
+  if (data && typeof data === "object") {
+    const o = /** @type {Record<string, unknown>} */ (data)
+    if (typeof o.available === "boolean") return o.available
+    if (typeof o.free === "boolean") return o.free
+    if (typeof o.exists === "boolean") return !o.exists
+    if (typeof o.unique === "boolean") return o.unique
+  }
+  return true
+}

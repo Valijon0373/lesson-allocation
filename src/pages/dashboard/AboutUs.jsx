@@ -83,7 +83,7 @@ export default function AboutUs({ dark }) {
         <p className={`text-xs font-semibold tracking-[0.45em] ${dark ? "text-slate-400" : "text-slate-500"}`}>URSPI 110 BALLIK TIZIMI</p>
         <h2 className={`mt-3 text-3xl font-extrabold ${dark ? "text-slate-100" : "text-slate-900"}`}>Biz haqimizda</h2>
         <p className={`mx-auto mt-3 max-w-3xl text-sm leading-6 ${dark ? "text-slate-300" : "text-slate-600"}`}>
-          Ushbu admin panel talabalar tomonidan o‘qituvchilar faoliyatini 110 ballik baholash tizimi asosida adolatli va qulay tarzda baholash,
+          Ushbu admin panel Komissiya tomonidan o‘qituvchilar faoliyatini 110 ballik baholash tizimi asosida adolatli va qulay tarzda baholash,
          natijalarni tahlil qilish hamda ta’lim sifatini oshirish maqsadida ishlab chiqilgan. 
         </p>
       </article>

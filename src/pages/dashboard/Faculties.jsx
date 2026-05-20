@@ -1,15 +1,14 @@
-import { useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, Plus, SquarePen, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { CircleCheck, CircleX, Eye, Loader2, Plus, SquarePen, Trash2 } from "lucide-react"
+import {
+  deleteFaculty,
+  fetchAllFaculties,
+  fetchFacultyById,
+  saveFaculty,
+  updateFaculty,
+} from "../../api/faculties"
 
 const TEAL_BG = "bg-teal-500"
-
-const MAVJUD_FAKULTETLAR = [
-  { id: "f-1", nameUz: "Filologiya Fakulteti", nameRu: "Факультет филологии" },
-  { id: "f-2", nameUz: "Pedagogika Fakulteti", nameRu: "Факультет Педагогики" },
-  { id: "f-3", nameUz: "Aniq va tabiiy fanlar Fakulteti", nameRu: "Факультет точных и естественных наук" },
-  { id: "f-4", nameUz: "Ijtimoiy va amaliy fanlar Fakulteti", nameRu: "Факультет социальных и прикладных наук" },
-  { id: "f-5", nameUz: "Boshlang'ich ta'lim Fakulteti", nameRu: "Факультет начального образования" },
-]
 
 function Modal({ open, onClose, dark, children }) {
   if (!open) return null
@@ -31,7 +30,10 @@ function Modal({ open, onClose, dark, children }) {
 }
 
 export default function Faculties({ dark }) {
-  const [rows, setRows] = useState(() => MAVJUD_FAKULTETLAR)
+  const [rows, setRows] = useState(/** @type {import("../../api/faculties").FacultyRow[]} */ ([]))
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState("")
   const [modal, setModal] = useState({
     open: false,
     type: /** @type {null | "view" | "edit" | "delete" | "create"} */ (null),
@@ -62,7 +64,39 @@ export default function Faculties({ dark }) {
     }, 1300)
   }
 
-  const openView = (fac) => setModal({ open: true, type: "view", fac })
+  const loadFaculties = useCallback(async () => {
+    setLoading(true)
+    setLoadError("")
+    try {
+      const list = await fetchAllFaculties()
+      setRows(list)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Fakultetlarni yuklab bo'lmadi"
+      setLoadError(message)
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadFaculties()
+  }, [loadFaculties])
+
+  const openView = async (fac) => {
+    setModal({ open: true, type: "view", fac })
+    if (!fac?.id) return
+
+    setBusy(true)
+    try {
+      const fresh = await fetchFacultyById(fac.id)
+      setModal({ open: true, type: "view", fac: fresh })
+    } catch {
+      showNotice("Fakultet ma'lumotlarini yuklab bo'lmadi", "danger")
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const openEdit = (fac) => {
     setEditDraft({ nameUz: fac?.nameUz ?? "" })
@@ -76,33 +110,61 @@ export default function Faculties({ dark }) {
 
   const openDelete = (fac) => setModal({ open: true, type: "delete", fac })
 
-  const onSaveEdit = () => {
+  const onSaveEdit = async () => {
     const fac = modal.fac
-    if (!fac?.id) return
+    if (!fac?.id || busy) return
     const nextUz = editDraft.nameUz.trim()
     if (!nextUz) return
 
-    setRows((prev) => prev.map((r) => (r.id === fac.id ? { ...r, nameUz: nextUz } : r)))
-    closeModal()
-    showNotice("Muvaqqatli Tahrirlandi")
+    setBusy(true)
+    try {
+      const updated = await updateFaculty(fac.id, { nameUz: nextUz })
+      setRows((prev) => prev.map((r) => (r.id === fac.id ? updated : r)))
+      closeModal()
+      showNotice("Fakultet tahrirlandi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onConfirmDelete = () => {
+  const onConfirmDelete = async () => {
     const fac = modal.fac
-    if (!fac?.id) return
-    setRows((prev) => prev.filter((r) => r.id !== fac.id))
-    closeModal()
-    showNotice("Muvaqqatli O'chirildi", "danger")
+    if (!fac?.id || busy) return
+
+    setBusy(true)
+    try {
+      await deleteFaculty(fac.id)
+      setRows((prev) => prev.filter((r) => r.id !== fac.id))
+      closeModal()
+      showNotice("Fakultet o'chirildi", "danger")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'chirib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onSaveCreate = () => {
+  const onSaveCreate = async () => {
+    if (busy) return
     const nextUz = createDraft.nameUz.trim()
     if (!nextUz) return
 
-    const newFac = { id: `f-${Date.now()}`, nameUz: nextUz, nameRu: "" }
-    setRows((prev) => [newFac, ...prev])
-    closeModal()
-    showNotice("Muvaqqatli Qo'shildi")
+    setBusy(true)
+    try {
+      await saveFaculty({ nameUz: nextUz })
+      await loadFaculties()
+      closeModal()
+      showNotice("Fakultet qo'shildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Qo'shib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -113,13 +175,37 @@ export default function Faculties({ dark }) {
           <button
             type="button"
             onClick={openCreate}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+            disabled={loading}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
           >
             <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
             Qo'shish
           </button>
         </div>
 
+        {loading && (
+          <div className={`flex items-center justify-center gap-2 py-10 text-sm ${subtitle}`}>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+            Yuklanmoqda...
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <div className="py-6 text-center">
+            <p className={`text-sm ${subtitle}`}>{loadError}</p>
+            <button
+              type="button"
+              onClick={loadFaculties}
+              className={`mt-3 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"
+              }`}
+            >
+              Qayta urinish
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && (
         <ul className="flex flex-col gap-3">
           {rows.map((fac) => (
             <li key={fac.id} className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-4 sm:px-5 ${cardBase}`}>
@@ -163,8 +249,11 @@ export default function Faculties({ dark }) {
             </li>
           ))}
         </ul>
+        )}
 
-        {rows.length === 0 && <p className={`text-center text-sm ${subtitle}`}>Hozircha fakultet yo'q.</p>}
+        {!loading && !loadError && rows.length === 0 && (
+          <p className={`text-center text-sm ${subtitle}`}>Hozircha fakultet yo'q.</p>
+        )}
       </div>
 
       <Modal open={modal.open} onClose={closeModal} dark={dark}>
@@ -182,10 +271,17 @@ export default function Faculties({ dark }) {
               </button>
             </div>
             <div className="space-y-3 text-base">
-              <div>
-                <p className={`text-xs font-semibold ${label}`}>Fakultet nomi:</p>
-                <p className="mt-1 font-semibold">{modal.fac.nameUz}</p>
-              </div>
+              {busy ? (
+                <div className={`flex items-center gap-2 text-sm ${subtitle}`}>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Yuklanmoqda...
+                </div>
+              ) : (
+                <div>
+                  <p className={`text-xs font-semibold ${label}`}>Fakultet nomi:</p>
+                  <p className="mt-1 font-semibold">{modal.fac.nameUz}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -219,9 +315,10 @@ export default function Faculties({ dark }) {
               <button
                 type="button"
                 onClick={onSaveEdit}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Saqlash
+                {busy ? "Saqlanmoqda..." : "Saqlash"}
               </button>
               <button
                 type="button"
@@ -253,9 +350,10 @@ export default function Faculties({ dark }) {
               <button
                 type="button"
                 onClick={onConfirmDelete}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Ha
+                {busy ? "O'chirilmoqda..." : "Ha"}
               </button>
               <button
                 type="button"
@@ -296,9 +394,10 @@ export default function Faculties({ dark }) {
               <button
                 type="button"
                 onClick={onSaveCreate}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Qo'shish
+                {busy ? "Qo'shilmoqda..." : "Qo'shish"}
               </button>
               <button
                 type="button"

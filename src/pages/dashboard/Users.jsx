@@ -1,8 +1,75 @@
-import { useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, LockKeyhole, Pencil, Plus, ShieldCheck, SlidersHorizontal, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
+import { CircleCheck, CircleX, Eye, EyeOff, LockKeyhole, Loader2, Pencil, Plus, ShieldCheck, SlidersHorizontal, Trash2 } from "lucide-react"
+import {
+  checkUsernameAvailable,
+  deleteUser,
+  fetchAllUsers,
+  fetchPermissionsCatalog,
+  fetchUserByUsername,
+  removeUserPermissions,
+  saveUser,
+  setUserPermissions,
+  updateUser,
+} from "../../api/users"
+import {
+  mergePermissionOptionsFromCatalog,
+  normalizePermissionKey,
+  PERMISSION_OPTIONS_UZ,
+} from "../../data/permissionLabels"
 
 const TEAL_BG = "bg-teal-500"
 const ROLES = ["Admin", "Foydalanuvchi", "Komissiya"]
+
+/**
+ * @param {string[] | undefined} permissions
+ * @param {{ id: string, label: string }[]} options
+ */
+function permissionsToDraft(permissions, options) {
+  /** @type {Record<string, boolean>} */
+  const draft = {}
+  const set = new Set((permissions ?? []).map((p) => normalizePermissionKey(p)))
+  for (const opt of options) {
+    draft[opt.id] = set.has(normalizePermissionKey(opt.id))
+  }
+  return draft
+}
+
+function PermissionToggle({ label, checked, onChange, dark }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3">
+      <span className={`text-base font-medium ${dark ? "text-slate-100" : "text-slate-800"}`}>{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border p-0.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 ${
+          checked
+            ? dark
+              ? "border-teal-600/40 bg-teal-950/50"
+              : "border-teal-200/80 bg-teal-50/80"
+            : dark
+              ? "border-slate-600 bg-slate-700/80"
+              : "border-slate-200/90 bg-[#eef1f5]"
+        }`}
+      >
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+            checked ? "translate-x-6" : "translate-x-0"
+          }`}
+        >
+          {checked ? (
+            <CircleCheck className={`h-4 w-4 ${dark ? "text-teal-400" : "text-teal-500"}`} strokeWidth={2} aria-hidden />
+          ) : (
+            <CircleX className={`h-4 w-4 ${dark ? "text-red-400" : "text-red-500"}`} strokeWidth={2} aria-hidden />
+          )}
+        </span>
+      </button>
+    </div>
+  )
+}
 
 function Modal({ open, onClose, dark, children }) {
   if (!open) return null
@@ -23,57 +90,22 @@ function Modal({ open, onClose, dark, children }) {
   )
 }
 
-export default function Users({ dark }) {
-  const [rows, setRows] = useState([
-    {
-      id: "u-sample-1",
-      role: "Admin",
-      fio: "Shahnoza Qodirova",
-      izoh: "Rektor o'rinbosari",
-      login: "admin_shahnoza",
-      password: "user123",
-    },
-    {
-      id: "u-sample-2",
-      role: "Komissiya",
-      fio: "Dilshod Karimov",
-      izoh: "Kafedra mudiri",
-      login: "mod_dilshod",
-      password: "user234",
-    },
-    {
-      id: "u-sample-3",
-      role: "Foydalanuvchi",
-      fio: "Aziza Rahimova",
-      izoh: "Xorijiy tillar bo'yicha",
-      login: "teacher_aziza",
-      password: "user345",
-    },
-    {
-      id: "u-sample-4",
-      role: "Foydalanuvchi",
-      fio: "Javohir Sobirov",
-      izoh: "3-kurs talabasi",
-      login: "stu_javohir",
-      password: "user456",
-    },
-    {
-      id: "u-sample-5",
-      role: "Komissiya",
-      fio: "Malika Nurmatova",
-      izoh: "Kafedra mudiri",
-      login: "teacher_malika",
-      password: "user567",
-    },
-    {
-      id: "u-sample-6",
-      role: "Foydalanuvchi",
-      fio: "Sardor Islomov",
-      izoh: "Stipendiya guruhi",
-      login: "stu_sardor",
-      password: "user678",
-    },
-  ])
+export default function Users({ dark, permissions = [], isAdmin = false }) {
+  const permSet = useMemo(
+    () => new Set(permissions.map((p) => String(p).trim().toLowerCase())),
+    [permissions]
+  )
+  const canView = isAdmin || permSet.has("user_view")
+  const canAdd = isAdmin || permSet.has("user_add")
+  const canEdit = isAdmin || permSet.has("user_edit")
+  const canDelete = isAdmin || permSet.has("user_delete")
+  const canPassword = isAdmin || permSet.has("user_password")
+  const canPermissions = isAdmin || permSet.has("user_permissions")
+  const [rows, setRows] = useState([])
+  const [permissionOptions, setPermissionOptions] = useState(PERMISSION_OPTIONS_UZ)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState("")
   const [modal, setModal] = useState({
     open: false,
     type: /** @type {null | "view" | "edit" | "credentials" | "delete" | "create" | "permissions"} */ (null),
@@ -96,12 +128,53 @@ export default function Users({ dark }) {
   const [credentialsDraft, setCredentialsDraft] = useState({
     password: "",
   })
+  const [showCredentialsPassword, setShowCredentialsPassword] = useState(false)
+  const [showCreatePassword, setShowCreatePassword] = useState(false)
+  const [permissionsDraft, setPermissionsDraft] = useState(/** @type {Record<string, boolean>} */ ({}))
   const [searchDraft, setSearchDraft] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [openActionsFor, setOpenActionsFor] = useState(/** @type {string | null} */ (null))
+  const [actionsMenu, setActionsMenu] = useState(
+    /** @type {{ open: boolean, rowId: string | null, position: "bottom" | "top", x: number, y: number }} */ ({
+      open: false,
+      rowId: null,
+      position: "bottom",
+      x: 0,
+      y: 0,
+    }),
+  )
   const [notice, setNotice] = useState({ open: false, message: "", variant: /** @type {"success" | "danger"} */ ("success") })
   const noticeTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError("")
+    try {
+      const [list, catalog] = await Promise.all([
+        fetchAllUsers(),
+        fetchPermissionsCatalog().catch(() => []),
+      ])
+      setPermissionOptions(mergePermissionOptionsFromCatalog(catalog))
+      setRows(list.map((u) => ({ ...u, password: "" })))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Foydalanuvchilarni yuklab bo'lmadi"
+      setLoadError(message)
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!canView) {
+      setLoading(false)
+      setRows([])
+      setLoadError("")
+      return
+    }
+    loadData()
+  }, [canView, loadData])
 
   const cardBase = dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white shadow-sm"
   const subtitle = dark ? "text-slate-400" : "text-slate-500"
@@ -115,7 +188,54 @@ export default function Users({ dark }) {
     dark ? "[&>option]:bg-slate-800 [&>option]:text-slate-100" : "[&>option]:bg-white [&>option]:text-slate-900"
   }`
 
-  const closeModal = () => setModal({ open: false, type: null, row: null })
+  const closeModal = () => {
+    setShowCredentialsPassword(false)
+    setShowCreatePassword(false)
+    setModal({ open: false, type: null, row: null })
+  }
+
+  const closeActionsMenu = useCallback(() => {
+    setOpenActionsFor(null)
+    setActionsMenu((p) => ({ ...p, open: false, rowId: null }))
+  }, [])
+
+  const openActionsMenuFor = useCallback((rowId, anchorEl) => {
+    if (!anchorEl) return
+    const rect = anchorEl.getBoundingClientRect()
+
+    // Pastga joy yetmasa tepaga ochiladi.
+    const menuHeight = 250
+    const gap = 8
+    const spaceBelow = window.innerHeight - rect.bottom
+    const position = spaceBelow < menuHeight ? "top" : "bottom"
+    const x = rect.right
+    const y = position === "bottom" ? rect.bottom + gap : rect.top - gap
+
+    setOpenActionsFor(rowId)
+    setActionsMenu({ open: true, rowId, position, x, y })
+  }, [])
+
+  useEffect(() => {
+    if (!actionsMenu.open) return
+    const onDown = (e) => {
+      if (e.key === "Escape") closeActionsMenu()
+    }
+    const onPointerDown = (e) => {
+      // Menyu portalda bo'lgani uchun tashqariga bosilsa yopamiz.
+      // (Menyu ichida bosilsa, handlerlar closeActionsMenu chaqiradi.)
+      const target = e.target
+      if (!(target instanceof Element)) return
+      if (target.closest("[data-actions-menu='true']")) return
+      if (target.closest("[data-actions-anchor='true']")) return
+      closeActionsMenu()
+    }
+    window.addEventListener("keydown", onDown)
+    window.addEventListener("pointerdown", onPointerDown, { capture: true })
+    return () => {
+      window.removeEventListener("keydown", onDown)
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true })
+    }
+  }, [actionsMenu.open, closeActionsMenu])
   const closeNotice = () => setNotice({ open: false, message: "", variant: "success" })
 
   const showNotice = (message, variant = "success") => {
@@ -127,7 +247,20 @@ export default function Users({ dark }) {
     }, 1300)
   }
 
-  const openView = (row) => setModal({ open: true, type: "view", row })
+  const openView = async (row) => {
+    setModal({ open: true, type: "view", row })
+    if (!row?.login) return
+
+    setBusy(true)
+    try {
+      const fresh = await fetchUserByUsername(row.login)
+      setModal({ open: true, type: "view", row: { ...fresh, password: "" } })
+    } catch {
+      showNotice("Ma'lumotlarni yuklab bo'lmadi", "danger")
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const openEdit = (row) => {
     setEditDraft({
@@ -149,7 +282,10 @@ export default function Users({ dark }) {
     setModal({ open: true, type: "credentials", row })
   }
 
-  const openPermissions = (row) => setModal({ open: true, type: "permissions", row })
+  const openPermissions = (row) => {
+    setPermissionsDraft(permissionsToDraft(row?.permissions, permissionOptions))
+    setModal({ open: true, type: "permissions", row })
+  }
 
   const openCreate = () => {
     setCreateDraft({
@@ -162,59 +298,158 @@ export default function Users({ dark }) {
     setModal({ open: true, type: "create", row: null })
   }
 
-  const onSaveEdit = () => {
+  const onSaveEdit = async () => {
     const row = modal.row
-    if (!row?.id) return
+    if (!row?.login || busy) return
 
     const fio = editDraft.fio.trim()
     if (!fio) return
 
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === row.id ? { ...r, role: editDraft.role, fio, izoh: editDraft.izoh.trim() } : r
+    setBusy(true)
+    try {
+      await updateUser(row.login, {
+        fio,
+        izoh: editDraft.izoh.trim(),
+        role: editDraft.role,
+      })
+      setRows((prev) =>
+        prev.map((r) =>
+          r.login === row.login ? { ...r, role: editDraft.role, fio, izoh: editDraft.izoh.trim() } : r
+        )
       )
-    )
-    closeModal()
-    showNotice("Muvaffaqiyatli o'zgartirildi")
+      closeModal()
+      showNotice("Muvaffaqiyatli o'zgartirildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onConfirmDelete = () => {
+  const onConfirmDelete = async () => {
     const row = modal.row
-    if (!row?.id) return
-    setRows((prev) => prev.filter((r) => r.id !== row.id))
-    closeModal()
-    showNotice("Muvaffaqiyatli o'chirildi", "danger")
+    if (!row?.login || busy) return
+
+    setBusy(true)
+    try {
+      await deleteUser(row.login)
+      setRows((prev) => prev.filter((r) => r.login !== row.login))
+      closeModal()
+      showNotice("Muvaffaqiyatli o'chirildi", "danger")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'chirib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onSaveCredentials = () => {
+  const onSaveCredentials = async () => {
     const row = modal.row
-    if (!row?.id) return
+    if (!row?.login || busy) return
 
     const password = credentialsDraft.password.trim()
     if (!password) return
 
-    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, password } : r)))
-    closeModal()
-    showNotice("Muvaffaqiyatli o'zgartirildi")
+    setBusy(true)
+    try {
+      await updateUser(row.login, {
+        fio: row.fio,
+        izoh: row.izoh ?? "",
+        role: row.role,
+        password,
+      })
+      setRows((prev) => prev.map((r) => (r.login === row.login ? { ...r, password: "" } : r)))
+      closeModal()
+      showNotice("Muvaffaqiyatli o'zgartirildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Parolni yangilab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onSaveCreate = () => {
+  const onSavePermissions = async () => {
+    const row = modal.row
+    if (!row?.login || busy) return
+
+    const selected = permissionOptions.filter((opt) => permissionsDraft[opt.id])
+    const nextIds = selected.map((opt) => String(opt.id))
+    const nextCodes = [...nextIds]
+
+    const prev = new Set((row.permissions ?? []).map((p) => normalizePermissionKey(p)))
+    const nextCompare = new Set(nextIds.map((id) => normalizePermissionKey(id)))
+
+    const isKnownPermission = (value) => {
+      const key = normalizePermissionKey(value)
+      return permissionOptions.some((opt) => normalizePermissionKey(opt.id) === key)
+    }
+
+    const knownPrev = [...prev].filter(isKnownPermission)
+
+    const toRemoveKeys = knownPrev.filter((key) => !nextCompare.has(key))
+    const toAdd = selected.filter((opt) => !prev.has(normalizePermissionKey(opt.id)))
+
+    const toAddIds = toAdd.map((opt) => opt.id)
+    const toAddCodes = toAdd.map((opt) => opt.id)
+
+    const toRemoveIds = toRemoveKeys.filter((k) => /^\d+$/.test(k)).map((k) => Number(k))
+    const toRemoveCodes = toRemoveKeys.filter((k) => !/^\d+$/.test(k))
+
+    if (!toAdd.length && !toRemoveKeys.length) {
+      closeModal()
+      return
+    }
+
+    setBusy(true)
+    try {
+      if (toAdd.length) await setUserPermissions(row.login, { ids: toAddIds, codes: toAddCodes })
+      if (toRemoveKeys.length) await removeUserPermissions(row.login, { ids: toRemoveIds, codes: toRemoveCodes })
+      setRows((prevRows) =>
+        prevRows.map((r) => (r.login === row.login ? { ...r, permissions: [...new Set(nextIds)] } : r))
+      )
+      closeModal()
+      showNotice("Ruxsatlar saqlandi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Ruxsatlarni saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onSaveCreate = async () => {
+    if (busy) return
     const fio = createDraft.fio.trim()
     const login = createDraft.login.trim()
     const password = createDraft.password.trim()
     if (!fio || !login || !password) return
 
-    const newRow = {
-      id: `u-${Date.now()}`,
-      role: createDraft.role,
-      fio,
-      izoh: createDraft.izoh.trim(),
-      login,
-      password,
+    setBusy(true)
+    try {
+      const free = await checkUsernameAvailable(login)
+      if (!free) {
+        showNotice("Bu login band", "danger")
+        return
+      }
+      await saveUser({
+        fio,
+        login,
+        password,
+        izoh: createDraft.izoh.trim(),
+        role: createDraft.role,
+      })
+      await loadData()
+      closeModal()
+      showNotice("Muvaffaqiyatli qo'shildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Qo'shib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
     }
-    setRows((prev) => [newRow, ...prev])
-    closeModal()
-    showNotice("Muvaffaqiyatli qo'shildi")
   }
 
   const roleOptions = Array.from(new Set([...ROLES, ...rows.map((row) => row.role)]))
@@ -227,15 +462,25 @@ export default function Users({ dark }) {
     return [row.role, row.fio, row.izoh, row.login].some((value) => String(value ?? "").toLowerCase().includes(q))
   })
 
+  if (!canView) {
+    return (
+      <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-8 text-center`}>
+        <p className={`text-lg font-semibold ${dark ? "text-slate-100" : "text-slate-900"}`}>Ruxsat yo'q</p>
+        <p className={`mt-2 text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>Foydalanuvchilarni ko'rish uchun ruxsat berilmagan.</p>
+      </div>
+    )
+  }
+
   return (
-    <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
+    <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6 min-h-[75vh]`}>
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className={`text-xl font-bold tracking-tight ${title}`}>Foydalanuvchilar</h2>
           <button
             type="button"
             onClick={openCreate}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+            disabled={loading || !canAdd}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
           >
             <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
             Foydalanuvchi Qo'shish
@@ -245,7 +490,8 @@ export default function Users({ dark }) {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className={`w-full sm:w-auto sm:min-w-[11rem] rounded-lg border px-3 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
+            disabled={loading}
+            className={`w-full sm:w-auto sm:min-w-[11rem] rounded-lg border px-3 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 disabled:opacity-60 ${selectInput}`}
           >
             <option value="all">Barcha rollar</option>
             {roleOptions.map((item) => (
@@ -257,13 +503,15 @@ export default function Users({ dark }) {
           <input
             value={searchDraft}
             onChange={(e) => setSearchDraft(e.target.value)}
+            disabled={loading}
             placeholder="Foydalanuvchini izlash"
-            className={`min-w-[12rem] flex-1 rounded-lg border px-4 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+            className={`min-w-[12rem] flex-1 rounded-lg border px-4 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 disabled:opacity-60 ${input}`}
           />
           <button
             type="button"
             onClick={() => setSearchQuery(searchDraft)}
-            className={`inline-flex shrink-0 items-center rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+            disabled={loading}
+            className={`inline-flex shrink-0 items-center rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 ${
               dark ? "border-teal-500 text-teal-300 hover:bg-slate-700/70" : "border-teal-600 text-teal-700 hover:bg-teal-50"
             }`}
           >
@@ -271,9 +519,34 @@ export default function Users({ dark }) {
           </button>
         </div>
 
-        <div className={`overflow-x-auto rounded-xl border ${cardBase}`}>
+        {loading && (
+          <div className={`flex items-center justify-center gap-2 py-10 text-sm ${subtitle}`}>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+            Yuklanmoqda...
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <div className="py-6 text-center">
+            <p className={`text-sm ${subtitle}`}>{loadError}</p>
+            <button
+              type="button"
+              onClick={loadData}
+              className={`mt-3 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"
+              }`}
+            >
+              Qayta urinish
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && (
+          <>
+        <div className={`rounded-xl border ${cardBase}`}>
+          <div className="max-h-[48rem] overflow-auto">
           <table className={`min-w-full border-collapse text-sm ${dark ? "border-slate-700" : "border-slate-200"}`}>
-            <thead className={dark ? "bg-slate-900/40" : "bg-slate-50"}>
+            <thead className={`sticky top-0 z-10 ${dark ? "bg-slate-900/40" : "bg-slate-50"}`}>
               <tr>
                 <th className={`border px-4 py-3 text-center text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>№</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>F.I.O</th>
@@ -296,10 +569,17 @@ export default function Users({ dark }) {
                     <span className={`font-bold ${title}`}>{row.login}</span>
                   </td>
                   <td className={`border px-4 py-3 text-center ${dark ? "border-slate-700" : "border-slate-200"}`}>
-                    <div className="relative inline-flex">
+                    <div className="inline-flex">
                       <button
                         type="button"
-                        onClick={() => setOpenActionsFor((prev) => (prev === row.id ? null : row.id))}
+                        data-actions-anchor="true"
+                        onClick={(e) => {
+                          if (openActionsFor === row.id) {
+                            closeActionsMenu()
+                            return
+                          }
+                          openActionsMenuFor(row.id, e.currentTarget)
+                        }}
                         className={`inline-flex items-center justify-center rounded-lg border p-2.5 transition-colors ${
                           dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-300 text-slate-700 hover:bg-slate-100"
                         }`}
@@ -308,90 +588,19 @@ export default function Users({ dark }) {
                       >
                         <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
                       </button>
-
-                      {openActionsFor === row.id && (
-                        <div
-                          className={`absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border p-1 shadow-lg ${
-                            dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionsFor(null)
-                              openPermissions(row)
-                            }}
-                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                              dark ? "text-violet-400 hover:bg-slate-700/80" : "text-violet-700 hover:bg-violet-50"
-                            }`}
-                          >
-                            <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                            Ruxsatlar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionsFor(null)
-                              openCredentials(row)
-                            }}
-                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                              dark ? "text-amber-400 hover:bg-slate-700/80" : "text-amber-700 hover:bg-amber-50"
-                            }`}
-                          >
-                            <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                            Parolni o'zgartirish
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionsFor(null)
-                              openView(row)
-                            }}
-                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                              dark ? "text-blue-400 hover:bg-slate-700/80" : "text-blue-700 hover:bg-blue-50"
-                            }`}
-                          >
-                            <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                            Ko'rish
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionsFor(null)
-                              openEdit(row)
-                            }}
-                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                              dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
-                            }`}
-                          >
-                            <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                            Tahrirlash
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionsFor(null)
-                              openDelete(row)
-                            }}
-                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                              dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
-                            }`}
-                          >
-                            <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                            O'chirish
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {filteredRows.length === 0 && (
           <p className={`text-center text-sm ${subtitle}`}>{searchQuery ? "Qidiruv bo'yicha natija topilmadi." : "Hozircha foydalanuvchi yo'q."}</p>
+        )}
+          </>
         )}
       </div>
 
@@ -432,7 +641,7 @@ export default function Users({ dark }) {
               <div className="space-y-2"><label className="text-base font-semibold">Role</label><select value={editDraft.role} onChange={(e) => setEditDraft((p) => ({ ...p, role: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}>{roleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button type="button" onClick={onSaveEdit} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600">Saqlash</button>
+              <button type="button" disabled={busy} onClick={onSaveEdit} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Saqlash</button>
               <button type="button" onClick={closeModal} className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"}`}>Bekor qilish</button>
             </div>
           </div>
@@ -447,7 +656,7 @@ export default function Users({ dark }) {
               </button>
             </div>
             <div className="flex flex-wrap items-center gap-4 pt-2">
-              <button type="button" onClick={onConfirmDelete} className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600">Ha</button>
+              <button type="button" disabled={busy} onClick={onConfirmDelete} className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60">Ha</button>
               <button type="button" onClick={closeModal} className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-blue-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-600">Yo'q</button>
             </div>
           </div>
@@ -469,9 +678,38 @@ export default function Users({ dark }) {
               <p className="font-semibold">{modal.row.fio}</p>
               <p className={`text-sm ${subtitle}`}>{modal.row.login}</p>
             </div>
-            <p className={`text-sm leading-relaxed ${subtitle}`}>Bu yerda tanlangan foydalanuvchi uchun modul va amallar bo'yicha ruxsatlar sozlanadi.</p>
+            <div
+              className={`divide-y rounded-xl border ${dark ? "divide-slate-600 border-slate-600" : "divide-slate-200 border-slate-200"} max-h-[55vh] overflow-y-auto`}
+            >
+              {permissionOptions.map((opt) => (
+                <div key={opt.id} className="px-4">
+                  <PermissionToggle
+                    label={opt.label}
+                    checked={Boolean(permissionsDraft[opt.id])}
+                    onChange={(next) => setPermissionsDraft((prev) => ({ ...prev, [opt.id]: next }))}
+                    dark={dark}
+                  />
+                </div>
+              ))}
+            </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button type="button" onClick={closeModal} className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"}`}>Yopish</button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onSavePermissions}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Saqlash
+              </button>
+              <button
+                type="button"
+                onClick={closeModal}
+                className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${
+                  dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"
+                }`}
+              >
+                Bekor qilish
+              </button>
             </div>
           </div>
         )}
@@ -489,10 +727,32 @@ export default function Users({ dark }) {
                 <label className="text-base font-semibold">Login</label>
                 <input value={modal.row.login} readOnly className={`w-full rounded-lg border px-4 py-3 text-base ${input}`} />
               </div>
-              <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={credentialsDraft.password} onChange={(e) => setCredentialsDraft((p) => ({ ...p, password: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Yangi parol kiriting" /></div>
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Parol</label>
+                <div className="relative">
+                  <input
+                    type={showCredentialsPassword ? "text" : "password"}
+                    value={credentialsDraft.password}
+                    onChange={(e) => setCredentialsDraft((p) => ({ ...p, password: e.target.value }))}
+                    className={`w-full rounded-lg border py-3 pl-4 pr-12 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                    placeholder="Yangi parol kiriting"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCredentialsPassword((v) => !v)}
+                    aria-label={showCredentialsPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    className={`absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors ${
+                      dark ? "text-slate-300 hover:bg-slate-700/80" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {showCredentialsPassword ? <EyeOff className="h-5 w-5" strokeWidth={2} aria-hidden /> : <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button type="button" onClick={onSaveCredentials} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600">Saqlash</button>
+              <button type="button" disabled={busy} onClick={onSaveCredentials} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Saqlash</button>
               <button type="button" onClick={closeModal} className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"}`}>Bekor qilish</button>
             </div>
           </div>
@@ -511,15 +771,132 @@ export default function Users({ dark }) {
               <div className="space-y-2"><label className="text-base font-semibold">Izoh</label><input value={createDraft.izoh} onChange={(e) => setCreateDraft((p) => ({ ...p, izoh: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Masalan: Kafedra mudiri" /></div>
               <div className="space-y-2"><label className="text-base font-semibold">Role</label><select value={createDraft.role} onChange={(e) => setCreateDraft((p) => ({ ...p, role: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}>{ROLES.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
               <div className="space-y-2"><label className="text-base font-semibold">Login</label><input value={createDraft.login} onChange={(e) => setCreateDraft((p) => ({ ...p, login: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="user.login" /></div>
-              <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={createDraft.password} onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Parol kiriting" /></div>
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Parol</label>
+                <div className="relative">
+                  <input
+                    type={showCreatePassword ? "text" : "password"}
+                    value={createDraft.password}
+                    onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))}
+                    className={`w-full rounded-lg border py-3 pl-4 pr-12 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                    placeholder="Parol kiriting"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCreatePassword((v) => !v)}
+                    aria-label={showCreatePassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    className={`absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors ${
+                      dark ? "text-slate-300 hover:bg-slate-700/80" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {showCreatePassword ? <EyeOff className="h-5 w-5" strokeWidth={2} aria-hidden /> : <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button type="button" onClick={onSaveCreate} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600">Qo'shish</button>
+              <button type="button" disabled={busy} onClick={onSaveCreate} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Qo'shish</button>
               <button type="button" onClick={closeModal} className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"}`}>Bekor qilish</button>
             </div>
           </div>
         )}
       </Modal>
+
+      {actionsMenu.open && actionsMenu.rowId && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              data-actions-menu="true"
+              className={`fixed z-[80] min-w-52 rounded-xl border p-1 shadow-xl ${
+                dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
+              }`}
+              style={{
+                left: actionsMenu.x,
+                top: actionsMenu.y,
+                transform:
+                  actionsMenu.position === "bottom"
+                    ? "translateX(-100%)"
+                    : "translate(-100%, -100%)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  closeActionsMenu()
+                  const row = rows.find((r) => r.id === actionsMenu.rowId)
+                  if (row && canPermissions) openPermissions(row)
+                }}
+                disabled={!canPermissions}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  dark ? "text-violet-400 hover:bg-slate-700/80" : "text-violet-700 hover:bg-violet-50"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                Ruxsatlar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeActionsMenu()
+                  const row = rows.find((r) => r.id === actionsMenu.rowId)
+                  if (row && canPassword) openCredentials(row)
+                }}
+                disabled={!canPassword}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  dark ? "text-amber-400 hover:bg-slate-700/80" : "text-amber-700 hover:bg-amber-50"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                Parolni o'zgartirish
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeActionsMenu()
+                  const row = rows.find((r) => r.id === actionsMenu.rowId)
+                  if (row) openView(row)
+                }}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  dark ? "text-blue-400 hover:bg-slate-700/80" : "text-blue-700 hover:bg-blue-50"
+                }`}
+              >
+                <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                Ko'rish
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeActionsMenu()
+                  const row = rows.find((r) => r.id === actionsMenu.rowId)
+                  if (row && canEdit) openEdit(row)
+                }}
+                disabled={!canEdit}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                Tahrirlash
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeActionsMenu()
+                  const row = rows.find((r) => r.id === actionsMenu.rowId)
+                  if (row && canDelete) openDelete(row)
+                }}
+                disabled={!canDelete}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                O'chirish
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
 
       {notice.open && (
         <div className="pointer-events-none fixed left-1/2 top-4 z-[60] w-[min(92vw,34rem)] -translate-x-1/2">

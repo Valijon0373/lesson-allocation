@@ -10,7 +10,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import logoImg from "../../assets/logo.jpg"
-import DashboardNav, { getDashboardNavLabel } from "../../components/dashboard/DashboardNav"
+import DashboardNav, { DASHBOARD_NAV, getDashboardNavLabel } from "../../components/dashboard/DashboardNav"
 import EvaluationSummaryCards from "../../components/dashboard/EvaluationSummaryCards"
 import Faculties from "./Faculties"
 import Departments from "./Departments"
@@ -19,6 +19,10 @@ import Users from "./Users"
 import Teachers from "./Teachers"
 import Criteria from "./Criteria"
 import AboutUs from "./AboutUs"
+import AdminLogin from "../../components/admin/AdminLogin"
+import { getAuthUsername, logout as apiLogout, verifyAdminSession } from "../../api/auth"
+import { fetchUserByUsername } from "../../api/users"
+import { SESSION_EXPIRED_EVENT } from "../../api/session"
 
 const TEAL = "#14b8a6"
 const TEAL_BG = "bg-teal-500"
@@ -155,14 +159,108 @@ function pieGradient(slices) {
 }
 
 export default function AdminDashboard() {
+  const [authChecked, setAuthChecked] = useState(false)
+  const [isAuthed, setIsAuthed] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : true
   )
   const [activeNav, setActiveNav] = useState("dashboard")
   const [dark, setDark] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const adminUsername = getAuthUsername() || "admin"
+  const [currentPermissions, setCurrentPermissions] = useState(/** @type {string[]} */ ([]))
+  const [currentRoles, setCurrentRoles] = useState(/** @type {string[]} */ ([]))
   const profileRef = useRef(null)
   const mainScrollRef = useRef(null)
+
+  useEffect(() => {
+    let cancelled = false
+    verifyAdminSession().then((ok) => {
+      if (!cancelled) {
+        setIsAuthed(ok)
+        setAuthChecked(true)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isAuthed) {
+      setCurrentPermissions([])
+      setCurrentRoles([])
+      return
+    }
+    let cancelled = false
+    const username = getAuthUsername()
+    if (!username) return
+    fetchUserByUsername(username)
+      .then((u) => {
+        if (cancelled) return
+        setCurrentPermissions(Array.isArray(u?.permissions) ? u.permissions : [])
+        setCurrentRoles(Array.isArray(u?.roles) ? u.roles.map(String) : [])
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCurrentPermissions([])
+          setCurrentRoles([])
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthed])
+
+  const hasAnyPermission = useMemo(() => {
+    const set = new Set(currentPermissions.map((k) => String(k).trim().toLowerCase()))
+    return (keys) => keys.some((k) => set.has(String(k).trim().toLowerCase()))
+  }, [currentPermissions])
+
+  const isAdmin = useMemo(() => currentRoles.some((r) => String(r).toUpperCase() === "ADMIN"), [currentRoles])
+
+  const visibleNavIds = useMemo(() => {
+    if (isAdmin) return DASHBOARD_NAV.map((n) => n.id)
+
+    const ids = ["dashboard", "biz-haqimizda"]
+    if (hasAnyPermission(["faculty_view", "faculty_add", "faculty_edit", "faculty_delete"])) ids.push("fakultetlar")
+    if (hasAnyPermission(["department_view", "department_add", "department_edit", "department_delete"])) ids.push("kafedralar")
+    if (hasAnyPermission(["position_view", "position_add", "position_edit", "position_delete"])) ids.push("lavozim")
+    if (hasAnyPermission(["user_view"])) ids.push("foydalanuvchilar")
+    if (hasAnyPermission(["teacher_view", "teacher_add", "teacher_edit", "teacher_delete", "teacher_password"])) ids.push("oqituvchilar")
+    if (
+      hasAnyPermission([
+        "criterion_view",
+        "criterion_add",
+        "criterion_edit",
+        "criterion_delete",
+        "criterion_create",
+        "criteria_view",
+        "criteria_edit",
+        "criteria_delete",
+        "criteria_create",
+        "criteria_add",
+      ])
+    )
+      ids.push("mezonlar")
+
+    return ids
+  }, [currentPermissions, hasAnyPermission, isAdmin])
+
+  useEffect(() => {
+    if (!visibleNavIds.includes(activeNav)) {
+      setActiveNav("dashboard")
+    }
+  }, [activeNav, visibleNavIds])
+
+  useEffect(() => {
+    const onSessionExpired = () => {
+      setProfileOpen(false)
+      setIsAuthed(false)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+  }, [])
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)")
@@ -231,6 +329,18 @@ export default function AdminDashboard() {
       ? "Dashboard"
       : getDashboardNavLabel(activeNav)
 
+  if (!authChecked) {
+    return (
+      <div className={`flex min-h-screen items-center justify-center font-sans ${dark ? "bg-slate-900 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
+        Tekshirilmoqda...
+      </div>
+    )
+  }
+
+  if (!isAuthed) {
+    return <AdminLogin onSuccess={() => setIsAuthed(true)} />
+  }
+
   return (
     <div
       className={`flex h-screen overflow-hidden font-sans ${dark ? "bg-slate-900 text-slate-100" : "bg-slate-100 text-slate-800"}`}
@@ -249,7 +359,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-        <DashboardNav dark={dark} activeNav={activeNav} onChange={setActiveNav} tealBgClass={TEAL_BG} />
+        <DashboardNav dark={dark} activeNav={activeNav} onChange={setActiveNav} tealBgClass={TEAL_BG} visibleIds={visibleNavIds} />
         <div className={`p-4 text-xs ${dark ? "text-slate-500" : "text-slate-400"}`}>
           <Link
             to="/"
@@ -306,10 +416,10 @@ export default function AdminDashboard() {
                 aria-expanded={profileOpen}
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
-                  AD
+                  {adminUsername.slice(0, 2).toUpperCase()}
                 </span>
                 <div className="hidden text-sm sm:block">
-                  <p className="font-medium leading-none">admin</p>
+                  <p className="font-medium leading-none">{adminUsername}</p>
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 opacity-50 transition-transform ${profileOpen ? "rotate-180" : ""}`}
@@ -328,9 +438,10 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={() => {
+                    onClick={async () => {
                       setProfileOpen(false)
-                      window.location.assign("/")
+                      await apiLogout()
+                      setIsAuthed(false)
                     }}
                     className={`flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors ${
                       dark ? "hover:bg-slate-700/70" : "hover:bg-slate-50"
@@ -353,7 +464,8 @@ export default function AdminDashboard() {
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <article
-                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    className={`dashboard-stat-in rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    style={{ animationDelay: "0ms" }}
                   >
                     <div className="flex items-start gap-4">
                       <div
@@ -372,7 +484,8 @@ export default function AdminDashboard() {
                     </div>
                   </article>
                   <article
-                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    className={`dashboard-stat-in rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    style={{ animationDelay: "85ms" }}
                   >
                     <div className="flex items-start gap-4">
                       <div
@@ -391,7 +504,8 @@ export default function AdminDashboard() {
                     </div>
                   </article>
                   <article
-                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    className={`dashboard-stat-in rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    style={{ animationDelay: "170ms" }}
                   >
                     <div className="flex items-start gap-4">
                       <div
@@ -413,13 +527,14 @@ export default function AdminDashboard() {
 
                 <div className="grid gap-6 lg:grid-cols-2">
                   <article
-                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    className={`dashboard-stat-in rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    style={{ animationDelay: "240ms" }}
                   >
                     <h2 className="text-lg font-semibold">Bo&apos;limlar ulushi</h2>
                     <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
                       <div
-                        className="relative h-48 w-48 shrink-0 rounded-full shadow-inner ring-4 ring-white/10"
-                        style={pieStyle}
+                        className="dashboard-pie-in relative h-48 w-48 shrink-0 rounded-full shadow-inner ring-4 ring-white/10"
+                        style={{ ...pieStyle, animationDelay: "300ms" }}
                       />
                       <div className="w-full max-w-xs space-y-2">
                         {pieSlices.map((s) => (
@@ -439,7 +554,8 @@ export default function AdminDashboard() {
                   </article>
 
                   <article
-                    className={`rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    className={`dashboard-stat-in rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
+                    style={{ animationDelay: "300ms" }}
                   >
                     <h2 className="text-lg font-semibold">Bo&apos;limlar bo&apos;yicha sonlar</h2>
                     <div className="mt-4 flex justify-between gap-1 border-b pb-1 text-[10px] font-medium text-slate-400">
@@ -450,13 +566,14 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                     <div className="flex h-52 items-end justify-between gap-2 border-l border-slate-200 pl-2 pt-2 dark:border-slate-600">
-                      {entityStats.map((c) => (
+                      {entityStats.map((c, idx) => (
                         <div key={c.key} className="flex min-w-0 flex-1 flex-col items-center justify-end">
                           <div
-                            className="w-full max-w-10 rounded-t-md"
+                            className="dashboard-bar-in w-full max-w-10 rounded-t-md"
                             style={{
                               height: `${Math.max(8, maxBar > 0 ? (c.value / maxBar) * 168 : 8)}px`,
                               backgroundColor: c.color,
+                              animationDelay: `${360 + idx * 70}ms`,
                             }}
                             title={`${c.label}: ${c.value}`}
                           />
@@ -478,11 +595,13 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {activeNav === "fakultetlar" && <Faculties dark={dark} />}
-            {activeNav === "kafedralar" && <Departments dark={dark} />}
-            {activeNav === "lavozim" && <Positions dark={dark} />}
-            {activeNav === "foydalanuvchilar" && <Users dark={dark} />}
-            {activeNav === "oqituvchilar" && <Teachers dark={dark} />}
+            {activeNav === "fakultetlar" && <Faculties dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />}
+            {activeNav === "kafedralar" && <Departments dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />}
+            {activeNav === "lavozim" && <Positions dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />}
+            {activeNav === "foydalanuvchilar" && visibleNavIds.includes("foydalanuvchilar") && (
+              <Users dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />
+            )}
+            {activeNav === "oqituvchilar" && <Teachers dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />}
             {activeNav === "mezonlar" && <Criteria dark={dark} />}
             {activeNav === "biz-haqimizda" && <AboutUs dark={dark} />}
           </div>

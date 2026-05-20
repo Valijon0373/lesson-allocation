@@ -30,10 +30,13 @@ export function getDashboardNavLabel(activeNav) {
   return DASHBOARD_NAV.find((n) => n.id === activeNav)?.label ?? "Administrator"
 }
 
-export default function DashboardNav({ dark, activeNav, onChange, tealBgClass = "bg-teal-500" }) {
+export default function DashboardNav({ dark, activeNav, onChange, tealBgClass = "bg-teal-500", visibleIds }) {
+  const items =
+    visibleIds == null ? DASHBOARD_NAV : DASHBOARD_NAV.filter((item) => visibleIds.includes(item.id))
+
   return (
     <nav className="flex flex-1 flex-col gap-1 p-3">
-      {DASHBOARD_NAV.map((item) => {
+      {items.map((item) => {
         const active = activeNav === item.id
         const NavItemIcon = item.Icon
         const stroke = item.iconStroke ?? 1.5

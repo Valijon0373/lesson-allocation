@@ -1,33 +1,15 @@
-import { useMemo, useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { CircleCheck, CircleX, Eye, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { fetchAllFaculties } from "../../api/faculties"
+import {
+  deleteDepartment,
+  fetchAllDepartments,
+  fetchDepartmentById,
+  saveDepartment,
+  updateDepartment,
+} from "../../api/departments"
 
 const TEAL_BG = "bg-teal-500"
-
-const MAVJUD_FAKULTETLAR = [
-  { id: "f-1", nameUz: "Filologiya Fakulteti", nameRu: "Факультет филологии" },
-  { id: "f-2", nameUz: "Pedagogika Fakulteti", nameRu: "Факультет Педагогики" },
-  { id: "f-3", nameUz: "Aniq va tabiiy fanlar Fakulteti", nameRu: "Факультет точных и естественных наук" },
-  { id: "f-4", nameUz: "Ijtimoiy va amaliy fanlar Fakulteti", nameRu: "Факультет социальных и прикладных наук" },
-  { id: "f-5", nameUz: "Boshlang'ich ta'lim Fakulteti", nameRu: "Факультет начального образования" },
-]
-
-const KAFEDRALAR_ROYXATI = [
-  { id: "k-1", nameUz: "Rus tili va adabiyoti kafedrasi", nameRu: "Кафедра русского языка и литературы", fakultet: "Filologiya Fakulteti" },
-  { id: "k-2", nameUz: "O'zbek tili va adabiyoti kafedrasi", nameRu: "Кафедра узбекского языка и литературы", fakultet: "Filologiya Fakulteti" },
-  { id: "k-3", nameUz: "Xorijiy tillar va tilshunoslik kafedrasi", nameRu: "Кафедра иностранных языков и лингвистики", fakultet: "Filologiya Fakulteti" },
-  { id: "k-4", nameUz: "Pedagogika nazariyasi va tarix kafedrasi", nameRu: "Кафедра теории и истории педагогики", fakultet: "Pedagogika Fakulteti" },
-  { id: "k-5", nameUz: "Psixologiya kafedrasi", nameRu: "Кафедра психологии", fakultet: "Pedagogika Fakulteti" },
-  { id: "k-6", nameUz: "Maxsus pedagogika va inklyuziv ta'lim kafedrasi", nameRu: "Кафедра специальной педагогики и инклюзивного образования", fakultet: "Pedagogika Fakulteti" },
-  { id: "k-7", nameUz: "Matematika va informatika o'qitish metodikasi kafedrasi", nameRu: "Кафедра методики преподавания математики и информатики", fakultet: "Aniq va tabiiy fanlar Fakulteti" },
-  { id: "k-8", nameUz: "Fizika va astronomiya kafedrasi", nameRu: "Кафедра физики и астрономии", fakultet: "Aniq va tabiiy fanlar Fakulteti" },
-  { id: "k-9", nameUz: "Kimyo va biologiya kafedrasi", nameRu: "Кафедра химии и биологии", fakultet: "Aniq va tabiiy fanlar Fakulteti" },
-  { id: "k-10", nameUz: "Tarix va ijtimoiy fanlar kafedrasi", nameRu: "Кафедра истории и общественных наук", fakultet: "Ijtimoiy va amaliy fanlar Fakulteti" },
-  { id: "k-11", nameUz: "Geografiya va ekologiya ta'limi kafedrasi", nameRu: "Кафедра географического и экологического образования", fakultet: "Ijtimoiy va amaliy fanlar Fakulteti" },
-  { id: "k-12", nameUz: "Jismoniy tarbiya va sport kafedrasi", nameRu: "Кафедра физического воспитания и спорта", fakultet: "Ijtimoiy va amaliy fanlar Fakulteti" },
-  { id: "k-13", nameUz: "Boshlang'ich ta'lim metodikasi kafedrasi", nameRu: "Кафедра методики начального образования", fakultet: "Boshlang'ich ta'lim Fakulteti" },
-  { id: "k-14", nameUz: "Maktabgacha ta'lim kafedrasi", nameRu: "Кафедра дошкольного образования", fakultet: "Boshlang'ich ta'lim Fakulteti" },
-  { id: "k-15", nameUz: "Bolalar rivojlanishi va ergonomika kafedrasi", nameRu: "Кафедра развития детей и эргономики", fakultet: "Boshlang'ich ta'lim Fakulteti" },
-]
 
 function Modal({ open, onClose, dark, children }) {
   if (!open) return null
@@ -48,7 +30,11 @@ function Modal({ open, onClose, dark, children }) {
 }
 
 export default function Departments({ dark }) {
-  const [rows, setRows] = useState(() => KAFEDRALAR_ROYXATI)
+  const [rows, setRows] = useState(/** @type {import("../../api/departments").DepartmentRow[]} */ ([]))
+  const [faculties, setFaculties] = useState(/** @type {import("../../api/faculties").FacultyRow[]} */ ([]))
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState("")
   const [searchDraft, setSearchDraft] = useState("")
   const [searchApplied, setSearchApplied] = useState("")
   const [modal, setModal] = useState({
@@ -56,16 +42,27 @@ export default function Departments({ dark }) {
     type: /** @type {null | "view" | "edit" | "delete" | "create"} */ (null),
     row: null,
   })
-  const [editDraft, setEditDraft] = useState({ fakultet: "", nameUz: "" })
-  const [createDraft, setCreateDraft] = useState({ fakultet: "", nameUz: "" })
+  const [editDraft, setEditDraft] = useState({ facultyId: "", nameUz: "" })
+  const [createDraft, setCreateDraft] = useState({ facultyId: "", nameUz: "" })
   const [notice, setNotice] = useState({ open: false, message: "", variant: /** @type {"success" | "danger"} */ ("success") })
   const noticeTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
+
+  const facultyNames = useMemo(() => {
+    /** @type {Record<string, string>} */
+    const map = {}
+    for (const f of faculties) map[f.id] = f.nameUz
+    return map
+  }, [faculties])
 
   const filtered = useMemo(() => {
     const q = searchApplied.trim().toLowerCase()
     if (!q) return rows
-    return rows.filter((row) => row.nameUz.toLowerCase().includes(q) || row.fakultet.toLowerCase().includes(q))
-  }, [rows, searchApplied])
+    return rows.filter(
+      (row) =>
+        row.nameUz.toLowerCase().includes(q) ||
+        (row.fakultet ?? facultyNames[row.facultyId] ?? "").toLowerCase().includes(q),
+    )
+  }, [rows, searchApplied, facultyNames])
 
   const cardBase = dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white shadow-sm"
   const subtitle = dark ? "text-slate-400" : "text-slate-500"
@@ -91,50 +88,139 @@ export default function Departments({ dark }) {
     }, 1300)
   }
 
-  const fakultetOptions = useMemo(() => MAVJUD_FAKULTETLAR.map((f) => f.nameUz), [])
+  const facultyLabel = (facultyId) => facultyNames[facultyId] ?? ""
 
-  const openView = (row) => setModal({ open: true, type: "view", row })
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError("")
+    try {
+      const facList = await fetchAllFaculties()
+      setFaculties(facList)
+      const names = Object.fromEntries(facList.map((f) => [f.id, f.nameUz]))
+      const list = await fetchAllDepartments(names)
+      setRows(list.map((r) => ({ ...r, fakultet: r.fakultet || names[r.facultyId] || "" })))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Kafedralarni yuklab bo'lmadi"
+      setLoadError(message)
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const openView = async (row) => {
+    setModal({ open: true, type: "view", row })
+    if (!row?.id) return
+
+    setBusy(true)
+    try {
+      const fresh = await fetchDepartmentById(row.id, facultyNames)
+      setModal({
+        open: true,
+        type: "view",
+        row: { ...fresh, fakultet: fresh.fakultet || facultyLabel(fresh.facultyId) },
+      })
+    } catch {
+      showNotice("Kafedra ma'lumotlarini yuklab bo'lmadi", "danger")
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const openEdit = (row) => {
-    setEditDraft({ fakultet: row?.fakultet ?? "", nameUz: row?.nameUz ?? "" })
+    setEditDraft({ facultyId: row?.facultyId ?? "", nameUz: row?.nameUz ?? "" })
     setModal({ open: true, type: "edit", row })
   }
 
   const openDelete = (row) => setModal({ open: true, type: "delete", row })
 
   const openCreate = () => {
-    setCreateDraft({ fakultet: fakultetOptions[0] ?? "", nameUz: "" })
+    setCreateDraft({ facultyId: faculties[0]?.id ?? "", nameUz: "" })
     setModal({ open: true, type: "create", row: null })
   }
 
-  const onSaveEdit = () => {
+  const onSaveEdit = async () => {
     const row = modal.row
-    if (!row?.id) return
+    if (!row?.id || busy) return
     const nextName = editDraft.nameUz.trim()
-    const nextFac = editDraft.fakultet.trim()
-    if (!nextName || !nextFac) return
-    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, nameUz: nextName, fakultet: nextFac } : r)))
-    closeModal()
-    showNotice("Muvaqqatli Tahrirlandi")
+    const nextFacultyId = editDraft.facultyId
+    if (!nextName || !nextFacultyId) return
+
+    setBusy(true)
+    try {
+      const updated = await updateDepartment(row.id, { nameUz: nextName, facultyId: nextFacultyId }, facultyNames)
+      const withLabel = { ...updated, fakultet: updated.fakultet || facultyLabel(updated.facultyId) }
+      setRows((prev) => prev.map((r) => (r.id === row.id ? withLabel : r)))
+      closeModal()
+      showNotice("Kafedra tahrirlandi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onConfirmDelete = () => {
+  const onConfirmDelete = async () => {
     const row = modal.row
-    if (!row?.id) return
-    setRows((prev) => prev.filter((r) => r.id !== row.id))
-    closeModal()
-    showNotice("Muvaqqatli O'chirildi", "danger")
+    if (!row?.id || busy) return
+
+    setBusy(true)
+    try {
+      await deleteDepartment(row.id)
+      setRows((prev) => prev.filter((r) => r.id !== row.id))
+      closeModal()
+      showNotice("Kafedra o'chirildi", "danger")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'chirib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onSaveCreate = () => {
+  const onSaveCreate = async () => {
+    if (busy) return
     const nextName = createDraft.nameUz.trim()
-    const nextFac = createDraft.fakultet.trim()
-    if (!nextName || !nextFac) return
-    const newRow = { id: `k-${Date.now()}`, nameUz: nextName, nameRu: "", fakultet: nextFac }
-    setRows((prev) => [newRow, ...prev])
-    closeModal()
-    showNotice("Muvaqqatli Qo'shildi")
+    const nextFacultyId = createDraft.facultyId
+    if (!nextName || !nextFacultyId) return
+
+    setBusy(true)
+    try {
+      await saveDepartment({ nameUz: nextName, facultyId: nextFacultyId }, facultyNames)
+      await loadData()
+      closeModal()
+      showNotice("Kafedra qo'shildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Qo'shib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
+
+  const facultySelect = (value, onChange) => (
+    <select
+      value={value}
+      onChange={onChange}
+      disabled={faculties.length === 0}
+      className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+    >
+      {faculties.length === 0 ? (
+        <option value="">Fakultetlar yuklanmadi</option>
+      ) : (
+        faculties.map((f) => (
+          <option key={f.id} value={f.id} className={dark ? "bg-slate-800 text-slate-100" : "bg-white text-slate-900"}>
+            {f.nameUz}
+          </option>
+        ))
+      )}
+    </select>
+  )
 
   return (
     <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
@@ -144,7 +230,8 @@ export default function Departments({ dark }) {
           <button
             type="button"
             onClick={openCreate}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+            disabled={loading || faculties.length === 0}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
           >
             <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
             Qo'shish
@@ -166,13 +253,15 @@ export default function Departments({ dark }) {
                 if (e.key === "Enter") setSearchApplied(searchDraft)
               }}
               placeholder="Kafedra qidirish..."
-              className={`w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${inputWrap}`}
+              disabled={loading}
+              className={`w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 disabled:opacity-60 ${inputWrap}`}
             />
           </div>
           <button
             type="button"
             onClick={() => setSearchApplied(searchDraft)}
-            className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-5 py-2.5 text-sm font-semibold transition-colors sm:min-w-[7.5rem] ${
+            disabled={loading}
+            className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-5 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 sm:min-w-[7.5rem] ${
               dark ? "border-blue-500/90 text-blue-400 hover:bg-slate-700/80" : "border-blue-600 text-blue-600 hover:bg-blue-50"
             }`}
           >
@@ -180,12 +269,35 @@ export default function Departments({ dark }) {
           </button>
         </div>
 
+        {loading && (
+          <div className={`flex items-center justify-center gap-2 py-10 text-sm ${subtitle}`}>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+            Yuklanmoqda...
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <div className="py-6 text-center">
+            <p className={`text-sm ${subtitle}`}>{loadError}</p>
+            <button
+              type="button"
+              onClick={loadData}
+              className={`mt-3 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"
+              }`}
+            >
+              Qayta urinish
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && (
         <ul className="flex flex-col gap-3">
           {filtered.map((row) => (
             <li key={row.id} className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-4 sm:px-5 ${cardBase}`}>
               <div className="min-w-0 flex-1">
                 <p className={`font-bold leading-snug ${title}`}>{row.nameUz}</p>
-                <p className={`mt-1.5 text-xs ${meta}`}>Fakultet: {row.fakultet}</p>
+                <p className={`mt-1.5 text-xs ${meta}`}>Fakultet: {row.fakultet || facultyLabel(row.facultyId)}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                 <button
@@ -224,8 +336,11 @@ export default function Departments({ dark }) {
             </li>
           ))}
         </ul>
+        )}
 
-        {filtered.length === 0 && <p className={`text-center text-sm ${subtitle}`}>Natija topilmadi.</p>}
+        {!loading && !loadError && filtered.length === 0 && (
+          <p className={`text-center text-sm ${subtitle}`}>Natija topilmadi.</p>
+        )}
       </div>
 
       <Modal open={modal.open} onClose={closeModal} dark={dark}>
@@ -243,14 +358,23 @@ export default function Departments({ dark }) {
               </button>
             </div>
             <div className="space-y-3 text-base">
-              <div>
-                <p className={`text-xs font-semibold ${meta}`}>Fakultet:</p>
-                <p className="mt-1 font-semibold">{modal.row.fakultet}</p>
-              </div>
-              <div>
-                <p className={`text-xs font-semibold ${meta}`}>Kafedra nomi:</p>
-                <p className="mt-1 font-semibold">{modal.row.nameUz}</p>
-              </div>
+              {busy ? (
+                <div className={`flex items-center gap-2 text-sm ${subtitle}`}>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Yuklanmoqda...
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className={`text-xs font-semibold ${meta}`}>Fakultet:</p>
+                    <p className="mt-1 font-semibold">{modal.row.fakultet || facultyLabel(modal.row.facultyId)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs font-semibold ${meta}`}>Kafedra nomi:</p>
+                    <p className="mt-1 font-semibold">{modal.row.nameUz}</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -272,17 +396,7 @@ export default function Departments({ dark }) {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-base font-semibold">Fakultet</label>
-                <select
-                  value={editDraft.fakultet}
-                  onChange={(e) => setEditDraft((p) => ({ ...p, fakultet: e.target.value }))}
-                  className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
-                >
-                  {fakultetOptions.map((opt) => (
-                    <option key={opt} value={opt} className={dark ? "bg-slate-800 text-slate-100" : "bg-white text-slate-900"}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                {facultySelect(editDraft.facultyId, (e) => setEditDraft((p) => ({ ...p, facultyId: e.target.value })))}
               </div>
               <div className="space-y-2">
                 <label className="text-base font-semibold">Kafedra nomi</label>
@@ -298,9 +412,10 @@ export default function Departments({ dark }) {
               <button
                 type="button"
                 onClick={onSaveEdit}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Saqlash
+                {busy ? "Saqlanmoqda..." : "Saqlash"}
               </button>
               <button
                 type="button"
@@ -332,9 +447,10 @@ export default function Departments({ dark }) {
               <button
                 type="button"
                 onClick={onConfirmDelete}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Ha
+                {busy ? "O'chirilmoqda..." : "Ha"}
               </button>
               <button
                 type="button"
@@ -364,17 +480,7 @@ export default function Departments({ dark }) {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-base font-semibold">Fakultet</label>
-                <select
-                  value={createDraft.fakultet}
-                  onChange={(e) => setCreateDraft((p) => ({ ...p, fakultet: e.target.value }))}
-                  className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
-                >
-                  {fakultetOptions.map((opt) => (
-                    <option key={opt} value={opt} className={dark ? "bg-slate-800 text-slate-100" : "bg-white text-slate-900"}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                {facultySelect(createDraft.facultyId, (e) => setCreateDraft((p) => ({ ...p, facultyId: e.target.value })))}
               </div>
               <div className="space-y-2">
                 <label className="text-base font-semibold">Kafedra nomi</label>
@@ -391,9 +497,10 @@ export default function Departments({ dark }) {
               <button
                 type="button"
                 onClick={onSaveCreate}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Qo'shish
+                {busy ? "Qo'shilmoqda..." : "Qo'shish"}
               </button>
               <button
                 type="button"

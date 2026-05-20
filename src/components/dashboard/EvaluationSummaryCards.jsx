@@ -5,7 +5,10 @@ function ScoreBar({ dark, value, max }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
     <div className={`mt-1.5 h-2 overflow-hidden rounded-full ${dark ? "bg-slate-700" : "bg-slate-200"}`}>
-      <div className="h-full rounded-full bg-teal-500 transition-[width] duration-300" style={{ width: `${pct}%` }} />
+      <div
+        className="dashboard-scorebar-in h-full rounded-full bg-teal-500 transition-[width] duration-300"
+        style={{ width: `${pct}%`, animationDelay: "220ms" }}
+      />
     </div>
   )
 }
@@ -52,14 +55,18 @@ export default function EvaluationSummaryCards({ dark }) {
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="dashboard-stat-in" style={{ animationDelay: "0ms" }}>
         <h2 className={`text-xl font-bold tracking-tight sm:text-2xl ${titleClr}`}>Umumiy natija</h2>
         <p className={`mt-1 text-sm ${subtitle}`}>Mezonlar bo'yicha yig'ilgan ball va holat</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {statCards.map(({ key, icon: Icon, iconWrap, value, label, extra }) => (
-          <div key={key} className={`rounded-xl border p-4 ${cardBase}`}>
+        {statCards.map(({ key, icon: Icon, iconWrap, value, label, extra }, i) => (
+          <div
+            key={key}
+            className={`dashboard-stat-in rounded-xl border p-4 ${cardBase}`}
+            style={{ animationDelay: `${70 + i * 75}ms` }}
+          >
             <div className="flex items-start gap-3">
               <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconWrap}`}>
                 <Icon className="h-5 w-5" strokeWidth={2} aria-hidden />
