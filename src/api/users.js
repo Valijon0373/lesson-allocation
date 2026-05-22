@@ -1,4 +1,9 @@
-import { getPermissionLabelUz, normalizePermissionKey } from "../data/permissionLabels"
+import {
+  getImpliedPermissionsWhenGranting,
+  getPermissionLabelUz,
+  isKnownPermissionCode,
+  normalizePermissionKey,
+} from "../data/permissionLabels"
 import { apiRequest, unwrapPayload } from "./client"
 
 /**
@@ -90,8 +95,15 @@ function collectUserPermissionStrings(raw) {
   for (const s of sources) {
     merged.push(...normalizeUserPermissions(s))
   }
-  const lower = merged.map((p) => String(p).trim().toLowerCase()).filter(Boolean)
-  return [...new Set(lower)]
+  const set = new Set(
+    merged.map((p) => normalizePermissionKey(p)).filter((p) => p && isKnownPermissionCode(p))
+  )
+  for (const p of [...set]) {
+    for (const implied of getImpliedPermissionsWhenGranting(p)) {
+      if (implied) set.add(implied)
+    }
+  }
+  return [...set]
 }
 
 /**
@@ -223,7 +235,7 @@ export async function fetchPermissionsCatalog() {
 
 /**
  * @param {string} username
- * @param {string[]} permissions — ruxsat kodlari (masalan: faculty_add)
+ * @param {string[]} permissions — ruxsat kodlari (masalan: faculty_create)
  */
 export async function setUserPermissions(username, permissions) {
   const idsRaw = Array.isArray(permissions) ? permissions : permissions?.ids ?? []

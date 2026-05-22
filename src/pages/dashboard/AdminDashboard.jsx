@@ -223,26 +223,12 @@ export default function AdminDashboard() {
     if (isAdmin) return DASHBOARD_NAV.map((n) => n.id)
 
     const ids = ["dashboard", "biz-haqimizda"]
-    if (hasAnyPermission(["faculty_view", "faculty_add", "faculty_edit", "faculty_delete"])) ids.push("fakultetlar")
-    if (hasAnyPermission(["department_view", "department_add", "department_edit", "department_delete"])) ids.push("kafedralar")
-    if (hasAnyPermission(["position_view", "position_add", "position_edit", "position_delete"])) ids.push("lavozim")
-    if (hasAnyPermission(["user_view"])) ids.push("foydalanuvchilar")
-    if (hasAnyPermission(["teacher_view", "teacher_add", "teacher_edit", "teacher_delete", "teacher_password"])) ids.push("oqituvchilar")
-    if (
-      hasAnyPermission([
-        "criterion_view",
-        "criterion_add",
-        "criterion_edit",
-        "criterion_delete",
-        "criterion_create",
-        "criteria_view",
-        "criteria_edit",
-        "criteria_delete",
-        "criteria_create",
-        "criteria_add",
-      ])
-    )
-      ids.push("mezonlar")
+    if (hasAnyPermission(["faculty_view", "faculty_create", "faculty_edit", "faculty_delete"])) ids.push("fakultetlar")
+    if (hasAnyPermission(["department_view", "department_create", "department_edit", "department_delete"]))
+      ids.push("kafedralar")
+    if (hasAnyPermission(["position_view", "position_create", "position_edit", "position_delete"])) ids.push("lavozim")
+    if (hasAnyPermission(["user_view", "user_create", "user_edit", "user_delete"])) ids.push("foydalanuvchilar")
+    if (hasAnyPermission(["criteria_view", "criteria_create", "criteria_edit", "criteria_delete"])) ids.push("mezonlar")
 
     return ids
   }, [currentPermissions, hasAnyPermission, isAdmin])

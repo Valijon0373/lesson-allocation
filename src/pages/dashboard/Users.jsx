@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { CircleCheck, CircleX, Eye, EyeOff, LockKeyhole, Loader2, Pencil, Plus, ShieldCheck, SlidersHorizontal, Trash2 } from "lucide-react"
+import { getAuthUsername } from "../../api/auth"
 import {
   checkUsernameAvailable,
   deleteUser,
@@ -13,13 +14,36 @@ import {
   updateUser,
 } from "../../api/users"
 import {
+  getCrudPermissions,
+  getImpliedPermissionsWhenGranting,
+  getMissingViewPermissionOptionIds,
+  hasEffectivePermission,
   mergePermissionOptionsFromCatalog,
   normalizePermissionKey,
   PERMISSION_OPTIONS_UZ,
+  resolvePermissionOptionId,
 } from "../../data/permissionLabels"
 
 const TEAL_BG = "bg-teal-500"
 const ROLES = ["Admin", "Foydalanuvchi", "Komissiya"]
+const EDITABLE_PERMISSION_ROLES = new Set(["Foydalanuvchi", "Komissiya"])
+
+/** @param {{ role?: string, login?: string } | null | undefined} row */
+function isEditablePermissionTarget(row) {
+  return EDITABLE_PERMISSION_ROLES.has(String(row?.role ?? ""))
+}
+
+/** @param {{ login?: string } | null | undefined} row */
+function isCurrentUserRow(row) {
+  const current = getAuthUsername().trim().toLowerCase()
+  const target = String(row?.login ?? "").trim().toLowerCase()
+  return Boolean(current && target && current === target)
+}
+
+/** @param {{ id: string, label: string }[]} options */
+function allPermissionsDraft(options) {
+  return Object.fromEntries(options.map((o) => [o.id, true]))
+}
 
 /**
  * @param {string[] | undefined} permissions
@@ -32,10 +56,21 @@ function permissionsToDraft(permissions, options) {
   for (const opt of options) {
     draft[opt.id] = set.has(normalizePermissionKey(opt.id))
   }
+  for (const opt of options) {
+    const key = normalizePermissionKey(opt.id)
+    if (!key.endsWith("_view") || draft[opt.id]) continue
+    const entity = key.slice(0, -"_view".length)
+    const hasWrite = [...set].some((p) => {
+      const parts = p.split("_")
+      const action = parts[parts.length - 1]
+      return parts.slice(0, -1).join("_") === entity && action !== "view"
+    })
+    if (hasWrite) draft[opt.id] = true
+  }
   return draft
 }
 
-function PermissionToggle({ label, checked, onChange, dark }) {
+function PermissionToggle({ label, checked, onChange, dark, disabled = false, saving = false }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <span className={`text-base font-medium ${dark ? "text-slate-100" : "text-slate-800"}`}>{label}</span>
@@ -44,8 +79,9 @@ function PermissionToggle({ label, checked, onChange, dark }) {
         role="switch"
         aria-checked={checked}
         aria-label={label}
+        disabled={disabled || saving}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border p-0.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 ${
+        className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border p-0.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 disabled:cursor-not-allowed disabled:opacity-50 ${
           checked
             ? dark
               ? "border-teal-600/40 bg-teal-950/50"
@@ -60,7 +96,9 @@ function PermissionToggle({ label, checked, onChange, dark }) {
             checked ? "translate-x-6" : "translate-x-0"
           }`}
         >
-          {checked ? (
+          {saving ? (
+            <Loader2 className={`h-4 w-4 animate-spin ${dark ? "text-teal-400" : "text-teal-500"}`} aria-hidden />
+          ) : checked ? (
             <CircleCheck className={`h-4 w-4 ${dark ? "text-teal-400" : "text-teal-500"}`} strokeWidth={2} aria-hidden />
           ) : (
             <CircleX className={`h-4 w-4 ${dark ? "text-red-400" : "text-red-500"}`} strokeWidth={2} aria-hidden />
@@ -95,12 +133,32 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
     () => new Set(permissions.map((p) => String(p).trim().toLowerCase())),
     [permissions]
   )
-  const canView = isAdmin || permSet.has("user_view")
-  const canAdd = isAdmin || permSet.has("user_add")
-  const canEdit = isAdmin || permSet.has("user_edit")
-  const canDelete = isAdmin || permSet.has("user_delete")
-  const canPassword = isAdmin || permSet.has("user_password")
-  const canPermissions = isAdmin || permSet.has("user_permissions")
+  const { canView, canAdd, canEdit, canDelete } = useMemo(
+    () => getCrudPermissions(permissions, "user", isAdmin),
+    [permissions, isAdmin]
+  )
+  const canPassword = canEdit
+  const canPermissions =
+    isAdmin || permSet.has("permission_edit") || hasEffectivePermission(permissions, "permission_view")
+
+  const canOpenPermissionsFor = useCallback(
+    (row) => {
+      if (isCurrentUserRow(row)) return false
+      if (!canPermissions && !isAdmin) return false
+      if (isAdmin) return true
+      return isEditablePermissionTarget(row)
+    },
+    [canPermissions, isAdmin]
+  )
+
+  const canTogglePermissionsFor = useCallback(
+    (row) => {
+      if (isCurrentUserRow(row)) return false
+      if (!isEditablePermissionTarget(row)) return false
+      return isAdmin || canPermissions
+    },
+    [canPermissions, isAdmin]
+  )
   const [rows, setRows] = useState([])
   const [permissionOptions, setPermissionOptions] = useState(PERMISSION_OPTIONS_UZ)
   const [loading, setLoading] = useState(true)
@@ -131,6 +189,7 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
   const [showCredentialsPassword, setShowCredentialsPassword] = useState(false)
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [permissionsDraft, setPermissionsDraft] = useState(/** @type {Record<string, boolean>} */ ({}))
+  const [permissionSavingId, setPermissionSavingId] = useState(/** @type {string | null} */ (null))
   const [searchDraft, setSearchDraft] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
@@ -282,9 +341,84 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
     setModal({ open: true, type: "credentials", row })
   }
 
-  const openPermissions = (row) => {
-    setPermissionsDraft(permissionsToDraft(row?.permissions, permissionOptions))
-    setModal({ open: true, type: "permissions", row })
+  const openPermissions = async (row) => {
+    if (!canOpenPermissionsFor(row)) return
+
+    let permissions = row?.permissions
+    if (row?.login && canTogglePermissionsFor(row)) {
+      const missingViewIds = getMissingViewPermissionOptionIds(permissions, permissionOptions)
+      if (missingViewIds.length) {
+        try {
+          await setUserPermissions(row.login, { ids: missingViewIds, codes: missingViewIds })
+          const merged = new Set((permissions ?? []).map((p) => normalizePermissionKey(p)))
+          for (const id of missingViewIds) merged.add(normalizePermissionKey(id))
+          permissions = [...merged]
+          setRows((prev) =>
+            prev.map((r) => (r.login === row.login ? { ...r, permissions } : r))
+          )
+        } catch {
+          /* ko'rish ruxsatini keyinroq qo'lda berish mumkin */
+        }
+      }
+    }
+
+    const draft =
+      row?.role === "Admin"
+        ? allPermissionsDraft(permissionOptions)
+        : permissionsToDraft(permissions, permissionOptions)
+    setPermissionsDraft(draft)
+    setPermissionSavingId(null)
+    setModal({ open: true, type: "permissions", row: { ...row, permissions } })
+  }
+
+  const updateRowPermissions = useCallback((login, code, enabled) => {
+    const key = normalizePermissionKey(code)
+    const patch = (perms) => {
+      const set = new Set((perms ?? []).map((p) => normalizePermissionKey(p)))
+      if (enabled) set.add(key)
+      else set.delete(key)
+      return [...set]
+    }
+    setRows((prev) => prev.map((r) => (r.login === login ? { ...r, permissions: patch(r.permissions) } : r)))
+    setModal((m) =>
+      m.row?.login === login ? { ...m, row: { ...m.row, permissions: patch(m.row.permissions) } } : m
+    )
+  }, [])
+
+  const onPermissionToggle = async (optId, next) => {
+    const row = modal.row
+    if (!row?.login || !canTogglePermissionsFor(row) || permissionSavingId) return
+
+    const impliedKeys = next
+      ? getImpliedPermissionsWhenGranting(optId).map((k) => resolvePermissionOptionId(k, permissionOptions))
+      : [optId]
+    const uniqueIds = [...new Set(impliedKeys)]
+
+    const prevDraft = { ...permissionsDraft }
+    setPermissionsDraft((prev) => {
+      const nextDraft = { ...prev }
+      for (const id of uniqueIds) nextDraft[id] = next
+      return nextDraft
+    })
+    setPermissionSavingId(optId)
+
+    try {
+      const payload = { ids: uniqueIds, codes: uniqueIds }
+      if (next) {
+        await setUserPermissions(row.login, payload)
+        showNotice(uniqueIds.length > 1 ? "Ruxsatlar berildi" : "Ruxsat berildi")
+      } else {
+        await removeUserPermissions(row.login, payload)
+        showNotice("Ruxsat olib tashlandi")
+      }
+      for (const id of uniqueIds) updateRowPermissions(row.login, id, next)
+    } catch (err) {
+      setPermissionsDraft(prevDraft)
+      const message = err instanceof Error ? err.message : "Ruxsatni saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setPermissionSavingId(null)
+    }
   }
 
   const openCreate = () => {
@@ -371,55 +505,6 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
     }
   }
 
-  const onSavePermissions = async () => {
-    const row = modal.row
-    if (!row?.login || busy) return
-
-    const selected = permissionOptions.filter((opt) => permissionsDraft[opt.id])
-    const nextIds = selected.map((opt) => String(opt.id))
-    const nextCodes = [...nextIds]
-
-    const prev = new Set((row.permissions ?? []).map((p) => normalizePermissionKey(p)))
-    const nextCompare = new Set(nextIds.map((id) => normalizePermissionKey(id)))
-
-    const isKnownPermission = (value) => {
-      const key = normalizePermissionKey(value)
-      return permissionOptions.some((opt) => normalizePermissionKey(opt.id) === key)
-    }
-
-    const knownPrev = [...prev].filter(isKnownPermission)
-
-    const toRemoveKeys = knownPrev.filter((key) => !nextCompare.has(key))
-    const toAdd = selected.filter((opt) => !prev.has(normalizePermissionKey(opt.id)))
-
-    const toAddIds = toAdd.map((opt) => opt.id)
-    const toAddCodes = toAdd.map((opt) => opt.id)
-
-    const toRemoveIds = toRemoveKeys.filter((k) => /^\d+$/.test(k)).map((k) => Number(k))
-    const toRemoveCodes = toRemoveKeys.filter((k) => !/^\d+$/.test(k))
-
-    if (!toAdd.length && !toRemoveKeys.length) {
-      closeModal()
-      return
-    }
-
-    setBusy(true)
-    try {
-      if (toAdd.length) await setUserPermissions(row.login, { ids: toAddIds, codes: toAddCodes })
-      if (toRemoveKeys.length) await removeUserPermissions(row.login, { ids: toRemoveIds, codes: toRemoveCodes })
-      setRows((prevRows) =>
-        prevRows.map((r) => (r.login === row.login ? { ...r, permissions: [...new Set(nextIds)] } : r))
-      )
-      closeModal()
-      showNotice("Ruxsatlar saqlandi")
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Ruxsatlarni saqlab bo'lmadi"
-      showNotice(message, "danger")
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const onSaveCreate = async () => {
     if (busy) return
     const fio = createDraft.fio.trim()
@@ -476,15 +561,17 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className={`text-xl font-bold tracking-tight ${title}`}>Foydalanuvchilar</h2>
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={loading || !canAdd}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
-          >
-            <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
-            Foydalanuvchi Qo'shish
-          </button>
+          {canAdd && (
+            <button
+              type="button"
+              onClick={openCreate}
+              disabled={loading}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
+            >
+              <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
+              Foydalanuvchi Qo'shish
+            </button>
+          )}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2">
           <select
@@ -678,6 +765,17 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
               <p className="font-semibold">{modal.row.fio}</p>
               <p className={`text-sm ${subtitle}`}>{modal.row.login}</p>
             </div>
+            {modal.row.role === "Admin" && (
+              <p className={`text-sm ${subtitle}`}>
+                Admin foydalanuvchida barcha ruxsatlar yoqilgan. Faqat Komissiya va Foydalanuvchi rollarida ruxsatlarni o'zgartirish mumkin.
+              </p>
+            )}
+            {isCurrentUserRow(modal.row) && (
+              <p className={`text-sm ${subtitle}`}>O&apos;z ruxsatlaringizni o&apos;zgartira olmaysiz.</p>
+            )}
+            {!canTogglePermissionsFor(modal.row) && !isCurrentUserRow(modal.row) && modal.row.role !== "Admin" && (
+              <p className={`text-sm ${subtitle}`}>Ushbu foydalanuvchi uchun ruxsatlarni o&apos;zgartirish mumkin emas.</p>
+            )}
             <div
               className={`divide-y rounded-xl border ${dark ? "divide-slate-600 border-slate-600" : "divide-slate-200 border-slate-200"} max-h-[55vh] overflow-y-auto`}
             >
@@ -686,8 +784,10 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
                   <PermissionToggle
                     label={opt.label}
                     checked={Boolean(permissionsDraft[opt.id])}
-                    onChange={(next) => setPermissionsDraft((prev) => ({ ...prev, [opt.id]: next }))}
+                    onChange={(next) => onPermissionToggle(opt.id, next)}
                     dark={dark}
+                    disabled={!canTogglePermissionsFor(modal.row)}
+                    saving={permissionSavingId === opt.id}
                   />
                 </div>
               ))}
@@ -695,20 +795,12 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 type="button"
-                disabled={busy}
-                onClick={onSavePermissions}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Saqlash
-              </button>
-              <button
-                type="button"
                 onClick={closeModal}
                 className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${
                   dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"
                 }`}
               >
-                Bekor qilish
+                Yopish
               </button>
             </div>
           </div>
@@ -819,36 +911,38 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
                     : "translate(-100%, -100%)",
               }}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  closeActionsMenu()
-                  const row = rows.find((r) => r.id === actionsMenu.rowId)
-                  if (row && canPermissions) openPermissions(row)
-                }}
-                disabled={!canPermissions}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                  dark ? "text-violet-400 hover:bg-slate-700/80" : "text-violet-700 hover:bg-violet-50"
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                Ruxsatlar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  closeActionsMenu()
-                  const row = rows.find((r) => r.id === actionsMenu.rowId)
-                  if (row && canPassword) openCredentials(row)
-                }}
-                disabled={!canPassword}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                  dark ? "text-amber-400 hover:bg-slate-700/80" : "text-amber-700 hover:bg-amber-50"
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                Parolni o'zgartirish
-              </button>
+              {canOpenPermissionsFor(rows.find((r) => r.id === actionsMenu.rowId)) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeActionsMenu()
+                    const row = rows.find((r) => r.id === actionsMenu.rowId)
+                    if (row) openPermissions(row)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    dark ? "text-violet-400 hover:bg-slate-700/80" : "text-violet-700 hover:bg-violet-50"
+                  }`}
+                >
+                  <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Ruxsatlar
+                </button>
+              )}
+              {canPassword && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeActionsMenu()
+                    const row = rows.find((r) => r.id === actionsMenu.rowId)
+                    if (row) openCredentials(row)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    dark ? "text-amber-400 hover:bg-slate-700/80" : "text-amber-700 hover:bg-amber-50"
+                  }`}
+                >
+                  <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Parolni o'zgartirish
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -863,36 +957,38 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
                 <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
                 Ko'rish
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  closeActionsMenu()
-                  const row = rows.find((r) => r.id === actionsMenu.rowId)
-                  if (row && canEdit) openEdit(row)
-                }}
-                disabled={!canEdit}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                  dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                Tahrirlash
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  closeActionsMenu()
-                  const row = rows.find((r) => r.id === actionsMenu.rowId)
-                  if (row && canDelete) openDelete(row)
-                }}
-                disabled={!canDelete}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                  dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                O'chirish
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeActionsMenu()
+                    const row = rows.find((r) => r.id === actionsMenu.rowId)
+                    if (row) openEdit(row)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
+                  }`}
+                >
+                  <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Tahrirlash
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeActionsMenu()
+                    const row = rows.find((r) => r.id === actionsMenu.rowId)
+                    if (row) openDelete(row)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
+                  }`}
+                >
+                  <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  O'chirish
+                </button>
+              )}
             </div>,
             document.body,
           )

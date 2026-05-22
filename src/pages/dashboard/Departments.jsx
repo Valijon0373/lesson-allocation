@@ -8,6 +8,7 @@ import {
   saveDepartment,
   updateDepartment,
 } from "../../api/departments"
+import { getCrudPermissions } from "../../data/permissionLabels"
 
 const TEAL_BG = "bg-teal-500"
 
@@ -29,7 +30,11 @@ function Modal({ open, onClose, dark, children }) {
   )
 }
 
-export default function Departments({ dark }) {
+export default function Departments({ dark, permissions = [], isAdmin = false }) {
+  const { canView, canAdd, canEdit, canDelete } = useMemo(
+    () => getCrudPermissions(permissions, "department", isAdmin),
+    [permissions, isAdmin]
+  )
   const [rows, setRows] = useState(/** @type {import("../../api/departments").DepartmentRow[]} */ ([]))
   const [faculties, setFaculties] = useState(/** @type {import("../../api/faculties").FacultyRow[]} */ ([]))
   const [loading, setLoading] = useState(true)
@@ -109,8 +114,14 @@ export default function Departments({ dark }) {
   }, [])
 
   useEffect(() => {
+    if (!canView) {
+      setLoading(false)
+      setRows([])
+      setLoadError("")
+      return
+    }
     loadData()
-  }, [loadData])
+  }, [canView, loadData])
 
   const openView = async (row) => {
     setModal({ open: true, type: "view", row })
@@ -222,20 +233,31 @@ export default function Departments({ dark }) {
     </select>
   )
 
+  if (!canView) {
+    return (
+      <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-8 text-center`}>
+        <p className={`text-lg font-semibold ${title}`}>Ruxsat yo'q</p>
+        <p className={`mt-2 text-sm ${subtitle}`}>Kafedralarni ko'rish uchun ruxsat berilmagan.</p>
+      </div>
+    )
+  }
+
   return (
     <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className={`text-xl font-bold tracking-tight ${title}`}>Kafedralar</h2>
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={loading || faculties.length === 0}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
-          >
-            <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
-            Qo'shish
-          </button>
+          {canAdd && (
+            <button
+              type="button"
+              onClick={openCreate}
+              disabled={loading || faculties.length === 0}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
+            >
+              <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
+              Qo'shish
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
@@ -310,28 +332,32 @@ export default function Departments({ dark }) {
                   <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
                   Ko'rish
                 </button>
-                <button
-                  type="button"
-                  onClick={() => openEdit(row)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    dark
-                      ? "border-emerald-500/80 text-emerald-400 hover:bg-slate-700/80"
-                      : "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-                  }`}
-                >
-                  <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                  Tahrirlash
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openDelete(row)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    dark ? "border-red-500/80 text-red-400 hover:bg-slate-700/80" : "border-red-600 text-red-600 hover:bg-red-50"
-                  }`}
-                >
-                  <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                  O'chirish
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => openEdit(row)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      dark
+                        ? "border-emerald-500/80 text-emerald-400 hover:bg-slate-700/80"
+                        : "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                    }`}
+                  >
+                    <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                    Tahrirlash
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => openDelete(row)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      dark ? "border-red-500/80 text-red-400 hover:bg-slate-700/80" : "border-red-600 text-red-600 hover:bg-red-50"
+                    }`}
+                  >
+                    <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                    O'chirish
+                  </button>
+                )}
               </div>
             </li>
           ))}
