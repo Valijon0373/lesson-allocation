@@ -60,4 +60,3 @@ export default function DashboardNav({ dark, activeNav, onChange, tealBgClass = 
     </nav>
   )
 }
-

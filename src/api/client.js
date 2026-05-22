@@ -30,16 +30,35 @@ export function unwrapPayload(json) {
 }
 
 /**
+ * @param {unknown} raw
+ */
+export function formatApiErrorMessage(raw) {
+  const message = String(raw ?? "").trim()
+  if (!message) return "So'rov bajarilmadi"
+
+  if (/null value in column "status".*relation "categories"/i.test(message)) {
+    return "Server kategoriyani saqlay olmadi: status maydoni to'ldirilmagan. Backend yangilangan bo'lsa, sahifani yangilab qayta urinib ko'ring."
+  }
+
+  if (message.length > 280) {
+    const short = message.split("Detail:")[0]?.trim() || message.slice(0, 280)
+    return short.endsWith("...") ? short : `${short}...`
+  }
+
+  return message
+}
+
+/**
  * @param {Response} res
  */
 async function parseError(res) {
   try {
     const json = await res.json()
-    if (typeof json === "object" && json && "message" in json) return String(json.message)
-    if (typeof json === "object" && json && "error" in json) return String(json.error)
-    return JSON.stringify(json)
+    if (typeof json === "object" && json && "message" in json) return formatApiErrorMessage(json.message)
+    if (typeof json === "object" && json && "error" in json) return formatApiErrorMessage(json.error)
+    return formatApiErrorMessage(JSON.stringify(json))
   } catch {
-    return res.statusText || `HTTP ${res.status}`
+    return formatApiErrorMessage(res.statusText || `HTTP ${res.status}`)
   }
 }
 

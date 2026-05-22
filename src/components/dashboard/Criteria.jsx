@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import {
   ChevronDown,
   ChevronUp,
@@ -6,95 +7,32 @@ import {
   CircleX,
   Eye,
   FolderPlus,
+  Loader2,
   Pencil,
   Plus,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react"
-import { CATEGORY_MAX, CRITERIA, DEMO_CRITERIA_EVAL } from "../../data/criteria.js"
-
-const CATEGORY_ORDER = Object.keys(CATEGORY_MAX)
-
-const CATEGORY_UI_TITLE = {
-  "OTM rivojiga hissa": "Institut rivojiga qo'shgan hissasi",
-  "Shaxsiy fazilatlar": "Shaxsiy yutuqlar",
-}
+import {
+  deleteCriterionRow,
+  fetchAllCriterionRows,
+  saveCriterionRow,
+  updateCriterionRow,
+} from "../../api/categories"
+import {
+  deleteSection,
+  fetchAllSections,
+  saveSection,
+  updateSection,
+} from "../../api/criteriaApi"
+import { mezonError, mezonLog, mezonWarn } from "../../api/mezonDebug"
+import { getCrudPermissions } from "../../data/permissionLabels"
 
 const PREVIEW_ROWS = 3
 const TEAL_BG = "bg-teal-500"
-const STORAGE_KEY = "admin_mezonlar_dashboard_v1"
 
-/** @typedef {{ id: string, title: string, maxScore: number }} DashboardSection */
-/** @typedef {{ id: string, sectionId: string, title: string, maxScore: number, requiredDocs: string[], collected: number, status: 'approved'|'pending' }} DashboardCriterion */
-
-function categoryLabel(cat) {
-  return CATEGORY_UI_TITLE[cat] ?? cat
-}
-
-function buildDefaultSnapshot() {
-  /** @type {DashboardSection[]} */
-  const sections = CATEGORY_ORDER.map((cat, idx) => ({
-    id: `builtin-${idx}`,
-    title: categoryLabel(cat),
-    maxScore: CATEGORY_MAX[cat] ?? 0,
-  }))
-  /** @type {DashboardCriterion[]} */
-  const criteria = CRITERIA.map((c) => {
-    const idx = CATEGORY_ORDER.indexOf(c.category)
-    const sectionId = idx >= 0 ? `builtin-${idx}` : sections[0].id
-    return {
-      id: c.id,
-      sectionId,
-      title: c.title,
-      maxScore: c.maxScore,
-      requiredDocs: c.requiredDocs ?? [],
-      collected: DEMO_CRITERIA_EVAL[c.id]?.collected ?? 0,
-      status: DEMO_CRITERIA_EVAL[c.id]?.status ?? "pending",
-    }
-  })
-  return { sections, criteria }
-}
-
-function sanitizeSnapshot(data) {
-  if (!data || typeof data !== "object") return buildDefaultSnapshot()
-  const rawSections = Array.isArray(data.sections) ? data.sections : []
-  /** @type {DashboardSection[]} */
-  const sections = rawSections
-    .filter((s) => s && typeof s.id === "string" && typeof s.title === "string" && s.title.trim())
-    .map((s) => ({
-      id: String(s.id),
-      title: String(s.title).trim(),
-      maxScore: Number.isFinite(Number(s.maxScore)) && Number(s.maxScore) > 0 ? Number(s.maxScore) : 20,
-    }))
-  if (sections.length === 0) return buildDefaultSnapshot()
-  const sectionIds = new Set(sections.map((s) => s.id))
-
-  const rawCrit = Array.isArray(data.criteria) ? data.criteria : []
-  /** @type {DashboardCriterion[]} */
-  let criteria = rawCrit
-    .filter((c) => c && typeof c.id === "string" && typeof c.sectionId === "string" && sectionIds.has(c.sectionId))
-    .map((c) => ({
-      id: String(c.id),
-      sectionId: String(c.sectionId),
-      title: String(c.title ?? "").trim() || "Mezon",
-      maxScore: Number.isFinite(Number(c.maxScore)) && Number(c.maxScore) > 0 ? Number(c.maxScore) : 1,
-      requiredDocs: Array.isArray(c.requiredDocs) ? c.requiredDocs.map(String) : [],
-      collected: Number.isFinite(Number(c.collected)) ? Number(c.collected) : 0,
-      status: c.status === "approved" ? "approved" : "pending",
-    }))
-
-  return { sections, criteria }
-}
-
-function loadSnapshot() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return buildDefaultSnapshot()
-    return sanitizeSnapshot(JSON.parse(raw))
-  } catch {
-    return buildDefaultSnapshot()
-  }
-}
+/** @typedef {import("../../api/criteriaApi").SectionRow} DashboardSection */
+/** @typedef {import("../../api/categories").CriterionRow} DashboardCriterion */
 
 function Modal({ open, onClose, dark, children }) {
   if (!open) return null
@@ -115,10 +53,22 @@ function Modal({ open, onClose, dark, children }) {
   )
 }
 
-export default function Criteria({ dark }) {
-  const initial = useMemo(() => loadSnapshot(), [])
-  const [sections, setSections] = useState(() => initial.sections)
-  const [criteria, setCriteria] = useState(() => initial.criteria)
+export default function Criteria({ dark, permissions = [], isAdmin = false }) {
+  const sectionPerms = useMemo(
+    () => getCrudPermissions(permissions, "criteria", isAdmin),
+    [permissions, isAdmin]
+  )
+  const rowPerms = useMemo(
+    () => getCrudPermissions(permissions, "category", isAdmin),
+    [permissions, isAdmin]
+  )
+  const canViewPage = sectionPerms.canView || rowPerms.canView
+
+  const [sections, setSections] = useState(/** @type {DashboardSection[]} */ ([]))
+  const [criteria, setCriteria] = useState(/** @type {DashboardCriterion[]} */ ([]))
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState("")
 
   const [openSection, setOpenSection] = useState("")
   const [showAllInSection, setShowAllInSection] = useState(() => ({}))
@@ -139,10 +89,23 @@ export default function Criteria({ dark }) {
   })
   const [deleteSectionTarget, setDeleteSectionTarget] = useState(/** @type {DashboardSection | null} */ (null))
 
-  const [notice, setNotice] = useState({ open: false, message: "" })
+  const [notice, setNotice] = useState({
+    open: false,
+    message: "",
+    variant: /** @type {"success" | "danger"} */ ("success"),
+  })
   const noticeTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
 
   const [openActionsFor, setOpenActionsFor] = useState(/** @type {string | null} */ (null))
+  const [actionsMenu, setActionsMenu] = useState(
+    /** @type {{ open: boolean, rowId: string | null, position: "bottom" | "top", x: number, y: number }} */ ({
+      open: false,
+      rowId: null,
+      position: "bottom",
+      x: 0,
+      y: 0,
+    }),
+  )
 
   const [criterionModal, setCriterionModal] = useState({
     open: false,
@@ -155,9 +118,42 @@ export default function Criteria({ dark }) {
     maxScore: "5",
   })
 
+  const loadData = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
+    setLoadError("")
+    try {
+      const sectionList = await fetchAllSections()
+      const rowList = await fetchAllCriterionRows(sectionList)
+      setSections(sectionList)
+      setCriteria(rowList)
+      mezonLog("Sahifa yuklandi", {
+        boLimlar: sectionList.length,
+        mezonlar: rowList.length,
+        boLimIdlar: sectionList.map((s) => s.id),
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Ma'lumotlarni yuklab bo'lmadi"
+      mezonError("Sahifa yuklanmadi", err)
+      setLoadError(message)
+      if (!silent) {
+        setSections([])
+        setCriteria([])
+      }
+    } finally {
+      if (!silent) setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sections, criteria }))
-  }, [sections, criteria])
+    if (!canViewPage) {
+      setLoading(false)
+      setSections([])
+      setCriteria([])
+      setLoadError("")
+      return
+    }
+    loadData()
+  }, [canViewPage, loadData])
 
   const rows = criteria
 
@@ -201,6 +197,46 @@ export default function Criteria({ dark }) {
     setEditingSectionId(null)
   }
 
+  const closeActionsMenu = useCallback(() => {
+    setOpenActionsFor(null)
+    setActionsMenu((p) => ({ ...p, open: false, rowId: null }))
+  }, [])
+
+  const openActionsMenuFor = useCallback((rowId, anchorEl) => {
+    if (!anchorEl) return
+    const rect = anchorEl.getBoundingClientRect()
+
+    const menuHeight = 250
+    const gap = 8
+    const spaceBelow = window.innerHeight - rect.bottom
+    const position = spaceBelow < menuHeight ? "top" : "bottom"
+    const x = rect.right
+    const y = position === "bottom" ? rect.bottom + gap : rect.top - gap
+
+    setOpenActionsFor(rowId)
+    setActionsMenu({ open: true, rowId, position, x, y })
+  }, [])
+
+  useEffect(() => {
+    if (!actionsMenu.open) return
+    const onDown = (e) => {
+      if (e.key === "Escape") closeActionsMenu()
+    }
+    const onPointerDown = (e) => {
+      const target = e.target
+      if (!(target instanceof Element)) return
+      if (target.closest("[data-actions-menu='true']")) return
+      if (target.closest("[data-actions-anchor='true']")) return
+      closeActionsMenu()
+    }
+    window.addEventListener("keydown", onDown)
+    window.addEventListener("pointerdown", onPointerDown, { capture: true })
+    return () => {
+      window.removeEventListener("keydown", onDown)
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true })
+    }
+  }, [actionsMenu.open, closeActionsMenu])
+
   const openCreateCriterion = () => {
     const first = sections[0]?.id ?? ""
     setCreateDraft({
@@ -235,13 +271,13 @@ export default function Criteria({ dark }) {
     setSectionModalOpen(true)
   }
 
-  const showNotice = (message) => {
-    setNotice({ open: true, message })
+  const showNotice = (message, variant = "success") => {
+    setNotice({ open: true, message, variant })
     if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current)
     noticeTimeoutRef.current = setTimeout(() => {
-      setNotice({ open: false, message: "" })
+      setNotice({ open: false, message: "", variant: "success" })
       noticeTimeoutRef.current = null
-    }, 1300)
+    }, variant === "danger" ? 3500 : 1300)
   }
 
   const closeCriterionModal = () =>
@@ -266,113 +302,216 @@ export default function Criteria({ dark }) {
     setCriterionModal({ open: true, type: "delete", row })
   }
 
-  const onSaveCriterionEdit = () => {
+  const onSaveCriterionEdit = async () => {
     const row = criterionModal.row
-    if (!row?.id) return
+    if (!row?.id || busy || !rowPerms.canEdit) return
     const title = editCriterionDraft.title.trim()
     const maxScore = Number(editCriterionDraft.maxScore)
-    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) return
-    if (!sections.some((s) => s.id === editCriterionDraft.sectionId)) return
-
-    setCriteria((prev) =>
-      prev.map((c) =>
-        c.id === row.id
-          ? {
-              ...c,
-              sectionId: editCriterionDraft.sectionId,
-              title,
-              maxScore: Math.round(maxScore),
-            }
-          : c
-      )
-    )
-    closeCriterionModal()
-    showNotice("Mezon yangilandi")
-    setOpenSection(editCriterionDraft.sectionId)
-  }
-
-  const onConfirmCriterionDelete = () => {
-    const row = criterionModal.row
-    if (!row?.id) return
-    setCriteria((prev) => prev.filter((c) => c.id !== row.id))
-    closeCriterionModal()
-    showNotice("Mezon o'chirildi")
-  }
-
-  const onSaveCriterion = () => {
-    const title = createDraft.title.trim()
-    const maxScore = Number(createDraft.maxScore)
-    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) return
-    if (!sections.some((s) => s.id === createDraft.sectionId)) return
-
-    const newRow = {
-      id: `c-custom-${Date.now()}`,
-      sectionId: createDraft.sectionId,
-      title,
-      maxScore: Math.round(maxScore),
-      requiredDocs: [],
-      collected: 0,
-      status: /** @type {'pending'} */ ("pending"),
+    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) {
+      showNotice("Mezon nomi va maks. ballni to'ldiring", "danger")
+      return
     }
-    setCriteria((prev) => [...prev, newRow])
-    closeCreateModal()
-    showNotice("Mezon qo'shildi")
-    setOpenSection(createDraft.sectionId)
-  }
-
-  const onSaveSection = () => {
-    const title = sectionFormDraft.title.trim()
-    const maxScore = Number(sectionFormDraft.maxScore)
-    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) return
-
-    if (editingSectionId) {
-      setSections((prev) =>
-        prev.map((s) =>
-          s.id === editingSectionId ? { ...s, title, maxScore: Math.round(maxScore) } : s
-        )
-      )
-      closeSectionModal()
-      showNotice("Bo'lim yangilandi")
+    if (!sections.some((s) => s.id === editCriterionDraft.sectionId)) {
+      showNotice("Avval bo'lim tanlang", "danger")
       return
     }
 
-    const id = `custom-${Date.now()}`
-    const newSection = {
-      id,
+    setBusy(true)
+    try {
+      const updated = await updateCriterionRow(row.id, {
+        sectionId: editCriterionDraft.sectionId,
+        title,
+        maxScore: Math.round(maxScore),
+      })
+      setCriteria((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+      closeCriterionModal()
+      showNotice("Mezon yangilandi")
+      setOpenSection(editCriterionDraft.sectionId)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onConfirmCriterionDelete = async () => {
+    const row = criterionModal.row
+    if (!row?.id || busy || !rowPerms.canDelete) return
+
+    setBusy(true)
+    try {
+      await deleteCriterionRow(row.id)
+      setCriteria((prev) => prev.filter((c) => c.id !== row.id))
+      closeCriterionModal()
+      showNotice("Mezon o'chirildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'chirib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onSaveCriterion = async () => {
+    if (busy || !rowPerms.canAdd) return
+    const title = createDraft.title.trim()
+    const maxScore = Number(createDraft.maxScore)
+    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) {
+      mezonWarn("Forma to'liq emas", { title, maxScore, createDraft })
+      showNotice("Mezon nomi va maks. ballni to'ldiring", "danger")
+      return
+    }
+    const sectionId = createDraft.sectionId || sections[0]?.id || ""
+    if (!sectionId || !sections.some((s) => s.id === sectionId)) {
+      mezonWarn("Bo'lim tanlanmagan", { sectionId, boLimlar: sections })
+      showNotice("Avval bo'lim qo'shing", "danger")
+      return
+    }
+
+    mezonLog("Mezon qo'shish — boshlandi", {
+      sectionId,
       title,
       maxScore: Math.round(maxScore),
+      tanlanganBoLim: sections.find((s) => s.id === sectionId)?.title,
+    })
+
+    setBusy(true)
+    try {
+      const created = await saveCriterionRow({
+        sectionId,
+        title,
+        maxScore: Math.round(maxScore),
+      })
+      setCriteria((prev) => [...prev.filter((c) => c.id !== created.id), created])
+      mezonLog("Mezon API dan qaytdi", created)
+
+      const needsRefresh = String(created.id).startsWith("tmp-")
+      if (needsRefresh) {
+        await loadData({ silent: true })
+      }
+
+      closeCreateModal()
+      showNotice("Mezon qo'shildi")
+      setOpenSection(sectionId)
+      mezonLog("Mezon qo'shish — tugadi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Qo'shib bo'lmadi"
+      mezonError("Mezon qo'shish — muvaffaqiyatsiz (UI)", err, {
+        sectionId,
+        title,
+        maxScore,
+        consoleFilter: "Console da [Mezon] qidiring",
+      })
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
     }
-    setSections((prev) => [...prev, newSection])
-    closeSectionModal()
-    showNotice("Bo'lim yaratildi")
-    setOpenSection(id)
+  }
+
+  const onSaveSection = async () => {
+    if (busy) return
+    const title = sectionFormDraft.title.trim()
+    const maxScore = Number(sectionFormDraft.maxScore)
+    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) {
+      showNotice("Bo'lim nomi va maks. ballni to'ldiring", "danger")
+      return
+    }
+
+    setBusy(true)
+    try {
+      if (editingSectionId) {
+        if (!sectionPerms.canEdit) return
+        const updated = await updateSection(editingSectionId, {
+          title,
+          maxScore: Math.round(maxScore),
+        })
+        setSections((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
+        closeSectionModal()
+        showNotice("Bo'lim yangilandi")
+        return
+      }
+
+      if (!sectionPerms.canAdd) return
+      const created = await saveSection({ title, maxScore: Math.round(maxScore) })
+      setSections((prev) => [...prev.filter((s) => s.id !== created.id), created])
+      if (String(created.id).startsWith("tmp-")) {
+        await loadData({ silent: true })
+      }
+      closeSectionModal()
+      showNotice("Bo'lim yaratildi")
+      setOpenSection(created.id)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
   const criteriaCountForSection = (sectionId) => criteria.filter((c) => c.sectionId === sectionId).length
 
-  const confirmDeleteSection = () => {
+  const confirmDeleteSection = async () => {
     const target = deleteSectionTarget
-    if (!target) return
+    if (!target?.id || busy || !sectionPerms.canDelete) return
     const id = target.id
 
-    setSections((prev) => {
-      const next = prev.filter((s) => s.id !== id)
-      const fallbackId = next[0]?.id ?? ""
-      setOpenSection((cur) => (cur === id ? fallbackId : cur))
-      setCreateDraft((d) => (d.sectionId === id ? { ...d, sectionId: fallbackId } : d))
-      return next
-    })
-    setCriteria((prev) => prev.filter((c) => c.sectionId !== id))
-    setSectionFilter((f) => (f === id ? "all" : f))
-    setDeleteSectionTarget(null)
-    showNotice("Bo'lim o'chirildi")
+    setBusy(true)
+    try {
+      await deleteSection(id)
+      setSections((prev) => prev.filter((s) => s.id !== id))
+      setCriteria((prev) => prev.filter((c) => c.sectionId !== id))
+      await loadData({ silent: true })
+      setSectionFilter((f) => (f === id ? "all" : f))
+      setDeleteSectionTarget(null)
+      showNotice("Bo'lim o'chirildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'chirib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
   const firstSectionId = sections[0]?.id ?? ""
 
+  if (!canViewPage) {
+    return (
+      <div className={`rounded-2xl border px-6 py-10 text-center ${dark ? "border-slate-700 bg-slate-800/40 text-slate-300" : "border-slate-200 bg-white text-slate-600"}`}>
+        <p className="text-sm">Mezonlar bo'limini ko'rish uchun ruxsat yo'q.</p>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className={`flex min-h-[16rem] items-center justify-center rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-8`}>
+        <Loader2 className={`h-8 w-8 animate-spin ${dark ? "text-teal-400" : "text-teal-500"}`} aria-hidden />
+        <span className="sr-only">Yuklanmoqda</span>
+      </div>
+    )
+  }
+
   return (
     <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
       <div className="space-y-6">
+        {loadError ? (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              dark ? "border-red-500/40 bg-red-950/30 text-red-200" : "border-red-200 bg-red-50 text-red-800"
+            }`}
+          >
+            <p>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => loadData()}
+              className={`mt-2 font-semibold underline ${dark ? "text-red-100" : "text-red-700"}`}
+            >
+              Qayta yuklash
+            </button>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className={`text-xl font-bold tracking-tight ${titleClr}`}>Mezonlar</h2>
@@ -383,16 +522,19 @@ export default function Criteria({ dark }) {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={openCreateSection}
-              className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                dark ? "border-emerald-500 text-emerald-300 hover:bg-slate-700/70" : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-              }`}
-            >
-              <FolderPlus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
-              Bo'lim qo'shish
-            </button>
+            {sectionPerms.canAdd ? (
+              <button
+                type="button"
+                onClick={openCreateSection}
+                className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                  dark ? "border-emerald-500 text-emerald-300 hover:bg-slate-700/70" : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                }`}
+              >
+                <FolderPlus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
+                Bo'lim qo'shish
+              </button>
+            ) : null}
+            {rowPerms.canAdd ? (
             <button
               type="button"
               onClick={openCreateCriterion}
@@ -402,6 +544,7 @@ export default function Criteria({ dark }) {
               <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
               Mezon qo'shish
             </button>
+            ) : null}
           </div>
         </div>
 
@@ -458,7 +601,9 @@ export default function Criteria({ dark }) {
                       Maks.Ball: {catMax}
                     </p>
                   </div>
+                  {(sectionPerms.canEdit || sectionPerms.canDelete) ? (
                   <div className="flex shrink-0 items-center gap-1">
+                    {sectionPerms.canEdit ? (
                     <button
                       type="button"
                       title="Bo'limni tahrirlash"
@@ -472,6 +617,8 @@ export default function Criteria({ dark }) {
                     >
                       <Pencil className="h-4 w-4" strokeWidth={2} aria-hidden />
                     </button>
+                    ) : null}
+                    {sectionPerms.canDelete ? (
                     <button
                       type="button"
                       title="Bo'limni o'chirish"
@@ -485,7 +632,9 @@ export default function Criteria({ dark }) {
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={2} aria-hidden />
                     </button>
+                    ) : null}
                   </div>
+                  ) : null}
                 </div>
 
                 {isOpen && (
@@ -495,6 +644,7 @@ export default function Criteria({ dark }) {
                         dark ? "border-slate-600 bg-slate-900/25" : "border-slate-200 bg-slate-50/90"
                       }`}
                     >
+                      {rowPerms.canAdd ? (
                       <button
                         type="button"
                         onClick={() => openCreateForSection(sec.id)}
@@ -505,6 +655,7 @@ export default function Criteria({ dark }) {
                         <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
                         Bu bo'limga mezon qo'shish
                       </button>
+                      ) : null}
                     </div>
 
                     {sectionRows.length > 0 ? (
@@ -532,10 +683,17 @@ export default function Criteria({ dark }) {
                                     {row.maxScore}
                                   </td>
                                   <td className={`border px-3 py-3 text-center align-middle ${dark ? "border-slate-600" : "border-slate-200"}`}>
-                                    <div className="relative inline-flex">
+                                    <div className="inline-flex">
                                       <button
                                         type="button"
-                                        onClick={() => setOpenActionsFor((prev) => (prev === row.id ? null : row.id))}
+                                        data-actions-anchor="true"
+                                        onClick={(e) => {
+                                          if (openActionsFor === row.id) {
+                                            closeActionsMenu()
+                                            return
+                                          }
+                                          openActionsMenuFor(row.id, e.currentTarget)
+                                        }}
                                         className={`inline-flex items-center justify-center rounded-lg border p-2.5 transition-colors ${
                                           dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-300 text-slate-700 hover:bg-slate-100"
                                         }`}
@@ -544,54 +702,6 @@ export default function Criteria({ dark }) {
                                       >
                                         <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
                                       </button>
-
-                                      {openActionsFor === row.id && (
-                                        <div
-                                          className={`absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border p-1 shadow-lg ${
-                                            dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
-                                          }`}
-                                        >
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setOpenActionsFor(null)
-                                              openViewCriterion(row)
-                                            }}
-                                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                                              dark ? "text-blue-400 hover:bg-slate-700/80" : "text-blue-700 hover:bg-blue-50"
-                                            }`}
-                                          >
-                                            <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                                            Ko'rish
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setOpenActionsFor(null)
-                                              openEditCriterion(row)
-                                            }}
-                                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                                              dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
-                                            }`}
-                                          >
-                                            <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                                            Tahrirlash
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setOpenActionsFor(null)
-                                              openDeleteCriterion(row)
-                                            }}
-                                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                                              dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
-                                            }`}
-                                          >
-                                            <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                                            O'chirish
-                                          </button>
-                                        </div>
-                                      )}
                                     </div>
                                   </td>
                                 </tr>
@@ -693,8 +803,10 @@ export default function Criteria({ dark }) {
             <button
               type="button"
               onClick={onSaveCriterion}
-              className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+              disabled={busy || sections.length === 0 || !rowPerms.canAdd}
+              className="inline-flex min-w-[11rem] items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
             >
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
               Saqlash
             </button>
             <button
@@ -750,8 +862,10 @@ export default function Criteria({ dark }) {
             <button
               type="button"
               onClick={onSaveSection}
-              className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+              disabled={busy}
+              className="inline-flex min-w-[11rem] items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
             >
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
               {editingSectionId ? "Saqlash" : "Yaratish"}
             </button>
             <button
@@ -789,8 +903,10 @@ export default function Criteria({ dark }) {
             <button
               type="button"
               onClick={confirmDeleteSection}
-              className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-red-600 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-red-700"
+              disabled={busy}
+              className="inline-flex min-w-[11rem] items-center justify-center gap-2 rounded-full bg-red-600 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
               O'chirish
             </button>
             <button
@@ -889,8 +1005,10 @@ export default function Criteria({ dark }) {
               <button
                 type="button"
                 onClick={onSaveCriterionEdit}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
               >
+                {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
                 Saqlash
               </button>
               <button
@@ -923,8 +1041,10 @@ export default function Criteria({ dark }) {
               <button
                 type="button"
                 onClick={onConfirmCriterionDelete}
-                className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600"
+                disabled={busy}
+                className="inline-flex min-w-[11rem] items-center justify-center gap-2 rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
               >
+                {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
                 Ha
               </button>
               <button
@@ -939,21 +1059,98 @@ export default function Criteria({ dark }) {
         )}
       </Modal>
 
+      {actionsMenu.open && actionsMenu.rowId && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              data-actions-menu="true"
+              className={`fixed z-[80] min-w-52 rounded-xl border p-1 shadow-xl ${
+                dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
+              }`}
+              style={{
+                left: actionsMenu.x,
+                top: actionsMenu.y,
+                transform:
+                  actionsMenu.position === "bottom"
+                    ? "translateX(-100%)"
+                    : "translate(-100%, -100%)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  closeActionsMenu()
+                  const target = criteria.find((r) => r.id === actionsMenu.rowId)
+                  if (target) openViewCriterion(target)
+                }}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                  dark ? "text-blue-400 hover:bg-slate-700/80" : "text-blue-700 hover:bg-blue-50"
+                }`}
+              >
+                <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                Ko'rish
+              </button>
+              {rowPerms.canEdit ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeActionsMenu()
+                    const target = criteria.find((r) => r.id === actionsMenu.rowId)
+                    if (target) openEditCriterion(target)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
+                  }`}
+                >
+                  <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Tahrirlash
+                </button>
+              ) : null}
+              {rowPerms.canDelete ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeActionsMenu()
+                    const target = criteria.find((r) => r.id === actionsMenu.rowId)
+                    if (target) openDeleteCriterion(target)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
+                  }`}
+                >
+                  <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  O'chirish
+                </button>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
+
       {notice.open && (
         <div className="pointer-events-none fixed left-1/2 top-4 z-[60] w-[min(92vw,34rem)] -translate-x-1/2">
           <div
             role="status"
             className={`pointer-events-auto flex items-center justify-between gap-3 rounded-2xl px-4 py-3 shadow-xl ring-1 ${
-              dark ? "bg-emerald-600 text-white ring-white/10" : "bg-emerald-500 text-white ring-emerald-600/30"
+              notice.variant === "danger"
+                ? dark
+                  ? "bg-red-600 text-white ring-white/10"
+                  : "bg-red-500 text-white ring-red-600/30"
+                : dark
+                  ? "bg-emerald-600 text-white ring-white/10"
+                  : "bg-emerald-500 text-white ring-emerald-600/30"
             }`}
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              <CircleCheck className="h-6 w-6 shrink-0 text-white" strokeWidth={2.25} aria-hidden />
+              {notice.variant === "danger" ? (
+                <CircleX className="h-6 w-6 shrink-0 text-white" strokeWidth={2.25} aria-hidden />
+              ) : (
+                <CircleCheck className="h-6 w-6 shrink-0 text-white" strokeWidth={2.25} aria-hidden />
+              )}
               <p className="truncate text-sm font-semibold">{notice.message}</p>
             </div>
             <button
               type="button"
-              onClick={() => setNotice({ open: false, message: "" })}
+              onClick={() => setNotice({ open: false, message: "", variant: "success" })}
               aria-label="Yopish"
               className="rounded-xl p-1.5 transition-colors hover:bg-white/10"
             >

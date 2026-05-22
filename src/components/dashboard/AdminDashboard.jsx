@@ -10,8 +10,8 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import logoImg from "../../assets/logo.jpg"
-import DashboardNav, { DASHBOARD_NAV, getDashboardNavLabel } from "../../components/dashboard/DashboardNav"
-import EvaluationSummaryCards from "../../components/dashboard/EvaluationSummaryCards"
+import DashboardNav, { DASHBOARD_NAV, getDashboardNavLabel } from "./DashboardNav"
+import EvaluationSummaryCards from "./EvaluationSummaryCards"
 import Faculties from "./Faculties"
 import Departments from "./Departments"
 import Positions from "./Positions"
@@ -228,7 +228,12 @@ export default function AdminDashboard() {
       ids.push("kafedralar")
     if (hasAnyPermission(["position_view", "position_create", "position_edit", "position_delete"])) ids.push("lavozim")
     if (hasAnyPermission(["user_view", "user_create", "user_edit", "user_delete"])) ids.push("foydalanuvchilar")
-    if (hasAnyPermission(["criteria_view", "criteria_create", "criteria_edit", "criteria_delete"])) ids.push("mezonlar")
+    if (
+      hasAnyPermission(["criteria_view", "criteria_create", "criteria_edit", "criteria_delete"]) ||
+      hasAnyPermission(["category_view", "category_create", "category_edit", "category_delete"])
+    ) {
+      ids.push("mezonlar")
+    }
 
     return ids
   }, [currentPermissions, hasAnyPermission, isAdmin])
@@ -588,7 +593,9 @@ export default function AdminDashboard() {
               <Users dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />
             )}
             {activeNav === "oqituvchilar" && <Teachers dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />}
-            {activeNav === "mezonlar" && <Criteria dark={dark} />}
+            {activeNav === "mezonlar" && (
+              <Criteria dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />
+            )}
             {activeNav === "biz-haqimizda" && <AboutUs dark={dark} />}
           </div>
         </main>
