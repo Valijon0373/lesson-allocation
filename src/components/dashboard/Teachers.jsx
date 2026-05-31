@@ -1,9 +1,15 @@
-import { useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, LockKeyhole, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { CircleCheck, CircleX, Eye, Loader2, LockKeyhole, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react"
+import { fetchAllDepartments } from "../../api/departments"
+import { fetchAllFaculties } from "../../api/faculties"
+import {
+  deleteTeacher,
+  fetchAllTeachers,
+  saveTeacher,
+  updateTeacher,
+} from "../../api/teachers"
 
 const TEAL_BG = "bg-teal-500"
-const FAKULTETLAR = ["Pedagogika", "Filologiya", "Axborot texnologiyalari", "Iqtisodiyot"]
-const KAFEDRALAR = ["Matematika", "Ingliz tili", "Informatika", "Buxgalteriya hisobi"]
 
 function Modal({ open, onClose, dark, children }) {
   if (!open) return null
@@ -25,71 +31,26 @@ function Modal({ open, onClose, dark, children }) {
 }
 
 export default function Teachers({ dark }) {
-  const [rows, setRows] = useState([
-    {
-      id: "t-sample-1",
-      fakultet: "Filologiya",
-      kafedra: "Ingliz tili",
-      fio: "Shahnoza Qodirova",
-      login: "shahnoza1111",
-      password: "teacher123",
-    },
-    {
-      id: "t-sample-2",
-      fakultet: "Pedagogika",
-      kafedra: "Matematika",
-      fio: "Dilshod Karimov",
-      login: "dilshod2026",
-      password: "teacher234",
-    },
-    {
-      id: "t-sample-3",
-      fakultet: "Filologiya",
-      kafedra: "Xorijiy tillar va tilshunoslik",
-      fio: "Aziza Rahimova",
-      login: "aziza_it",
-      password: "teacher345",
-    },
-    {
-      id: "t-sample-4",
-      fakultet: "Filologiya",
-      kafedra: "Ingliz tili",
-      fio: "Javohir Sobirov",
-      login: "javohir_acc",
-      password: "teacher456",
-    },
-    {
-      id: "t-sample-5",
-      fakultet: "Filologiya",
-      kafedra: "Ingliz tili",
-      fio: "Malika Nurmatova",
-      login: "malika_eng",
-      password: "teacher567",
-    },
-    {
-      id: "t-sample-6",
-      fakultet: "Pedagogika",
-      kafedra: "Matematika",
-      fio: "Sardor Islomov",
-      login: "sardor_math",
-      password: "teacher678",
-    },
-  ])
+  const [rows, setRows] = useState(/** @type {import("../../api/teachers").TeacherRow[]} */ ([]))
+  const [faculties, setFaculties] = useState(/** @type {import("../../api/faculties").FacultyRow[]} */ ([]))
+  const [departments, setDepartments] = useState(/** @type {import("../../api/departments").DepartmentRow[]} */ ([]))
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [loadError, setLoadError] = useState("")
   const [modal, setModal] = useState({
     open: false,
     type: /** @type {null | "view" | "edit" | "credentials" | "delete" | "create"} */ (null),
     row: null,
   })
   const [editDraft, setEditDraft] = useState({
-    fakultet: FAKULTETLAR[0],
-    kafedra: KAFEDRALAR[0],
+    facultyId: "",
+    departmentId: "",
     fio: "",
     login: "",
-    password: "",
   })
   const [createDraft, setCreateDraft] = useState({
-    fakultet: FAKULTETLAR[0],
-    kafedra: KAFEDRALAR[0],
+    facultyId: "",
+    departmentId: "",
     fio: "",
     login: "",
     password: "",
@@ -99,8 +60,8 @@ export default function Teachers({ dark }) {
   })
   const [searchDraft, setSearchDraft] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [fakultetFilter, setFakultetFilter] = useState("all")
-  const [kafedraFilter, setKafedraFilter] = useState("all")
+  const [facultyFilter, setFacultyFilter] = useState("all")
+  const [departmentFilter, setDepartmentFilter] = useState("all")
   const [openActionsFor, setOpenActionsFor] = useState(/** @type {string | null} */ (null))
   const [notice, setNotice] = useState({ open: false, message: "", variant: /** @type {"success" | "danger"} */ ("success") })
   const noticeTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
@@ -116,6 +77,54 @@ export default function Teachers({ dark }) {
   const selectInput = `${input} ${
     dark ? "[&>option]:bg-slate-800 [&>option]:text-slate-100" : "[&>option]:bg-white [&>option]:text-slate-900"
   }`
+
+  const facultyNames = useMemo(() => {
+    /** @type {Record<string, string>} */
+    const map = {}
+    for (const f of faculties) map[f.id] = f.nameUz
+    return map
+  }, [faculties])
+
+  const departmentNames = useMemo(() => {
+    /** @type {Record<string, string>} */
+    const map = {}
+    for (const d of departments) map[d.id] = d.nameUz
+    return map
+  }, [departments])
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setLoadError("")
+    try {
+      const facList = await fetchAllFaculties()
+      setFaculties(facList)
+      const names = Object.fromEntries(facList.map((f) => [f.id, f.nameUz]))
+      const depList = await fetchAllDepartments(names)
+      setDepartments(depList)
+      const depNames = Object.fromEntries(depList.map((d) => [d.id, d.nameUz]))
+      const list = await fetchAllTeachers(names, depNames)
+      setRows(
+        list.map((r) => ({
+          ...r,
+          fakultet: r.fakultet || names[r.facultyId] || "",
+          kafedra: r.kafedra || depNames[r.departmentId] || "",
+        })),
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'qituvchilarni yuklab bo'lmadi"
+      setLoadError(message)
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const departmentsForFaculty = (facultyId) =>
+    departments.filter((d) => d.facultyId === facultyId)
 
   const closeModal = () => setModal({ open: false, type: null, row: null })
   const closeNotice = () => setNotice({ open: false, message: "", variant: "success" })
@@ -133,11 +142,10 @@ export default function Teachers({ dark }) {
 
   const openEdit = (row) => {
     setEditDraft({
-      fakultet: row?.fakultet ?? FAKULTETLAR[0],
-      kafedra: row?.kafedra ?? KAFEDRALAR[0],
+      facultyId: row?.facultyId ?? faculties[0]?.id ?? "",
+      departmentId: row?.departmentId ?? "",
       fio: row?.fio ?? "",
       login: row?.login ?? "",
-      password: row?.password ?? "",
     })
     setModal({ open: true, type: "edit", row })
   }
@@ -152,9 +160,11 @@ export default function Teachers({ dark }) {
   }
 
   const openCreate = () => {
+    const firstFaculty = faculties[0]?.id ?? ""
+    const firstDepartment = departmentsForFaculty(firstFaculty)[0]?.id ?? ""
     setCreateDraft({
-      fakultet: FAKULTETLAR[0],
-      kafedra: KAFEDRALAR[0],
+      facultyId: firstFaculty,
+      departmentId: firstDepartment,
       fio: "",
       login: "",
       password: "",
@@ -162,74 +172,181 @@ export default function Teachers({ dark }) {
     setModal({ open: true, type: "create", row: null })
   }
 
-  const onSaveEdit = () => {
+  const onSaveEdit = async () => {
     const row = modal.row
-    if (!row?.id) return
+    if (!row?.id || busy) return
 
     const fio = editDraft.fio.trim()
-    if (!fio) return
+    const facultyId = editDraft.facultyId
+    const departmentId = editDraft.departmentId
+    if (!fio || !facultyId || !departmentId) return
 
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === row.id
-          ? { ...r, fakultet: editDraft.fakultet, kafedra: editDraft.kafedra, fio }
-          : r
+    setBusy(true)
+    try {
+      await updateTeacher(
+        row.id,
+        {
+          fio,
+          login: row.login,
+          facultyId,
+          departmentId,
+        },
+        facultyNames,
+        departmentNames,
       )
-    )
-    closeModal()
-    showNotice("Muvaffaqiyatli o'zgartirildi")
+      await loadData()
+      closeModal()
+      showNotice("Muvaffaqiyatli o'zgartirildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onConfirmDelete = () => {
+  const onConfirmDelete = async () => {
     const row = modal.row
-    if (!row?.id) return
-    setRows((prev) => prev.filter((r) => r.id !== row.id))
-    closeModal()
-    showNotice("Muvaffaqiyatli o'chirildi", "danger")
+    if (!row?.id || busy) return
+
+    setBusy(true)
+    try {
+      await deleteTeacher(row.id)
+      setRows((prev) => prev.filter((r) => r.id !== row.id))
+      closeModal()
+      showNotice("Muvaffaqiyatli o'chirildi", "danger")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "O'chirib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onSaveCredentials = () => {
+  const onSaveCredentials = async () => {
     const row = modal.row
-    if (!row?.id) return
+    if (!row?.id || busy) return
 
     const password = credentialsDraft.password.trim()
     if (!password) return
 
-    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, password } : r)))
-    closeModal()
-    showNotice("Muvaffaqiyatli o'zgartirildi")
+    setBusy(true)
+    try {
+      await updateTeacher(
+        row.id,
+        {
+          fio: row.fio,
+          login: row.login,
+          facultyId: row.facultyId,
+          departmentId: row.departmentId,
+          password,
+        },
+        facultyNames,
+        departmentNames,
+      )
+      closeModal()
+      showNotice("Muvaffaqiyatli o'zgartirildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Parolni yangilab bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const onSaveCreate = () => {
+  const onSaveCreate = async () => {
+    if (busy) return
     const fio = createDraft.fio.trim()
     const login = createDraft.login.trim()
     const password = createDraft.password.trim()
-    if (!fio || !login || !password) return
+    const facultyId = createDraft.facultyId
+    const departmentId = createDraft.departmentId
+    if (!fio || !login || !password || !facultyId || !departmentId) return
 
-    const newRow = {
-      id: `t-${Date.now()}`,
-      fakultet: createDraft.fakultet,
-      kafedra: createDraft.kafedra,
-      fio,
-      login,
-      password,
+    setBusy(true)
+    try {
+      await saveTeacher(
+        { fio, login, password, facultyId, departmentId },
+        facultyNames,
+        departmentNames,
+      )
+      await loadData()
+      closeModal()
+      showNotice("Muvaffaqiyatli qo'shildi")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Qo'shib bo'lmadi"
+      showNotice(message, "danger")
+    } finally {
+      setBusy(false)
     }
-    setRows((prev) => [newRow, ...prev])
-    closeModal()
-    showNotice("Muvaffaqiyatli qo'shildi")
   }
 
-  const fakultetOptions = Array.from(new Set([...FAKULTETLAR, ...rows.map((row) => row.fakultet)]))
-  const kafedraOptions = Array.from(new Set([...KAFEDRALAR, ...rows.map((row) => row.kafedra)]))
+  const facultyFilterOptions = useMemo(() => {
+    const ids = new Set(rows.map((r) => r.facultyId).filter(Boolean))
+    return faculties.filter((f) => ids.has(f.id))
+  }, [faculties, rows])
+
+  const departmentFilterOptions = useMemo(() => {
+    const ids = new Set(rows.map((r) => r.departmentId).filter(Boolean))
+    return departments.filter((d) => ids.has(d.id))
+  }, [departments, rows])
 
   const filteredRows = rows.filter((row) => {
-    if (fakultetFilter !== "all" && row.fakultet !== fakultetFilter) return false
-    if (kafedraFilter !== "all" && row.kafedra !== kafedraFilter) return false
+    if (facultyFilter !== "all" && row.facultyId !== facultyFilter) return false
+    if (departmentFilter !== "all" && row.departmentId !== departmentFilter) return false
 
     const q = searchQuery.trim().toLowerCase()
     if (!q) return true
-    return [row.fakultet, row.kafedra, row.fio, row.login].some((value) => value.toLowerCase().includes(q))
+    return [row.fakultet, row.kafedra, row.fio, row.login].some((value) =>
+      String(value ?? "").toLowerCase().includes(q),
+    )
   })
+
+  const renderFacultySelect = (value, onFacultyChange, onDepartmentChange) => (
+    <select
+      value={value}
+      onChange={(e) => {
+        const nextFaculty = e.target.value
+        onFacultyChange(nextFaculty)
+        const nextDeps = departmentsForFaculty(nextFaculty)
+        onDepartmentChange(nextDeps[0]?.id ?? "")
+      }}
+      disabled={faculties.length === 0 || loading}
+      className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
+    >
+      {faculties.length === 0 ? (
+        <option value="">Fakultetlar yuklanmadi</option>
+      ) : (
+        faculties.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.nameUz}
+          </option>
+        ))
+      )}
+    </select>
+  )
+
+  const renderDepartmentSelect = (facultyId, value, onChange) => {
+    const deps = departmentsForFaculty(facultyId)
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={deps.length === 0 || loading}
+        className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
+      >
+        {deps.length === 0 ? (
+          <option value="">Kafedralar yo'q</option>
+        ) : (
+          deps.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.nameUz}
+            </option>
+          ))
+        )}
+      </select>
+    )
+  }
 
   return (
     <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
@@ -248,35 +365,45 @@ export default function Teachers({ dark }) {
             <button
               type="button"
               onClick={openCreate}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 ${TEAL_BG}`}
+              disabled={loading || faculties.length === 0}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 ${TEAL_BG}`}
             >
               <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" aria-hidden />
               Qo'shish
             </button>
           </div>
         </div>
+
+        {loadError && (
+          <p className={`rounded-lg border px-4 py-3 text-sm ${dark ? "border-red-500/40 bg-red-500/10 text-red-300" : "border-red-200 bg-red-50 text-red-700"}`}>
+            {loadError}
+          </p>
+        )}
+
         <div className="flex w-full flex-wrap items-center gap-2">
           <select
-            value={fakultetFilter}
-            onChange={(e) => setFakultetFilter(e.target.value)}
+            value={facultyFilter}
+            onChange={(e) => setFacultyFilter(e.target.value)}
+            disabled={loading}
             className={`w-full sm:w-auto sm:min-w-[11rem] rounded-lg border px-3 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
           >
             <option value="all">Barcha fakultetlar</option>
-            {fakultetOptions.map((item) => (
-              <option key={item} value={item}>
-                {item}
+            {facultyFilterOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nameUz}
               </option>
             ))}
           </select>
           <select
-            value={kafedraFilter}
-            onChange={(e) => setKafedraFilter(e.target.value)}
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            disabled={loading}
             className={`w-full sm:w-auto sm:min-w-[11rem] rounded-lg border px-3 py-2.5 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
           >
             <option value="all">Barcha kafedralar</option>
-            {kafedraOptions.map((item) => (
-              <option key={item} value={item}>
-                {item}
+            {departmentFilterOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nameUz}
               </option>
             ))}
           </select>
@@ -297,6 +424,12 @@ export default function Teachers({ dark }) {
           </button>
         </div>
 
+        {loading ? (
+          <div className={`flex items-center justify-center gap-2 rounded-xl border py-16 ${cardBase}`}>
+            <Loader2 className="h-6 w-6 animate-spin text-teal-500" aria-hidden />
+            <span className={`text-sm font-medium ${subtitle}`}>Yuklanmoqda...</span>
+          </div>
+        ) : (
         <div className={`overflow-x-auto rounded-xl border ${cardBase}`}>
           <table className={`min-w-full border-collapse text-sm ${dark ? "border-slate-700" : "border-slate-200"}`}>
             <thead className={dark ? "bg-slate-900/40" : "bg-slate-50"}>
@@ -402,8 +535,9 @@ export default function Teachers({ dark }) {
             </tbody>
           </table>
         </div>
+        )}
 
-        {filteredRows.length === 0 && (
+        {!loading && filteredRows.length === 0 && (
           <p className={`text-center text-sm ${subtitle}`}>{searchQuery ? "Qidiruv bo'yicha natija topilmadi." : "Hozircha o'qituvchi yo'q."}</p>
         )}
       </div>
@@ -440,12 +574,12 @@ export default function Teachers({ dark }) {
               </button>
             </div>
             <div className="space-y-4">
-              <div className="space-y-2"><label className="text-base font-semibold">Fakultet</label><select value={editDraft.fakultet} onChange={(e) => setEditDraft((p) => ({ ...p, fakultet: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}>{FAKULTETLAR.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
-              <div className="space-y-2"><label className="text-base font-semibold">Kafedra</label><select value={editDraft.kafedra} onChange={(e) => setEditDraft((p) => ({ ...p, kafedra: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}>{KAFEDRALAR.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
-              <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={editDraft.fio} onChange={(e) => setEditDraft((p) => ({ ...p, fio: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} /></div>
+              <div className="space-y-2"><label className="text-base font-semibold">Fakultet</label>{renderFacultySelect(editDraft.facultyId, (facultyId) => setEditDraft((p) => ({ ...p, facultyId })), (departmentId) => setEditDraft((p) => ({ ...p, departmentId })))}</div>
+              <div className="space-y-2"><label className="text-base font-semibold">Kafedra</label>{renderDepartmentSelect(editDraft.facultyId, editDraft.departmentId, (departmentId) => setEditDraft((p) => ({ ...p, departmentId })))}</div>
+              <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={editDraft.fio} onChange={(e) => setEditDraft((p) => ({ ...p, fio: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button type="button" onClick={onSaveEdit} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600">Saqlash</button>
+              <button type="button" onClick={onSaveEdit} disabled={busy} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Saqlash</button>
               <button type="button" onClick={closeModal} className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"}`}>Bekor qilish</button>
             </div>
           </div>
@@ -460,7 +594,7 @@ export default function Teachers({ dark }) {
               </button>
             </div>
             <div className="flex flex-wrap items-center gap-4 pt-2">
-              <button type="button" onClick={onConfirmDelete} className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600">Ha</button>
+              <button type="button" onClick={onConfirmDelete} disabled={busy} className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-red-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60">Ha</button>
               <button type="button" onClick={closeModal} className="inline-flex min-w-[11rem] items-center justify-center rounded-2xl bg-blue-500 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-600">Yo'q</button>
             </div>
           </div>
@@ -482,7 +616,7 @@ export default function Teachers({ dark }) {
               <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={credentialsDraft.password} onChange={(e) => setCredentialsDraft((p) => ({ ...p, password: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Yangi parol kiriting" /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button type="button" onClick={onSaveCredentials} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600">Saqlash</button>
+              <button type="button" onClick={onSaveCredentials} disabled={busy} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Saqlash</button>
               <button type="button" onClick={closeModal} className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"}`}>Bekor qilish</button>
             </div>
           </div>
@@ -497,14 +631,14 @@ export default function Teachers({ dark }) {
               </button>
             </div>
             <div className="space-y-4">
-              <div className="space-y-2"><label className="text-base font-semibold">Fakultet</label><select value={createDraft.fakultet} onChange={(e) => setCreateDraft((p) => ({ ...p, fakultet: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}>{FAKULTETLAR.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
-              <div className="space-y-2"><label className="text-base font-semibold">Kafedra</label><select value={createDraft.kafedra} onChange={(e) => setCreateDraft((p) => ({ ...p, kafedra: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}>{KAFEDRALAR.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
-              <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={createDraft.fio} onChange={(e) => setCreateDraft((p) => ({ ...p, fio: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Masalan:F.I.O" /></div>
-              <div className="space-y-2"><label className="text-base font-semibold">Login</label><input value={createDraft.login} onChange={(e) => setCreateDraft((p) => ({ ...p, login: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Teacher.login" /></div>
-              <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={createDraft.password} onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Parol kiriting" /></div>
+              <div className="space-y-2"><label className="text-base font-semibold">Fakultet</label>{renderFacultySelect(createDraft.facultyId, (facultyId) => setCreateDraft((p) => ({ ...p, facultyId })), (departmentId) => setCreateDraft((p) => ({ ...p, departmentId })))}</div>
+              <div className="space-y-2"><label className="text-base font-semibold">Kafedra</label>{renderDepartmentSelect(createDraft.facultyId, createDraft.departmentId, (departmentId) => setCreateDraft((p) => ({ ...p, departmentId })))}</div>
+              <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={createDraft.fio} onChange={(e) => setCreateDraft((p) => ({ ...p, fio: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Masalan: F.I.O" /></div>
+              <div className="space-y-2"><label className="text-base font-semibold">Login</label><input value={createDraft.login} onChange={(e) => setCreateDraft((p) => ({ ...p, login: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Teacher.login" /></div>
+              <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={createDraft.password} onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Parol kiriting" /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button type="button" onClick={onSaveCreate} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600">Qo'shish</button>
+              <button type="button" onClick={onSaveCreate} disabled={busy} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Qo'shish</button>
               <button type="button" onClick={closeModal} className={`inline-flex min-w-[11rem] items-center justify-center rounded-full border px-6 py-3 text-base font-bold transition-colors ${dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-200 text-slate-800 hover:bg-slate-50"}`}>Bekor qilish</button>
             </div>
           </div>
