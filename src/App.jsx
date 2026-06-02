@@ -7,8 +7,10 @@ import HomeHeroBrand from "./components/HomeHeroBrand.jsx"
 import Navbar from "./components/Navbar.jsx"
 import { fetchAllCriterionRows } from "./api/categories"
 import { fetchAllSections } from "./api/criteriaApi"
+import { clearAuthTokens, login, setAuthTokens } from "./api/auth"
 import { fetchAllTeachers, saveTeacher } from "./api/teachers"
 import { fetchTeacherDocuments, saveTeacherDocument, uploadTeacherFile } from "./api/teacherDocuments"
+import { fetchUserByUsername } from "./api/users"
 import { CRITERIA as DEFAULT_CRITERIA } from "./data/criteria.js"
 
 const USERS = [
@@ -101,11 +103,36 @@ function getEvaluation(evaluations, teacherId, criterionId) {
   return evaluations[`${teacherId}_${criterionId}`] ?? { score: 0, comment: "", status: "pending" }
 }
 
+function mapTeachersFromApi(list) {
+  return list.map((teacher) => ({
+    id: teacher.id,
+    fullName: teacher.fio,
+    role: "teacher",
+    login: teacher.login,
+    password: "",
+    departmentId: teacher.departmentId,
+    department: teacher.kafedra || "",
+    positionId: teacher.positionId ?? "",
+  }))
+}
+
+function findTeacherByLogin(list, login) {
+  const normalized = login.trim().toLowerCase()
+  return list.find((item) => item.login.trim().toLowerCase() === normalized)
+}
+
+function isTeacherAccount(user) {
+  if (!user) return false
+  if (user.role === "O'qituvchi" || user.role === "teacher") return true
+  return Array.isArray(user.roles) && user.roles.some((role) => String(role).toUpperCase() === "TEACHER")
+}
+
 function App() {
   const [activePage, setActivePage] = useState("dashboard")
   const [loginOpen, setLoginOpen] = useState(false)
   const [loginForm, setLoginForm] = useState({ login: "", password: "" })
   const [loginError, setLoginError] = useState("")
+  const [loginLoading, setLoginLoading] = useState(false)
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState("")
@@ -136,18 +163,7 @@ function App() {
     const loadTeachers = async () => {
       try {
         const list = await fetchAllTeachers()
-        setTeachers(
-          list.map((teacher) => ({
-            id: teacher.id,
-            fullName: teacher.fio,
-            role: "teacher",
-            login: teacher.login,
-            password: "",
-            departmentId: teacher.departmentId,
-            department: teacher.kafedra || "",
-            positionId: teacher.positionId ?? "",
-          })),
-        )
+        setTeachers(mapTeachersFromApi(list))
         setSelectedTeacherId((prev) => prev || list[0]?.id || "")
         setTeacherLoadError("")
       } catch (error) {
@@ -381,32 +397,70 @@ function App() {
       setLoginError("Parolni kiriting.")
       return
     }
+
     const foundLocal = users.find((u) => u.login === loginTrim && u.password === loginForm.password)
-    const foundTeacher = teachers.find((t) => t.login === loginTrim)
-    const found = foundLocal || foundTeacher
-    if (!found) {
-      setLoginError("Login yoki parol noto'g'ri.")
+    if (foundLocal) {
+      setCurrentUser(foundLocal)
+      if (foundLocal.role === "teacher") setSelectedTeacherId(foundLocal.id)
+      setLoginError("")
+      setLoginOpen(false)
+      setLoginForm({ login: "", password: "" })
       return
     }
-    if (found.role === "teacher" && !foundLocal) {
-      // Teacher login/parol backend orqali tekshiriladi.
+
+    setLoginLoading(true)
+    setLoginError("")
+    try {
+      const tokens = await login(loginTrim, loginForm.password)
+
+      let matched = findTeacherByLogin(teachers, loginTrim)
+      if (!matched) {
+        const list = await fetchAllTeachers()
+        const mapped = mapTeachersFromApi(list)
+        matched = findTeacherByLogin(mapped, loginTrim)
+        if (matched) setTeachers(mapped)
+      }
+
+      let user = null
       try {
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ username: loginTrim, password: loginForm.password }),
-        })
-        if (!response.ok) throw new Error("Teacher login xato")
+        user = await fetchUserByUsername(loginTrim)
       } catch {
-        setLoginError("Login yoki parol noto'g'ri.")
+        user = null
+      }
+
+      if (!matched && !isTeacherAccount(user)) {
+        clearAuthTokens()
+        setLoginError("Bu login faqat o'qituvchilar uchun.")
         return
       }
+
+      setAuthTokens({
+        ...tokens,
+        username: loginTrim,
+        roles: user?.roles,
+      })
+
+      const teacherUser = matched ?? {
+        id: user.id,
+        fullName: user.fio,
+        role: "teacher",
+        login: user.login,
+        password: "",
+        departmentId: "",
+        department: "",
+        positionId: "",
+      }
+
+      setCurrentUser(teacherUser)
+      setSelectedTeacherId(teacherUser.id)
+      setLoginOpen(false)
+      setLoginForm({ login: "", password: "" })
+    } catch {
+      clearAuthTokens()
+      setLoginError("Login yoki parol noto'g'ri.")
+    } finally {
+      setLoginLoading(false)
     }
-    setCurrentUser(found)
-    if (found.role === "teacher") setSelectedTeacherId(found.id)
-    setLoginError("")
-    setLoginOpen(false)
-    setLoginForm({ login: "", password: "" })
   }
 
   const canEvaluate = currentUser && ["admin", "head", "dean", "expert"].includes(currentUser.role)
@@ -871,7 +925,10 @@ function App() {
           logoSrc={logoImg}
           logoAlt="Urganch DPI logo"
           userRoleLabel={currentUser ? ROLE_LABELS[currentUser.role] : ""}
-          onLogout={() => setCurrentUser(null)}
+          onLogout={() => {
+            clearAuthTokens()
+            setCurrentUser(null)
+          }}
           onOpenLogin={() => setLoginOpen(true)}
         />
         <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-6 pt-[calc(4.25rem+1rem)] sm:px-6 sm:pt-[calc(4.75rem+1rem)] lg:px-8">
@@ -1172,9 +1229,10 @@ function App() {
               )}
               <button
                 type="submit"
-                className="mt-2 w-full rounded-md bg-blue-600 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 active:bg-blue-800"
+                disabled={loginLoading}
+                className="mt-2 w-full rounded-md bg-blue-600 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Kirish
+                {loginLoading ? "Tekshirilmoqda..." : "Kirish"}
               </button>
             </form>
           </div>
