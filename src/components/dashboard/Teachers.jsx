@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { CircleCheck, CircleX, Eye, Loader2, LockKeyhole, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react"
 import { fetchAllDepartments } from "../../api/departments"
 import { fetchAllFaculties } from "../../api/faculties"
+import { fetchAllPositions } from "../../api/positions"
 import {
   deleteTeacher,
   fetchAllTeachers,
@@ -34,6 +35,7 @@ export default function Teachers({ dark }) {
   const [rows, setRows] = useState(/** @type {import("../../api/teachers").TeacherRow[]} */ ([]))
   const [faculties, setFaculties] = useState(/** @type {import("../../api/faculties").FacultyRow[]} */ ([]))
   const [departments, setDepartments] = useState(/** @type {import("../../api/departments").DepartmentRow[]} */ ([]))
+  const [positions, setPositions] = useState(/** @type {import("../../api/positions").PositionRow[]} */ ([]))
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [loadError, setLoadError] = useState("")
@@ -45,12 +47,14 @@ export default function Teachers({ dark }) {
   const [editDraft, setEditDraft] = useState({
     facultyId: "",
     departmentId: "",
+    positionId: "",
     fio: "",
     login: "",
   })
   const [createDraft, setCreateDraft] = useState({
     facultyId: "",
     departmentId: "",
+    positionId: "",
     fio: "",
     login: "",
     password: "",
@@ -102,6 +106,8 @@ export default function Teachers({ dark }) {
       const depList = await fetchAllDepartments(names)
       setDepartments(depList)
       const depNames = Object.fromEntries(depList.map((d) => [d.id, d.nameUz]))
+      const posList = await fetchAllPositions()
+      setPositions(posList)
       const list = await fetchAllTeachers(names, depNames)
       setRows(
         list.map((r) => ({
@@ -114,6 +120,7 @@ export default function Teachers({ dark }) {
       const message = err instanceof Error ? err.message : "O'qituvchilarni yuklab bo'lmadi"
       setLoadError(message)
       setRows([])
+      setPositions([])
     } finally {
       setLoading(false)
     }
@@ -144,6 +151,7 @@ export default function Teachers({ dark }) {
     setEditDraft({
       facultyId: row?.facultyId ?? faculties[0]?.id ?? "",
       departmentId: row?.departmentId ?? "",
+      positionId: row?.positionId ?? positions[0]?.id ?? "",
       fio: row?.fio ?? "",
       login: row?.login ?? "",
     })
@@ -162,9 +170,11 @@ export default function Teachers({ dark }) {
   const openCreate = () => {
     const firstFaculty = faculties[0]?.id ?? ""
     const firstDepartment = departmentsForFaculty(firstFaculty)[0]?.id ?? ""
+    const firstPosition = positions[0]?.id ?? ""
     setCreateDraft({
       facultyId: firstFaculty,
       departmentId: firstDepartment,
+      positionId: firstPosition,
       fio: "",
       login: "",
       password: "",
@@ -179,7 +189,8 @@ export default function Teachers({ dark }) {
     const fio = editDraft.fio.trim()
     const facultyId = editDraft.facultyId
     const departmentId = editDraft.departmentId
-    if (!fio || !facultyId || !departmentId) return
+    const positionId = editDraft.positionId
+    if (!fio || !facultyId || !departmentId || !positionId) return
 
     setBusy(true)
     try {
@@ -190,6 +201,7 @@ export default function Teachers({ dark }) {
           login: row.login,
           facultyId,
           departmentId,
+          positionId,
         },
         facultyNames,
         departmentNames,
@@ -261,12 +273,13 @@ export default function Teachers({ dark }) {
     const password = createDraft.password.trim()
     const facultyId = createDraft.facultyId
     const departmentId = createDraft.departmentId
-    if (!fio || !login || !password || !facultyId || !departmentId) return
+    const positionId = createDraft.positionId
+    if (!fio || !login || !password || !facultyId || !departmentId || !positionId) return
 
     setBusy(true)
     try {
       await saveTeacher(
-        { fio, login, password, facultyId, departmentId },
+        { fio, login, password, facultyId, departmentId, positionId },
         facultyNames,
         departmentNames,
       )
@@ -347,6 +360,25 @@ export default function Teachers({ dark }) {
       </select>
     )
   }
+
+  const renderPositionSelect = (value, onChange) => (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={positions.length === 0 || loading}
+      className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${selectInput}`}
+    >
+      {positions.length === 0 ? (
+        <option value="">Lavozimlar yuklanmadi</option>
+      ) : (
+        positions.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.nameUz}
+          </option>
+        ))
+      )}
+    </select>
+  )
 
   return (
     <div className={`rounded-2xl border ${dark ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-white"} p-5 sm:p-6`}>
@@ -576,6 +608,7 @@ export default function Teachers({ dark }) {
             <div className="space-y-4">
               <div className="space-y-2"><label className="text-base font-semibold">Fakultet</label>{renderFacultySelect(editDraft.facultyId, (facultyId) => setEditDraft((p) => ({ ...p, facultyId })), (departmentId) => setEditDraft((p) => ({ ...p, departmentId })))}</div>
               <div className="space-y-2"><label className="text-base font-semibold">Kafedra</label>{renderDepartmentSelect(editDraft.facultyId, editDraft.departmentId, (departmentId) => setEditDraft((p) => ({ ...p, departmentId })))}</div>
+              <div className="space-y-2"><label className="text-base font-semibold">Lavozim</label>{renderPositionSelect(editDraft.positionId, (positionId) => setEditDraft((p) => ({ ...p, positionId })))}</div>
               <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={editDraft.fio} onChange={(e) => setEditDraft((p) => ({ ...p, fio: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -633,6 +666,7 @@ export default function Teachers({ dark }) {
             <div className="space-y-4">
               <div className="space-y-2"><label className="text-base font-semibold">Fakultet</label>{renderFacultySelect(createDraft.facultyId, (facultyId) => setCreateDraft((p) => ({ ...p, facultyId })), (departmentId) => setCreateDraft((p) => ({ ...p, departmentId })))}</div>
               <div className="space-y-2"><label className="text-base font-semibold">Kafedra</label>{renderDepartmentSelect(createDraft.facultyId, createDraft.departmentId, (departmentId) => setCreateDraft((p) => ({ ...p, departmentId })))}</div>
+              <div className="space-y-2"><label className="text-base font-semibold">Lavozim</label>{renderPositionSelect(createDraft.positionId, (positionId) => setCreateDraft((p) => ({ ...p, positionId })))}</div>
               <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={createDraft.fio} onChange={(e) => setCreateDraft((p) => ({ ...p, fio: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Masalan: F.I.O" /></div>
               <div className="space-y-2"><label className="text-base font-semibold">Login</label><input value={createDraft.login} onChange={(e) => setCreateDraft((p) => ({ ...p, login: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Teacher.login" /></div>
               <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={createDraft.password} onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Parol kiriting" /></div>

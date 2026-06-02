@@ -1,7 +1,17 @@
 import { apiRequest, unwrapPayload } from "./client"
 
 /**
- * @typedef {{ id: string, fio: string, login: string, facultyId: string, departmentId: string, fakultet?: string, kafedra?: string, password?: string }} TeacherRow
+ * @typedef {{
+ *   id: string,
+ *   fio: string,
+ *   login: string,
+ *   facultyId: string,
+ *   departmentId: string,
+ *   positionId?: string,
+ *   fakultet?: string,
+ *   kafedra?: string,
+ *   password?: string,
+ * }} TeacherRow
  */
 
 /**
@@ -21,6 +31,9 @@ export function mapTeacher(item, facultyNames, departmentNames) {
   const facultyId = raw.facultyId ?? raw.faculty_id ?? raw.faculty?.id ?? raw.faculty ?? ""
   const departmentId =
     raw.departmentId ?? raw.department_id ?? raw.department?.id ?? raw.department ?? ""
+
+  const positionId =
+    raw.positionId ?? raw.position_id ?? raw.lavozimId ?? raw.lavozim_id ?? raw.position?.id ?? raw.position ?? ""
 
   const fid = String(facultyId)
   const did = String(departmentId)
@@ -53,6 +66,7 @@ export function mapTeacher(item, facultyNames, departmentNames) {
     departmentId: did,
     fakultet: String(fakultet),
     kafedra: String(kafedra),
+    positionId: positionId === "" ? undefined : String(positionId),
   }
 }
 
@@ -105,7 +119,7 @@ export async function fetchTeacherById(id, facultyNames, departmentNames) {
 }
 
 /**
- * @param {{ fio: string, login: string, password: string, facultyId: string, departmentId: string }} body
+ * @param {{ fio: string, login: string, password: string, facultyId: string, departmentId: string, positionId?: string }} body
  * @param {Record<string, string>} [facultyNames]
  * @param {Record<string, string>} [departmentNames]
  * @returns {Promise<TeacherRow>}
@@ -121,6 +135,7 @@ export async function saveTeacher(body, facultyNames, departmentNames) {
       password: body.password,
       facultyId: body.facultyId,
       departmentId: body.departmentId,
+      positionId: body.positionId,
     }),
   })
   const mapped = tryMapTeacher(json, facultyNames, departmentNames)
@@ -133,12 +148,20 @@ export async function saveTeacher(body, facultyNames, departmentNames) {
     departmentId: body.departmentId,
     fakultet: facultyNames?.[body.facultyId] ?? "",
     kafedra: departmentNames?.[body.departmentId] ?? "",
+    positionId: body.positionId ? String(body.positionId) : undefined,
   }
 }
 
 /**
  * @param {string | number} id
- * @param {{ fio: string, login: string, facultyId: string, departmentId: string, password?: string }} body
+ * @param {{
+ *   fio: string,
+ *   login: string,
+ *   facultyId: string,
+ *   departmentId: string,
+ *   positionId?: string,
+ *   password?: string,
+ * }} body
  * @param {Record<string, string>} [facultyNames]
  * @param {Record<string, string>} [departmentNames]
  * @returns {Promise<TeacherRow>}
@@ -151,6 +174,7 @@ export async function updateTeacher(id, body, facultyNames, departmentNames) {
     login: body.login,
     facultyId: body.facultyId,
     departmentId: body.departmentId,
+    positionId: body.positionId,
   }
   if (body.password) payload.password = body.password
 
@@ -168,6 +192,7 @@ export async function updateTeacher(id, body, facultyNames, departmentNames) {
     departmentId: body.departmentId,
     fakultet: facultyNames?.[body.facultyId] ?? "",
     kafedra: departmentNames?.[body.departmentId] ?? "",
+    positionId: body.positionId ? String(body.positionId) : undefined,
   }
 }
 

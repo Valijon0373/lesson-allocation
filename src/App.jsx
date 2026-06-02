@@ -35,6 +35,56 @@ const ROLE_VISIBLE_CATEGORIES = {
 const STORAGE_KEYS = {
   submissions: "nizom_submissions_v2",
   evaluations: "nizom_evaluations_v2",
+  users: "nizom_users_v1",
+  adminCriterionFiles: "nizom_admin_criterion_files_v1",
+}
+
+const POSITIONS_API_URL = "/api/positions"
+const DEPARTMENTS_API_URL = "/api/departments"
+
+function normalizePositions(payload) {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.items)
+        ? payload.items
+        : []
+
+  return list
+    .map((item, index) => {
+      if (typeof item === "string") {
+        return { id: item, name: item, departmentId: "", order: index }
+      }
+      const id = String(item?.id ?? item?.positionId ?? item?.code ?? item?.name ?? index)
+      const name = String(item?.name ?? item?.title ?? item?.positionName ?? item?.label ?? "").trim()
+      const departmentId = String(item?.departmentId ?? item?.kafedraId ?? item?.department?.id ?? "")
+      if (!name) return null
+      return { id, name, departmentId, order: index }
+    })
+    .filter(Boolean)
+}
+
+function normalizeDepartments(payload) {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.items)
+        ? payload.items
+        : []
+
+  return list
+    .map((item, index) => {
+      if (typeof item === "string") {
+        return { id: item, name: item, order: index }
+      }
+      const id = String(item?.id ?? item?.departmentId ?? item?.kafedraId ?? item?.code ?? item?.name ?? index)
+      const name = String(item?.name ?? item?.title ?? item?.departmentName ?? item?.kafedraNomi ?? "").trim()
+      if (!name) return null
+      return { id, name, order: index }
+    })
+    .filter(Boolean)
 }
 
 function parseStorage(key, fallback) {
@@ -75,14 +125,37 @@ function App() {
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState("t-1")
+  const [users, setUsers] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [evaluations, setEvaluations] = useState({})
   const [uploadState, setUploadState] = useState({})
+  const [adminCriterionFiles, setAdminCriterionFiles] = useState([])
+  const [adminUploadState, setAdminUploadState] = useState({})
+  const [newTeacherForm, setNewTeacherForm] = useState({
+    fullName: "",
+    login: "",
+    password: "",
+    departmentId: "",
+    position: "",
+  })
+  const [newTeacherError, setNewTeacherError] = useState("")
+  const [departments, setDepartments] = useState([])
+  const [departmentsLoading, setDepartmentsLoading] = useState(false)
+  const [departmentsError, setDepartmentsError] = useState("")
+  const [positions, setPositions] = useState([])
+  const [positionsLoading, setPositionsLoading] = useState(false)
+  const [positionsError, setPositionsError] = useState("")
 
   useEffect(() => {
+    setUsers(parseStorage(STORAGE_KEYS.users, USERS))
     setSubmissions(parseStorage(STORAGE_KEYS.submissions, []))
     setEvaluations(parseStorage(STORAGE_KEYS.evaluations, {}))
+    setAdminCriterionFiles(parseStorage(STORAGE_KEYS.adminCriterionFiles, []))
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users))
+  }, [users])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions))
@@ -93,10 +166,104 @@ function App() {
   }, [evaluations])
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.adminCriterionFiles, JSON.stringify(adminCriterionFiles))
+  }, [adminCriterionFiles])
+
+  useEffect(() => {
     if (!loginOpen) setLoginPasswordVisible(false)
   }, [loginOpen])
 
-  const teachers = USERS.filter((u) => u.role === "teacher")
+  useEffect(() => {
+    let cancelled = false
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true)
+      setDepartmentsError("")
+      try {
+        const response = await fetch(DEPARTMENTS_API_URL)
+        if (!response.ok) {
+          throw new Error(`API xatosi: ${response.status}`)
+        }
+        const payload = await response.json()
+        const normalized = normalizeDepartments(payload)
+        if (normalized.length === 0) {
+          throw new Error("Kafedralar topilmadi.")
+        }
+        if (!cancelled) {
+          setDepartments(normalized)
+          setNewTeacherForm((prev) => ({
+            ...prev,
+            departmentId: prev.departmentId || normalized[0].id,
+          }))
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDepartments([])
+          setDepartmentsError(error instanceof Error ? error.message : "Kafedralarni yuklashda xatolik yuz berdi.")
+        }
+      } finally {
+        if (!cancelled) {
+          setDepartmentsLoading(false)
+        }
+      }
+    }
+    fetchDepartments()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    const selectedDepartmentId = newTeacherForm.departmentId
+    if (!selectedDepartmentId) {
+      setPositions([])
+      setPositionsError("")
+      setPositionsLoading(false)
+      setNewTeacherForm((prev) => ({ ...prev, position: "" }))
+      return
+    }
+    let cancelled = false
+    const fetchPositions = async () => {
+      setPositionsLoading(true)
+      setPositionsError("")
+      try {
+        const response = await fetch(`${POSITIONS_API_URL}?departmentId=${encodeURIComponent(selectedDepartmentId)}`)
+        if (!response.ok) {
+          throw new Error(`API xatosi: ${response.status}`)
+        }
+        const payload = await response.json()
+        const normalized = normalizePositions(payload)
+        const filtered = normalized.some((item) => item.departmentId)
+          ? normalized.filter((item) => item.departmentId === selectedDepartmentId)
+          : normalized
+        if (filtered.length === 0) {
+          throw new Error("Tanlangan kafedra uchun lavozim topilmadi.")
+        }
+        if (!cancelled) {
+          setPositions(filtered)
+          setNewTeacherForm((prev) => ({
+            ...prev,
+            position: filtered.some((item) => item.name === prev.position) ? prev.position : filtered[0].name,
+          }))
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPositions([])
+          setNewTeacherForm((prev) => ({ ...prev, position: "" }))
+          setPositionsError(error instanceof Error ? error.message : "Lavozimlarni yuklashda xatolik yuz berdi.")
+        }
+      } finally {
+        if (!cancelled) {
+          setPositionsLoading(false)
+        }
+      }
+    }
+    fetchPositions()
+    return () => {
+      cancelled = true
+    }
+  }, [newTeacherForm.departmentId])
+
+  const teachers = users.filter((u) => u.role === "teacher")
   const managedTeacherId = currentUser?.role === "teacher" ? currentUser.id : selectedTeacherId
   const visibleCategories = currentUser ? ROLE_VISIBLE_CATEGORIES[currentUser.role] : Object.keys(CATEGORY_MAX)
 
@@ -154,7 +321,7 @@ function App() {
       setLoginError("Parolni kiriting.")
       return
     }
-    const found = USERS.find((u) => u.login === loginTrim && u.password === loginForm.password)
+    const found = users.find((u) => u.login === loginTrim && u.password === loginForm.password)
     if (!found) {
       setLoginError("Login yoki parol noto'g'ri.")
       return
@@ -167,6 +334,44 @@ function App() {
   }
 
   const canEvaluate = currentUser && ["admin", "head", "dean", "expert"].includes(currentUser.role)
+
+  const createTeacherAccount = (event) => {
+    event.preventDefault()
+    if (!currentUser || currentUser.role !== "admin") return
+    const fullName = newTeacherForm.fullName.trim()
+    const login = newTeacherForm.login.trim()
+    const password = newTeacherForm.password
+    const departmentId = newTeacherForm.departmentId.trim()
+    const position = newTeacherForm.position.trim()
+    const department = departments.find((item) => item.id === departmentId)
+    if (!fullName || !login || !password || !departmentId || !position) {
+      setNewTeacherError("Ism, login, parol, kafedra va lavozimni to'ldiring.")
+      return
+    }
+    if (!department) {
+      setNewTeacherError("Kafedra topilmadi. Qayta tanlang.")
+      return
+    }
+    const loginUsed = users.some((u) => u.login.toLowerCase() === login.toLowerCase())
+    if (loginUsed) {
+      setNewTeacherError("Bu login band. Boshqa login tanlang.")
+      return
+    }
+    const newTeacher = {
+      id: `t-${crypto.randomUUID()}`,
+      fullName,
+      role: "teacher",
+      login,
+      password,
+      departmentId,
+      department: department.name,
+      position,
+    }
+    setUsers((prev) => [...prev, newTeacher])
+    setSelectedTeacherId(newTeacher.id)
+    setNewTeacherForm({ fullName: "", login: "", password: "", departmentId, position })
+    setNewTeacherError("")
+  }
 
   const handleUploadChange = (criterionId, field, value) => {
     setUploadState((prev) => ({
@@ -215,6 +420,39 @@ function App() {
       setSubmissions((prev) => [payload, ...prev])
     }
     setUploadState((prev) => ({ ...prev, [criterionId]: { type: "file", link: "", comment: "" } }))
+  }
+
+  const handleAdminUploadChange = (criterionId, field, value) => {
+    setAdminUploadState((prev) => ({
+      ...prev,
+      [criterionId]: { ...(prev[criterionId] ?? { comment: "" }), [field]: value },
+    }))
+  }
+
+  const submitAdminCriterionFile = async (criterion) => {
+    if (!currentUser || currentUser.role !== "admin") return
+    const state = adminUploadState[criterion.id] ?? { comment: "" }
+    if (!state.file) return
+    const fileDataUrl = await fileToDataUrl(state.file)
+    const payload = {
+      id: crypto.randomUUID(),
+      criterionId: criterion.id,
+      category: criterion.category,
+      title: criterion.title,
+      fileName: state.file.name,
+      fileSize: state.file.size,
+      fileType: state.file.type || "application/octet-stream",
+      fileDataUrl,
+      comment: state.comment?.trim() || "",
+      uploadedBy: currentUser.fullName,
+      uploadedAt: new Date().toISOString(),
+    }
+    setAdminCriterionFiles((prev) => [payload, ...prev])
+    setAdminUploadState((prev) => ({ ...prev, [criterion.id]: { comment: "" } }))
+  }
+
+  const deleteAdminCriterionFile = (fileId) => {
+    setAdminCriterionFiles((prev) => prev.filter((file) => file.id !== fileId))
   }
 
   const deleteSubmission = (submissionId) => {
@@ -372,6 +610,108 @@ function App() {
               </div>
             </article>
           )}
+
+          {currentUser?.role === "admin" && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-900">O'qituvchi login/parolini berish</h3>
+              <form onSubmit={createTeacherAccount} className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Kafedra</span>
+                  <select
+                    value={newTeacherForm.departmentId}
+                    onChange={(e) =>
+                      setNewTeacherForm((prev) => ({ ...prev, departmentId: e.target.value, position: "" }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    disabled={departmentsLoading || departments.length === 0}
+                  >
+                    {departmentsLoading && <option value="">Kafedralar yuklanmoqda...</option>}
+                    {!departmentsLoading && departments.length === 0 && <option value="">Kafedra topilmadi</option>}
+                    {departments.map((department) => (
+                      <option key={department.id} value={department.id}>
+                        {department.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Lavozim</span>
+                  <select
+                    value={newTeacherForm.position}
+                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, position: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    disabled={!newTeacherForm.departmentId || positionsLoading || positions.length === 0}
+                  >
+                    {!newTeacherForm.departmentId && <option value="">Avval kafedrani tanlang</option>}
+                    {newTeacherForm.departmentId && positionsLoading && <option value="">Lavozimlar yuklanmoqda...</option>}
+                    {newTeacherForm.departmentId && !positionsLoading && positions.length === 0 && (
+                      <option value="">Lavozim topilmadi</option>
+                    )}
+                    {positions.map((position) => (
+                      <option key={position.id} value={position.name}>
+                        {position.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm md:col-span-2">
+                  <span className="mb-1 block font-medium text-slate-700">F.I.O</span>
+                  <input
+                    value={newTeacherForm.fullName}
+                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                    placeholder="O'qituvchi F.I.O"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Login</span>
+                  <input
+                    value={newTeacherForm.login}
+                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, login: e.target.value }))}
+                    placeholder="Login"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Parol</span>
+                  <input
+                    value={newTeacherForm.password}
+                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, password: e.target.value }))}
+                    placeholder="Parol"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={
+                    departmentsLoading ||
+                    departments.length === 0 ||
+                    !newTeacherForm.departmentId ||
+                    positionsLoading ||
+                    positions.length === 0
+                  }
+                  className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white md:col-span-2"
+                >
+                  O'qituvchini qo'shish
+                </button>
+              </form>
+              {departmentsError && (
+                <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 ring-1 ring-amber-100">
+                  Kafedralarni API dan olishda xatolik: {departmentsError}
+                </p>
+              )}
+              {positionsError && (
+                <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 ring-1 ring-amber-100">
+                  Lavozimlarni API dan olishda xatolik: {positionsError}
+                </p>
+              )}
+              {newTeacherError && (
+                <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-100">
+                  {newTeacherError}
+                </p>
+              )}
+            </article>
+          )}
         </>
       )}
     </section>
@@ -447,6 +787,8 @@ function App() {
                 (s) => s.teacherId === managedTeacherId && s.criterionId === criterion.id
               )
               const uploadModel = uploadState[criterion.id] ?? { type: "file", link: "", comment: "" }
+              const adminUploadModel = adminUploadState[criterion.id] ?? { comment: "" }
+              const criterionAdminFiles = adminCriterionFiles.filter((item) => item.criterionId === criterion.id)
               return (
                 <article key={criterion.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -469,6 +811,73 @@ function App() {
                       ))}
                     </div>
                   </div>
+
+                  <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+                    <p className="text-xs font-semibold uppercase text-indigo-700">Admin yuklagan bo'lim/mezon fayllari</p>
+                    <div className="mt-2 space-y-2">
+                      {criterionAdminFiles.map((file) => (
+                        <div key={file.id} className="rounded-lg bg-white p-2 text-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-medium text-slate-800">{file.fileName}</p>
+                            <p className="text-xs text-slate-500">{formatFileSize(file.fileSize)}</p>
+                          </div>
+                          <a
+                            className="mt-1 inline-block text-xs font-semibold text-indigo-700"
+                            href={file.fileDataUrl}
+                            download={file.fileName}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Ochish/Yuklab olish
+                          </a>
+                          {file.comment && (
+                            <p className="mt-1 text-xs text-slate-600">
+                              <span className="font-semibold text-slate-700">Izoh:</span> {file.comment}
+                            </p>
+                          )}
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            Yuklagan: {file.uploadedBy}
+                          </p>
+                          {currentUser.role === "admin" && (
+                            <button
+                              onClick={() => deleteAdminCriterionFile(file.id)}
+                              className="mt-2 rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700"
+                            >
+                              O'chirish
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {criterionAdminFiles.length === 0 && (
+                        <p className="text-sm text-slate-500">Bu mezon uchun admin fayli yuklanmagan.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {currentUser.role === "admin" && (
+                    <div className="mt-4 rounded-xl border border-slate-200 p-3">
+                      <p className="mb-2 text-sm font-semibold text-slate-800">Bo'lim/mezon faylini yuklash (Admin)</p>
+                      <div className="grid gap-2 md:grid-cols-3">
+                        <input
+                          type="file"
+                          onChange={(e) => handleAdminUploadChange(criterion.id, "file", e.target.files?.[0])}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-xs file:rounded file:border-0 file:bg-indigo-100 file:px-2 file:py-1 file:text-indigo-700"
+                        />
+                        <input
+                          value={adminUploadModel.comment || ""}
+                          onChange={(e) => handleAdminUploadChange(criterion.id, "comment", e.target.value)}
+                          placeholder="Fayl izohi"
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                        <button
+                          onClick={() => submitAdminCriterionFile(criterion)}
+                          className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white"
+                        >
+                          Fayl yuklash
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {currentUser.role === "teacher" && (
                     <div className="mt-4 rounded-xl border border-slate-200 p-3">
@@ -703,9 +1112,6 @@ function App() {
               >
                 Kirish
               </button>
-              <p className="text-center text-xs text-slate-400">
-                Demo: admin, mudir, dekan, expert, teacher1, teacher2 — parol: 12345
-              </p>
             </form>
           </div>
         </div>
