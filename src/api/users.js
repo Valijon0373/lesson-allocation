@@ -12,8 +12,8 @@ import { apiRequest, unwrapPayload } from "./client"
 
 const UI_ROLE_BY_API = {
   ADMIN: "Admin",
-  // Ba'zi backendlarda oddiy user roli TEACHER/USER ko'rinishida bo'ladi
-  TEACHER: "Foydalanuvchi",
+  // Teacher roli Users sahifasida alohida ajratiladi
+  TEACHER: "O'qituvchi",
   USER: "Foydalanuvchi",
   // Ba'zi backendlarda komissiya roli MODERATOR/COMMISSION ko'rinishida keladi
   MODERATOR: "Komissiya",
@@ -25,6 +25,7 @@ const API_ROLE_BY_UI = {
   Admin: "ADMIN",
   // Backend "TEACHER"ni tanimasa, ko'pincha "USER" ishlatiladi
   "Foydalanuvchi": "USER",
+  "O'qituvchi": "TEACHER",
   // Backend "MODERATOR"ni tanimasa, ko'pincha "COMMISSION" ishlatiladi
   Komissiya: "COMMISSION",
 }
