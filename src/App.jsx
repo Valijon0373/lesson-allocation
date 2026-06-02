@@ -171,13 +171,13 @@ function App() {
   const handleUploadChange = (criterionId, field, value) => {
     setUploadState((prev) => ({
       ...prev,
-      [criterionId]: { ...(prev[criterionId] ?? { type: "file", link: "" }), [field]: value },
+      [criterionId]: { ...(prev[criterionId] ?? { type: "file", link: "", comment: "" }), [field]: value },
     }))
   }
 
   const submitCriterionFile = async (criterionId) => {
     if (!currentUser || currentUser.role !== "teacher") return
-    const state = uploadState[criterionId] ?? { type: "file", link: "" }
+    const state = uploadState[criterionId] ?? { type: "file", link: "", comment: "" }
     const evidenceType = state.type || "file"
     if (evidenceType === "file") {
       const file = state.file
@@ -193,6 +193,7 @@ function App() {
         fileType: file.type || "application/octet-stream",
         fileDataUrl,
         url: "",
+        comment: state.comment?.trim() || "",
         uploadedAt: new Date().toISOString(),
       }
       setSubmissions((prev) => [payload, ...prev])
@@ -208,11 +209,12 @@ function App() {
         fileType: "url",
         fileDataUrl: "",
         url: state.link.trim(),
+        comment: state.comment?.trim() || "",
         uploadedAt: new Date().toISOString(),
       }
       setSubmissions((prev) => [payload, ...prev])
     }
-    setUploadState((prev) => ({ ...prev, [criterionId]: { type: "file", link: "" } }))
+    setUploadState((prev) => ({ ...prev, [criterionId]: { type: "file", link: "", comment: "" } }))
   }
 
   const deleteSubmission = (submissionId) => {
@@ -444,7 +446,7 @@ function App() {
               const criterionSubmissions = submissions.filter(
                 (s) => s.teacherId === managedTeacherId && s.criterionId === criterion.id
               )
-              const uploadModel = uploadState[criterion.id] ?? { type: "file", link: "" }
+              const uploadModel = uploadState[criterion.id] ?? { type: "file", link: "", comment: "" }
               return (
                 <article key={criterion.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -470,40 +472,58 @@ function App() {
 
                   {currentUser.role === "teacher" && (
                     <div className="mt-4 rounded-xl border border-slate-200 p-3">
-                      <p className="mb-2 text-sm font-semibold text-slate-800">Hujjat yuklash</p>
-                      <div className="grid gap-2 md:grid-cols-4">
-                        <select
-                          value={uploadModel.type}
-                          onChange={(e) => handleUploadChange(criterion.id, "type", e.target.value)}
-                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        >
-                          <option value="file">PDF/DOCX/JPG/PNG</option>
-                          <option value="link">Link</option>
-                          <option value="video">Video link</option>
-                        </select>
+                      <div className="grid grid-cols-4 items-end gap-2">
+                        <div>
+                          <p className="mb-1 text-center text-xs font-semibold text-slate-700">Hujjat turi</p>
+                          <select
+                            value={uploadModel.type}
+                            onChange={(e) => handleUploadChange(criterion.id, "type", e.target.value)}
+                            className="min-h-12 min-w-0 w-full rounded-lg border border-slate-300 px-2 py-3 text-center text-xs"
+                          >
+                            <option value="file">PDF/DOCX/JPG/PNG</option>
+                            <option value="link">Link</option>
+                            <option value="video">Video link</option>
+                          </select>
+                        </div>
 
-                        {uploadModel.type === "file" ? (
-                          <input
-                            type="file"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            onChange={(e) => handleUploadChange(criterion.id, "file", e.target.files?.[0])}
-                            className="rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-indigo-100 file:px-3 file:py-1 file:text-indigo-700 md:col-span-2"
-                          />
-                        ) : (
-                          <input
-                            value={uploadModel.link || ""}
-                            onChange={(e) => handleUploadChange(criterion.id, "link", e.target.value)}
-                            placeholder={uploadModel.type === "video" ? "Video URL" : "URL"}
-                            className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
-                          />
-                        )}
+                        <div>
+                          <p className="mb-1 text-center text-xs font-semibold text-slate-700">Hujjat yuklash</p>
+                          {uploadModel.type === "file" ? (
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                              onChange={(e) => handleUploadChange(criterion.id, "file", e.target.files?.[0])}
+                              className="min-h-12 min-w-0 w-full rounded-lg border border-slate-300 px-2 py-2.5 text-center text-xs file:mx-auto file:rounded file:border-0 file:bg-indigo-100 file:px-2 file:py-1.5 file:text-[11px] file:text-indigo-700"
+                            />
+                          ) : (
+                            <input
+                              value={uploadModel.link || ""}
+                              onChange={(e) => handleUploadChange(criterion.id, "link", e.target.value)}
+                              placeholder={uploadModel.type === "video" ? "Video URL" : "URL"}
+                              className="min-h-12 min-w-0 w-full rounded-lg border border-slate-300 px-2 py-3 text-center text-xs"
+                            />
+                          )}
+                        </div>
 
-                        <button
-                          onClick={() => submitCriterionFile(criterion.id)}
-                          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
-                        >
-                          Yuklash
-                        </button>
+                        <div>
+                          <p className="mb-1 text-center text-xs font-semibold text-slate-700">Hujjat izohi</p>
+                          <input
+                            value={uploadModel.comment || ""}
+                            onChange={(e) => handleUploadChange(criterion.id, "comment", e.target.value)}
+                            placeholder="Izoh yozing..."
+                            className="min-h-12 min-w-0 w-full rounded-lg border border-slate-300 px-2 py-3 text-center text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <p className="mb-1 text-center text-xs font-semibold text-transparent">.</p>
+                          <button
+                            onClick={() => submitCriterionFile(criterion.id)}
+                            className="min-h-12 min-w-0 w-full rounded-lg bg-indigo-600 px-2 py-3 text-center text-xs font-semibold text-white"
+                          >
+                            Yuklash
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -535,6 +555,11 @@ function App() {
                           >
                             {submission.url}
                           </a>
+                        )}
+                        {submission.comment && (
+                          <p className="mt-1 text-xs text-slate-600">
+                            <span className="font-semibold text-slate-700">Izoh:</span> {submission.comment}
+                          </p>
                         )}
                         {currentUser.role === "teacher" && (
                           <button
