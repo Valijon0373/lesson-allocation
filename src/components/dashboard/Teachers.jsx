@@ -96,6 +96,13 @@ export default function Teachers({ dark }) {
     return map
   }, [departments])
 
+  const positionNames = useMemo(() => {
+    /** @type {Record<string, string>} */
+    const map = {}
+    for (const p of positions) map[p.id] = p.nameUz
+    return map
+  }, [positions])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     setLoadError("")
@@ -310,7 +317,7 @@ export default function Teachers({ dark }) {
 
     const q = searchQuery.trim().toLowerCase()
     if (!q) return true
-    return [row.fakultet, row.kafedra, row.fio, row.login].some((value) =>
+    return [row.fakultet, row.kafedra, positionNames[row.positionId ?? ""] ?? "", row.fio, row.login].some((value) =>
       String(value ?? "").toLowerCase().includes(q),
     )
   })
@@ -469,6 +476,7 @@ export default function Teachers({ dark }) {
                 <th className={`border px-4 py-3 text-center text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>№</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Fakultet</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Kafedra</th>
+                <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Lavozim</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>F.I.O</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Login</th>
                 <th className={`border px-4 py-3 text-right text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Amallar</th>
@@ -482,6 +490,9 @@ export default function Teachers({ dark }) {
                   </td>
                   <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"} ${subtitle}`}>{row.fakultet}</td>
                   <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"} ${subtitle}`}>{row.kafedra}</td>
+                  <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"} ${subtitle}`}>
+                    {positionNames[row.positionId ?? ""] ?? "-"}
+                  </td>
                   <td className={`border px-4 py-3 text-sm font-semibold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>{row.fio}</td>
                   <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"}`}>
                     <span className={`font-bold ${title}`}>{row.login}</span>
@@ -591,6 +602,7 @@ export default function Teachers({ dark }) {
             <div className="space-y-3 text-base">
               <div><p className={`text-xs font-semibold ${meta}`}>Fakultet:</p><p className="mt-1 font-semibold">{modal.row.fakultet}</p></div>
               <div><p className={`text-xs font-semibold ${meta}`}>Kafedra:</p><p className="mt-1 font-semibold">{modal.row.kafedra}</p></div>
+              <div><p className={`text-xs font-semibold ${meta}`}>Lavozim:</p><p className="mt-1 font-semibold">{positionNames[modal.row.positionId ?? ""] ?? "-"}</p></div>
               <div><p className={`text-xs font-semibold ${meta}`}>F.I.O:</p><p className="mt-1 font-semibold">{modal.row.fio}</p></div>
               <div><p className={`text-xs font-semibold ${meta}`}>Login:</p><p className="mt-1 font-semibold">{modal.row.login}</p></div>
             </div>
