@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Eye, EyeOff, X } from "lucide-react"
 import bgVideo from "./assets/bg.mp4"
 import logoImg from "./assets/logo.jpg"
@@ -7,9 +7,10 @@ import HomeHeroBrand from "./components/HomeHeroBrand.jsx"
 import Navbar from "./components/Navbar.jsx"
 import { fetchAllCriterionRows } from "./api/categories"
 import { fetchAllSections } from "./api/criteriaApi"
-import { clearAuthTokens, login, setAuthTokens } from "./api/auth"
+import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens } from "./api/auth"
 import { fetchAllTeachers, saveTeacher } from "./api/teachers"
-import { fetchTeacherDocuments, saveTeacherDocument, uploadTeacherFile } from "./api/teacherDocuments"
+import { fetchTeacherDocuments, saveTeacherDocument } from "./api/teacherDocuments"
+import { getFileDownloadUrl } from "./api/files"
 import { fetchUserByUsername } from "./api/users"
 import { CRITERIA as DEFAULT_CRITERIA } from "./data/criteria.js"
 
@@ -127,6 +128,10 @@ function isTeacherAccount(user) {
   return Array.isArray(user.roles) && user.roles.some((role) => String(role).toUpperCase() === "TEACHER")
 }
 
+function isTeacherUser(user) {
+  return isTeacherAccount(user)
+}
+
 function App() {
   const [activePage, setActivePage] = useState("dashboard")
   const [loginOpen, setLoginOpen] = useState(false)
@@ -142,6 +147,8 @@ function App() {
   const [evaluations, setEvaluations] = useState({})
   const [criteriaList, setCriteriaList] = useState(DEFAULT_CRITERIA)
   const [uploadState, setUploadState] = useState({})
+  const [teacherDocumentIds, setTeacherDocumentIds] = useState({})
+  const [uploadError, setUploadError] = useState("")
   const [newTeacherForm, setNewTeacherForm] = useState({
     fullName: "",
     login: "",
@@ -158,59 +165,131 @@ function App() {
   const [positionsError, setPositionsError] = useState("")
   const [teacherLoadError, setTeacherLoadError] = useState("")
   const [criteriaLoadError, setCriteriaLoadError] = useState("")
+  const [authSessionKey, setAuthSessionKey] = useState(0)
+
+  const loadCriteriaFromApi = useCallback(async () => {
+    if (!getAccessToken()) {
+      setCriteriaLoadError("")
+      return
+    }
+    try {
+      const sections = await fetchAllSections()
+      const rows = await fetchAllCriterionRows(sections)
+      const sectionTitleById = Object.fromEntries(sections.map((section) => [section.id, section.title]))
+      const apiCriteria = rows.map((row) => ({
+        id: row.id,
+        category: row.sectionId ? (sectionTitleById[row.sectionId] ?? "Bo'lim") : "Mezonlar",
+        title: row.title,
+        maxScore: row.maxScore,
+        fileUpload: row.fileUpload !== false,
+        requiredDocs: Array.isArray(row.requiredDocs) ? row.requiredDocs : [],
+      }))
+
+      if (apiCriteria.length > 0) {
+        setCriteriaList(apiCriteria)
+      } else if (sections.length > 0) {
+        setCriteriaList(
+          sections.map((section) => ({
+            id: section.id,
+            category: section.title,
+            title: section.title,
+            maxScore: section.maxScore,
+            fileUpload: true,
+            requiredDocs: [],
+          })),
+        )
+      }
+      setCriteriaLoadError("")
+    } catch (error) {
+      setCriteriaLoadError(error instanceof Error ? error.message : "Mezonlar API dan yuklanmadi")
+    }
+  }, [])
+
+  const loadTeachersFromApi = useCallback(async () => {
+    if (!getAccessToken()) {
+      setTeacherLoadError("")
+      return
+    }
+    try {
+      const list = await fetchAllTeachers()
+      setTeachers(mapTeachersFromApi(list))
+      setSelectedTeacherId((prev) => prev || list[0]?.id || "")
+      setTeacherLoadError("")
+    } catch (error) {
+      setTeacherLoadError(error instanceof Error ? error.message : "O'qituvchilarni yuklab bo'lmadi")
+    }
+  }, [])
 
   useEffect(() => {
-    const loadTeachers = async () => {
-      try {
-        const list = await fetchAllTeachers()
-        setTeachers(mapTeachersFromApi(list))
-        setSelectedTeacherId((prev) => prev || list[0]?.id || "")
-        setTeacherLoadError("")
-      } catch (error) {
-        setTeacherLoadError(error instanceof Error ? error.message : "O'qituvchilarni yuklab bo'lmadi")
-      }
-    }
-    loadTeachers()
     setSubmissions(parseStorage(STORAGE_KEYS.submissions, []))
     setEvaluations(parseStorage(STORAGE_KEYS.evaluations, {}))
   }, [])
 
   useEffect(() => {
-    const loadCriteria = async () => {
-      try {
-        const sections = await fetchAllSections()
-        if (!sections.length) return
-        const rows = await fetchAllCriterionRows(sections)
-        const sectionTitleById = Object.fromEntries(sections.map((section) => [section.id, section.title]))
-        const apiCriteria = rows
-          .filter((row) => row.sectionId)
-          .map((row) => ({
-            id: row.id,
-            category: sectionTitleById[row.sectionId] ?? "Bo'lim",
-            title: row.title,
-            maxScore: row.maxScore,
-            requiredDocs: Array.isArray(row.requiredDocs) ? row.requiredDocs : [],
-          }))
+    loadTeachersFromApi()
+  }, [loadTeachersFromApi, authSessionKey])
 
-        // Agar mezonlar endpointi bo'sh qaytsa, bo'limlarni fallback sifatida ko'rsatamiz.
-        setCriteriaList(
-          apiCriteria.length > 0
-            ? apiCriteria
-            : sections.map((section) => ({
-                id: section.id,
-                category: "Mezonlar",
-                title: section.title,
-                maxScore: section.maxScore,
-                requiredDocs: [],
-              })),
-        )
-        setCriteriaLoadError("")
-      } catch (error) {
-        setCriteriaLoadError(error instanceof Error ? error.message : "Mezonlar API dan yuklanmadi")
+  useEffect(() => {
+    loadCriteriaFromApi()
+  }, [loadCriteriaFromApi, authSessionKey])
+
+  useEffect(() => {
+    if (currentUser) return
+    const token = getAccessToken()
+    const username = getAuthUsername()
+    if (!token || !username) return
+
+    let cancelled = false
+    const restoreSession = async () => {
+      try {
+        let matched = findTeacherByLogin(teachers, username)
+        if (!matched) {
+          const list = await fetchAllTeachers()
+          const mapped = mapTeachersFromApi(list)
+          matched = findTeacherByLogin(mapped, username)
+          if (!cancelled && mapped.length) setTeachers(mapped)
+        }
+
+        let user = null
+        try {
+          user = await fetchUserByUsername(username)
+        } catch {
+          user = null
+        }
+
+        if (!matched && !isTeacherAccount(user)) return
+
+        const teacherUser =
+          matched ??
+          (user
+            ? {
+                id: user.id,
+                fullName: user.fio,
+                role: "teacher",
+                login: user.login,
+                password: "",
+                departmentId: "",
+                department: "",
+                positionId: "",
+              }
+            : null)
+
+        if (!teacherUser || cancelled) return
+
+        setCurrentUser(teacherUser)
+        setSelectedTeacherId(teacherUser.id)
+        setActivePage("mezonlar")
+        setAuthSessionKey((key) => key + 1)
+      } catch {
+        if (!cancelled) clearAuthTokens()
       }
     }
-    loadCriteria()
-  }, [])
+
+    restoreSession()
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser, teachers])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions))
@@ -340,7 +419,7 @@ function App() {
     }
   }, [newTeacherForm.departmentId])
 
-  const managedTeacherId = currentUser?.role === "teacher" ? currentUser.id : selectedTeacherId
+  const managedTeacherId = isTeacherUser(currentUser) ? currentUser.id : selectedTeacherId
   const visibleCategories = currentUser ? roleVisibleCategories[currentUser.role] ?? allCategories : allCategories
 
   const visibleCriteria = criteriaList.filter((c) => visibleCategories.includes(c.category))
@@ -401,7 +480,10 @@ function App() {
     const foundLocal = users.find((u) => u.login === loginTrim && u.password === loginForm.password)
     if (foundLocal) {
       setCurrentUser(foundLocal)
-      if (foundLocal.role === "teacher") setSelectedTeacherId(foundLocal.id)
+      if (foundLocal.role === "teacher") {
+        setSelectedTeacherId(foundLocal.id)
+        setActivePage("mezonlar")
+      }
       setLoginError("")
       setLoginOpen(false)
       setLoginForm({ login: "", password: "" })
@@ -453,6 +535,8 @@ function App() {
 
       setCurrentUser(teacherUser)
       setSelectedTeacherId(teacherUser.id)
+      setAuthSessionKey((key) => key + 1)
+      setActivePage("mezonlar")
       setLoginOpen(false)
       setLoginForm({ login: "", password: "" })
     } catch {
@@ -526,72 +610,39 @@ function App() {
     if (!currentUser || currentUser.role !== "teacher") return
     const state = uploadState[criterionId] ?? { type: "file", link: "", comment: "" }
     const evidenceType = state.type || "file"
-    if (evidenceType === "file") {
-      const file = state.file
-      if (!file) return
-      try {
-        const uploaded = await uploadTeacherFile(file)
-        const saved = await saveTeacherDocument({
-          teacherId: currentUser.id,
-          criterionId,
-          evidenceType,
-          fileName: uploaded.fileName || file.name,
-          fileSize: file.size,
-          fileType: file.type || "application/octet-stream",
-          url: uploaded.url || "",
-          comment: state.comment?.trim() || "",
-        })
-        const payload =
-          saved ?? {
-            id: crypto.randomUUID(),
-            teacherId: currentUser.id,
-            criterionId,
-            evidenceType,
-            fileName: uploaded.fileName || file.name,
-            fileSize: file.size,
-            fileType: file.type || "application/octet-stream",
-            fileDataUrl: "",
-            url: uploaded.url || "",
-            comment: state.comment?.trim() || "",
-            uploadedAt: new Date().toISOString(),
-          }
-        setSubmissions((prev) => [payload, ...prev])
-      } catch {
-        return
-      }
-    } else {
-      if (!state.link) return
+    const teacherDocumentId = teacherDocumentIds[criterionId]
+    if (!teacherDocumentId) {
+      setUploadError("Ushbu mezon uchun hujjat identifikatori topilmadi. Sahifani yangilab qayta urinib ko'ring.")
+      return
+    }
+
+    if (evidenceType === "file" && !state.file) return
+    if (evidenceType !== "file" && !state.link?.trim()) return
+
+    setUploadError("")
+    try {
       const saved = await saveTeacherDocument({
+        teacherDocumentId,
         teacherId: currentUser.id,
         criterionId,
         evidenceType,
-        fileName: evidenceType === "video" ? "Video link" : "Web link",
-        fileSize: 0,
-        fileType: "url",
-        url: state.link.trim(),
+        file: evidenceType === "file" ? state.file : undefined,
+        url: evidenceType !== "file" ? state.link.trim() : undefined,
         comment: state.comment?.trim() || "",
       })
-      const payload =
-        saved ?? {
-          id: crypto.randomUUID(),
-          teacherId: currentUser.id,
-          criterionId,
-          evidenceType,
-          fileName: evidenceType === "video" ? "Video link" : "Web link",
-          fileSize: 0,
-          fileType: "url",
-          fileDataUrl: "",
-          url: state.link.trim(),
-          comment: state.comment?.trim() || "",
-          uploadedAt: new Date().toISOString(),
-        }
-      setSubmissions((prev) => [payload, ...prev])
+      setSubmissions((prev) => [saved, ...prev])
+      setUploadState((prev) => ({ ...prev, [criterionId]: { type: "file", link: "", comment: "" } }))
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Hujjatni yuklab bo'lmadi.")
     }
+  }
+
   useEffect(() => {
     if (!currentUser || currentUser.role !== "teacher") return
     const loadDocs = async () => {
       try {
-        const list = await fetchTeacherDocuments(currentUser.id)
+        const { submissions: list, documentIdByCriterion } = await fetchTeacherDocuments(currentUser.id)
+        setTeacherDocumentIds(documentIdByCriterion)
         if (list.length) setSubmissions((prev) => [...list, ...prev.filter((p) => p.teacherId !== currentUser.id)])
       } catch {
         // API xatoligida local holat saqlanadi
@@ -599,9 +650,6 @@ function App() {
     }
     loadDocs()
   }, [currentUser])
-
-    setUploadState((prev) => ({ ...prev, [criterionId]: { type: "file", link: "", comment: "" } }))
-  }
 
   const deleteSubmission = (submissionId) => {
     setSubmissions((prev) => prev.filter((s) => s.id !== submissionId))
@@ -632,6 +680,20 @@ function App() {
           Jami {totalMaxScore} ball bo'yicha progress, hujjatlar holati{currentUser?.role === "teacher" ? "." : " va reyting."}
         </p>
       </header>
+
+      {isTeacherUser(currentUser) && activePage === "dashboard" && (
+        <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+          Hujjat yuklash uchun yuqoridagi{" "}
+          <button
+            type="button"
+            onClick={() => setActivePage("mezonlar")}
+            className="font-semibold underline underline-offset-2"
+          >
+            Mezonlar
+          </button>{" "}
+          bo'limiga o'ting.
+        </div>
+      )}
 
       {currentUser && (
         <>
@@ -928,6 +990,9 @@ function App() {
           onLogout={() => {
             clearAuthTokens()
             setCurrentUser(null)
+            setCriteriaLoadError("")
+            setCriteriaList(DEFAULT_CRITERIA)
+            setAuthSessionKey((key) => key + 1)
           }}
           onOpenLogin={() => setLoginOpen(true)}
         />
@@ -953,6 +1018,19 @@ function App() {
                 Mezonlarni API dan olishda xatolik: {criteriaLoadError}
               </p>
             )}
+            {teacherLoadError && currentUser.role !== "teacher" && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                {teacherLoadError}
+              </p>
+            )}
+
+            {visibleCriteria.length === 0 && !criteriaLoadError && (
+              <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                {getAccessToken()
+                  ? "Hozircha mezon ko'rinmayapti. Admin panelda (/admin) avval bo'lim va mezon qo'shing."
+                  : "Mezonlarni ko'rish uchun tizimga kiring (admin panelda yaratilgan login va parol)."}
+              </p>
+            )}
 
             {currentUser.role !== "teacher" && (
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -970,6 +1048,12 @@ function App() {
                 </select>
               </div>
             )}
+
+            {uploadError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {uploadError}
+              </div>
+            ) : null}
 
             {visibleCriteria.map((criterion) => {
               const evalData = getEvaluation(evaluations, managedTeacherId, criterion.id)
@@ -1000,7 +1084,7 @@ function App() {
                     </div>
                   </div>
 
-                  {currentUser.role === "teacher" && (
+                  {isTeacherUser(currentUser) && (
                     <div className="mt-4 rounded-xl border border-slate-200 p-3">
                       <div className="grid grid-cols-4 items-end gap-2">
                         <div>
@@ -1065,18 +1149,22 @@ function App() {
                           <p className="font-medium text-slate-800">{submission.fileName}</p>
                           <p className="text-xs text-slate-500">{formatFileSize(submission.fileSize)}</p>
                         </div>
-                        {submission.fileDataUrl && (
+                        {submission.fileDataUrl || (submission.evidenceType === "file" && submission.fileName) ? (
                           <a
                             className="mt-1 inline-block text-xs font-semibold text-indigo-700"
-                            href={submission.fileDataUrl}
+                            href={
+                              submission.fileDataUrl ||
+                              submission.url ||
+                              getFileDownloadUrl(submission.fileName)
+                            }
                             download={submission.fileName}
                             target="_blank"
                             rel="noreferrer"
                           >
                             Ochish/Yuklab olish
                           </a>
-                        )}
-                        {submission.url && (
+                        ) : null}
+                        {submission.url && submission.evidenceType !== "file" && (
                           <a
                             className="mt-1 block break-all text-xs font-semibold text-indigo-700"
                             href={submission.url}

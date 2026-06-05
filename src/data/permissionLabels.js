@@ -34,6 +34,8 @@ export const PERMISSION_LABELS_UZ = {
   PERMISSION_CREATE: "Ruxsat qo'shish",
   PERMISSION_EDIT: "Ruxsatni tahrirlash",
   PERMISSION_DELETE: "Ruxsatni o'chirish",
+
+  FILE_UPLOAD: "Faylni yuklash",
 }
 
 /** @type {{ id: string, label: string }[]} */

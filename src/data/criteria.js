@@ -16,6 +16,7 @@ export const CRITERIA = [
     category: "O'qituvchilik faoliyati",
     title: "Nazariy-amaliy bilimlar va ochiq darslar",
     maxScore: 8,
+    fileUpload: true,
     requiredDocs: ["Ochiq dars jadvali", "Taqdimot", "Bayonnoma", "Foto/video"],
   },
   {
@@ -23,6 +24,7 @@ export const CRITERIA = [
     category: "O'qituvchilik faoliyati",
     title: "Talabalar so'rovnomasi bo'yicha o'qitish sifati",
     maxScore: 5,
+    fileUpload: true,
     requiredDocs: ["So'rovnoma natijasi", "Tahlil hujjati"],
   },
   {
@@ -30,6 +32,7 @@ export const CRITERIA = [
     category: "O'qituvchilik faoliyati",
     title: "Talabalar olimpiada/tanlov/grantdagi ishtiroki",
     maxScore: 7,
+    fileUpload: true,
     requiredDocs: ["Buyruq nusxasi", "Diplom/sertifikat", "Nashr havolasi"],
   },
   {
@@ -37,6 +40,7 @@ export const CRITERIA = [
     category: "Metodik ishlar",
     title: "Darslik va o'quv qo'llanmalar",
     maxScore: 8,
+    fileUpload: true,
     requiredDocs: ["Guvohnoma", "ISBN ma'lumot", "Nashr nusxasi"],
   },
   {
@@ -44,6 +48,7 @@ export const CRITERIA = [
     category: "Metodik ishlar",
     title: "AKTdan foydalanish va o'quv materiallari",
     maxScore: 7,
+    fileUpload: true,
     requiredDocs: ["HEMIS skrinshot", "Videodars", "Topshiriqlar ro'yxati"],
   },
   {
@@ -51,6 +56,7 @@ export const CRITERIA = [
     category: "Metodik ishlar",
     title: "Zamonaviy pedagogik texnologiyalar",
     maxScore: 5,
+    fileUpload: true,
     requiredDocs: ["Metodik qo'llanma", "Mashg'ulot ishlanmasi"],
   },
   {
@@ -58,6 +64,7 @@ export const CRITERIA = [
     category: "Tarbiyaviy faoliyat",
     title: "Ma'naviy-ma'rifiy va sport tadbirlari",
     maxScore: 6,
+    fileUpload: true,
     requiredDocs: ["Ma'lumotnoma", "Foto", "Dastur"],
   },
   {
@@ -65,6 +72,7 @@ export const CRITERIA = [
     category: "Tarbiyaviy faoliyat",
     title: "Kuratorlik faoliyati",
     maxScore: 5,
+    fileUpload: true,
     requiredDocs: ["Farmoyish", "Bayonnoma", "Foto hisobot"],
   },
   {
@@ -72,6 +80,7 @@ export const CRITERIA = [
     category: "Tarbiyaviy faoliyat",
     title: "Talabalar bo'sh vaqtini tashkil etish",
     maxScore: 5,
+    fileUpload: true,
     requiredDocs: ["Reja", "Sertifikat", "Bayonnoma"],
   },
   {
@@ -79,6 +88,7 @@ export const CRITERIA = [
     category: "Tarbiyaviy faoliyat",
     title: "Jamoatchilik ishlari va OAVdagi chiqishlar",
     maxScore: 4,
+    fileUpload: true,
     requiredDocs: ["Ma'lumotnoma", "Foto", "Media havola"],
   },
   {
@@ -86,6 +96,7 @@ export const CRITERIA = [
     category: "Ilmiy faoliyat",
     title: "Ilmiy konferensiyalar",
     maxScore: 10,
+    fileUpload: true,
     requiredDocs: ["Maqola/tezis", "Indeksatsiya havolasi"],
   },
   {
@@ -93,6 +104,7 @@ export const CRITERIA = [
     category: "Ilmiy faoliyat",
     title: "Ilmiy nashrlar va monografiyalar",
     maxScore: 5,
+    fileUpload: true,
     requiredDocs: ["Maqola PDF", "Monografiya nusxasi", "ISBN/DOI"],
   },
   {
@@ -100,6 +112,7 @@ export const CRITERIA = [
     category: "Ilmiy faoliyat",
     title: "Loyihalar va tijoratlashtirish",
     maxScore: 4,
+    fileUpload: true,
     requiredDocs: ["Shartnoma", "Kafedra ma'lumotnomasi"],
   },
   {
@@ -107,6 +120,7 @@ export const CRITERIA = [
     category: "Ilmiy faoliyat",
     title: "Patent va mualliflik guvohnomalari",
     maxScore: 3,
+    fileUpload: true,
     requiredDocs: ["Patent guvohnomasi", "Mualliflik hujjati"],
   },
   {
@@ -114,6 +128,7 @@ export const CRITERIA = [
     category: "Ilmiy faoliyat",
     title: "Dissertatsiya va ilmiy rahbarlik",
     maxScore: 8,
+    fileUpload: true,
     requiredDocs: ["Avtoreferat", "Diplom", "OAK e'loni"],
   },
   {
@@ -121,6 +136,7 @@ export const CRITERIA = [
     category: "OTM rivojiga hissa",
     title: "Ta'lim muassasalari hamkorligi",
     maxScore: 3,
+    fileUpload: true,
     requiredDocs: ["Reja", "Seminar dasturi", "Xulosa"],
   },
   {
@@ -128,6 +144,7 @@ export const CRITERIA = [
     category: "OTM rivojiga hissa",
     title: "Xorijiy OTMlar bilan almashinuv",
     maxScore: 4,
+    fileUpload: true,
     requiredDocs: ["Memorandum", "Taklifnoma", "Buyruq"],
   },
   {
@@ -135,6 +152,7 @@ export const CRITERIA = [
     category: "OTM rivojiga hissa",
     title: "Yangi yo'nalish va ARM bazasi",
     maxScore: 3,
+    fileUpload: true,
     requiredDocs: ["Tasdiqlovchi hujjat", "ARM ma'lumotnomasi"],
   },
   {
@@ -142,6 +160,7 @@ export const CRITERIA = [
     category: "Shaxsiy fazilatlar",
     title: "Ilmiy daraja va unvon",
     maxScore: 3,
+    fileUpload: true,
     requiredDocs: ["Diplom nusxasi"],
   },
   {
@@ -149,6 +168,7 @@ export const CRITERIA = [
     category: "Shaxsiy fazilatlar",
     title: "Malaka oshirish va til/stajirovka",
     maxScore: 7,
+    fileUpload: true,
     requiredDocs: ["Sertifikat", "Seminar bayonnomasi", "Dalolatnoma"],
   },
 ]

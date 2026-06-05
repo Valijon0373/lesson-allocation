@@ -1,5 +1,4 @@
 import { apiRequest, unwrapPayload } from "./client"
-import { mezonError, mezonLog, mezonWarn } from "./mezonDebug"
 
 /**
  * Backend «Category» = UI dagi Mezon.
@@ -7,8 +6,23 @@ import { mezonError, mezonLog, mezonWarn } from "./mezonDebug"
  * CategoryResponse (GET): id, name, maxBall, status, fileUpload, createdAt, updatedAt, createdUser
  * CategoryDTO (POST/PUT): name, maxBall, criteriaId, isFileUpload
  *
- * @typedef {{ id: string, sectionId: string, title: string, maxScore: number, requiredDocs: string[], collected: number, status: 'approved'|'pending' }} CriterionRow
+ * @typedef {{ id: string, sectionId: string, title: string, maxScore: number, fileUpload: boolean, requiredDocs: string[], collected: number, status: 'approved'|'pending' }} CriterionRow
  */
+
+/**
+ * @param {unknown} value
+ */
+function parseFileUploadFlag(value) {
+  if (value == null || value === "") return true
+  if (value === true || value === 1 || value === "1") return true
+  if (value === false || value === 0 || value === "0") return false
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === "true" || normalized === "yes") return true
+    if (normalized === "false" || normalized === "no") return false
+  }
+  return Boolean(value)
+}
 
 /** CategoryDTO — mezon saqlash/tahrirlash (criteriaId = tanlangan bo'lim id) */
 function buildCategorySaveBody(body, criteriaId) {
@@ -17,7 +31,7 @@ function buildCategorySaveBody(body, criteriaId) {
     name: body.title.trim(),
     maxBall: body.maxScore,
     criteriaId: criteriaIdNum,
-    isFileUpload: false,
+    isFileUpload: Boolean(body.fileUpload),
     status: "ACTIVE",
   }
 }
@@ -45,7 +59,6 @@ export function mapCriterion(item, fallbackSectionId = null) {
   const raw = /** @type {Record<string, unknown>} */ (item)
   const id = raw.id ?? raw.categoryId ?? raw.category_id
   if (id == null) {
-    mezonWarn("mapCriterion: id yo'q, qator tashlandi", raw)
     return null
   }
 
@@ -84,12 +97,16 @@ export function mapCriterion(item, fallbackSectionId = null) {
   const collectedRaw = raw.collected ?? raw.collectedScore ?? raw.collected_score
   const collected = Number(collectedRaw)
   const status = raw.status === "approved" || raw.status === "ACTIVE" ? "approved" : "pending"
+  const fileUpload = parseFileUploadFlag(
+    raw.fileUpload ?? raw.file_upload ?? raw.isFileUpload ?? raw.is_file_upload
+  )
 
   return {
     id: String(id),
     sectionId: sectionId ?? "",
     title: String(title).trim() || "Mezon",
     maxScore: safeMax,
+    fileUpload,
     requiredDocs,
     collected: Number.isFinite(collected) ? collected : 0,
     status,
@@ -181,34 +198,10 @@ function tryMapCriterion(payload, fallbackSectionId = null) {
  * @returns {Promise<CriterionRow[]>}
  */
 export async function fetchAllCriterionRows(sections = []) {
-  mezonLog("GET /api/categories/all — yuklanmoqda", { boLimlar: sections.map((s) => ({ id: s.id, title: s.title })) })
-  try {
-    const json = await apiRequest("/api/categories/all")
-    const data = unwrapPayload(json)
-    const rawList = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
-    const onlySectionId = sections.length === 1 ? sections[0].id : null
-    const rows = mapCriterionList(json, onlySectionId)
-    const attached = attachOrphanCriterionRows(rows, sections)
-
-    mezonLog("GET /api/categories/all — javob", {
-      serverdanKelgan: rawList.length,
-      mapQilindi: rows.length,
-      koRsatiladi: attached.length,
-      namuna: rawList[0] ?? null,
-    })
-
-    if (rawList.length > 0 && attached.length === 0) {
-      mezonWarn(
-        "Serverdan mezon keldi, lekin criteriaId yo'q — ro'yxatda ko'rinmasligi mumkin",
-        rawList.slice(0, 3)
-      )
-    }
-
-    return attached
-  } catch (err) {
-    mezonError("GET /api/categories/all — xato", err)
-    throw err
-  }
+  const json = await apiRequest("/api/categories/all")
+  const onlySectionId = sections.length === 1 ? sections[0].id : null
+  const rows = mapCriterionList(json, onlySectionId)
+  return attachOrphanCriterionRows(rows, sections)
 }
 
 /**
@@ -224,13 +217,12 @@ export async function fetchCriterionRowById(id, fallbackSectionId = null) {
 
 /**
  * POST /api/categories/save — mezon qo'shish.
- * @param {{ sectionId: string, title: string, maxScore: number }} body
+ * @param {{ sectionId: string, title: string, maxScore: number, fileUpload?: boolean }} body
  * @returns {Promise<CriterionRow>}
  */
 export async function saveCriterionRow(body) {
   const criteriaId = parseCriteriaId(body.sectionId)
   if (!criteriaId) {
-    mezonError("Saqlash to'xtatildi: bo'lim (criteriaId) tanlanmagan", new Error("criteriaId yo'q"), { body })
     throw new Error("Avval bo'lim tanlang")
   }
 
@@ -241,7 +233,6 @@ export async function saveCriterionRow(body) {
 
   const payload = buildCategorySaveBody(body, criteriaId)
   const url = "/api/categories/save"
-  mezonLog("POST " + url + " — yuborilmoqda", payload)
 
   try {
     const json = await apiRequest(url, {
@@ -249,27 +240,23 @@ export async function saveCriterionRow(body) {
       body: JSON.stringify(payload),
     })
 
-    mezonLog("POST " + url + " — muvaffaqiyat", json)
-
     const mapped = tryMapCriterion(json, criteriaId)
     if (mapped) {
       const row = mapped.sectionId ? mapped : { ...mapped, sectionId: criteriaId }
-      mezonLog("POST " + url + " — map natija", row)
       return row
     }
 
-    mezonWarn("POST " + url + " — javob map bo'lmadi, vaqtinchalik qator", { json, criteriaId })
     return {
       id: `tmp-${Date.now()}`,
       sectionId: criteriaId,
       title: body.title,
       maxScore: body.maxScore,
+      fileUpload: Boolean(body.fileUpload),
       requiredDocs: [],
       collected: 0,
       status: "pending",
     }
   } catch (err) {
-    mezonError("POST " + url + " — server rad etdi (qo'shilmadi)", err, { yuborilganBody: payload })
     throw err
   }
 }
@@ -277,7 +264,7 @@ export async function saveCriterionRow(body) {
 /**
  * PUT /api/categories/update/{id} — mezonni tahrirlash.
  * @param {string | number} id
- * @param {{ sectionId: string, title: string, maxScore: number }} body
+ * @param {{ sectionId: string, title: string, maxScore: number, fileUpload?: boolean }} body
  * @returns {Promise<CriterionRow>}
  */
 export async function updateCriterionRow(id, body) {
@@ -286,7 +273,6 @@ export async function updateCriterionRow(id, body) {
 
   const payload = buildCategorySaveBody(body, criteriaId)
   const url = `/api/categories/update/${encodeURIComponent(String(id))}`
-  mezonLog("PUT " + url, payload)
 
   try {
     const json = await apiRequest(url, {
@@ -304,12 +290,12 @@ export async function updateCriterionRow(id, body) {
       sectionId: criteriaId,
       title: body.title,
       maxScore: body.maxScore,
+      fileUpload: Boolean(body.fileUpload),
       requiredDocs: [],
       collected: 0,
       status: "pending",
     }
   } catch (err) {
-    mezonError("PUT " + url + " — xato", err, { payload })
     throw err
   }
 }
@@ -321,12 +307,5 @@ export async function updateCriterionRow(id, body) {
  */
 export async function deleteCriterionRow(id) {
   const url = `/api/categories/delete/${encodeURIComponent(String(id))}`
-  mezonLog("DELETE " + url)
-  try {
-    await apiRequest(url, { method: "DELETE" })
-    mezonLog("DELETE " + url + " — OK")
-  } catch (err) {
-    mezonError("DELETE " + url + " — xato", err)
-    throw err
-  }
+  await apiRequest(url, { method: "DELETE" })
 }

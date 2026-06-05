@@ -25,7 +25,6 @@ import {
   saveSection,
   updateSection,
 } from "../../api/criteriaApi"
-import { mezonError, mezonLog, mezonWarn } from "../../api/mezonDebug"
 import { getCrudPermissions } from "../../data/permissionLabels"
 
 const PREVIEW_ROWS = 3
@@ -79,6 +78,7 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
     sectionId: "",
     title: "",
     maxScore: "5",
+    fileUpload: true,
   })
 
   const [sectionModalOpen, setSectionModalOpen] = useState(false)
@@ -116,6 +116,7 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
     sectionId: "",
     title: "",
     maxScore: "5",
+    fileUpload: true,
   })
 
   const loadData = useCallback(async ({ silent = false } = {}) => {
@@ -126,14 +127,8 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
       const rowList = await fetchAllCriterionRows(sectionList)
       setSections(sectionList)
       setCriteria(rowList)
-      mezonLog("Sahifa yuklandi", {
-        boLimlar: sectionList.length,
-        mezonlar: rowList.length,
-        boLimIdlar: sectionList.map((s) => s.id),
-      })
     } catch (err) {
       const message = err instanceof Error ? err.message : "Ma'lumotlarni yuklab bo'lmadi"
-      mezonError("Sahifa yuklanmadi", err)
       setLoadError(message)
       if (!silent) {
         setSections([])
@@ -243,6 +238,7 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
       sectionId: first,
       title: "",
       maxScore: "5",
+      fileUpload: true,
     })
     setCreateModalOpen(true)
   }
@@ -252,6 +248,7 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
       sectionId,
       title: "",
       maxScore: "5",
+      fileUpload: true,
     })
     setCreateModalOpen(true)
   }
@@ -294,6 +291,7 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
       sectionId: row.sectionId,
       title: row.title,
       maxScore: String(row.maxScore),
+      fileUpload: Boolean(row.fileUpload),
     })
     setCriterionModal({ open: true, type: "edit", row })
   }
@@ -322,6 +320,7 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
         sectionId: editCriterionDraft.sectionId,
         title,
         maxScore: Math.round(maxScore),
+        fileUpload: editCriterionDraft.fileUpload,
       })
       setCriteria((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
       closeCriterionModal()
@@ -358,23 +357,14 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
     const title = createDraft.title.trim()
     const maxScore = Number(createDraft.maxScore)
     if (!title || !Number.isFinite(maxScore) || maxScore <= 0) {
-      mezonWarn("Forma to'liq emas", { title, maxScore, createDraft })
       showNotice("Mezon nomi va maks. ballni to'ldiring", "danger")
       return
     }
     const sectionId = createDraft.sectionId || sections[0]?.id || ""
     if (!sectionId || !sections.some((s) => s.id === sectionId)) {
-      mezonWarn("Bo'lim tanlanmagan", { sectionId, boLimlar: sections })
       showNotice("Avval bo'lim qo'shing", "danger")
       return
     }
-
-    mezonLog("Mezon qo'shish — boshlandi", {
-      sectionId,
-      title,
-      maxScore: Math.round(maxScore),
-      tanlanganBoLim: sections.find((s) => s.id === sectionId)?.title,
-    })
 
     setBusy(true)
     try {
@@ -382,9 +372,9 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
         sectionId,
         title,
         maxScore: Math.round(maxScore),
+        fileUpload: createDraft.fileUpload,
       })
       setCriteria((prev) => [...prev.filter((c) => c.id !== created.id), created])
-      mezonLog("Mezon API dan qaytdi", created)
 
       const needsRefresh = String(created.id).startsWith("tmp-")
       if (needsRefresh) {
@@ -394,15 +384,8 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
       closeCreateModal()
       showNotice("Mezon qo'shildi")
       setOpenSection(sectionId)
-      mezonLog("Mezon qo'shish — tugadi")
     } catch (err) {
       const message = err instanceof Error ? err.message : "Qo'shib bo'lmadi"
-      mezonError("Mezon qo'shish — muvaffaqiyatsiz (UI)", err, {
-        sectionId,
-        title,
-        maxScore,
-        consoleFilter: "Console da [Mezon] qidiring",
-      })
       showNotice(message, "danger")
     } finally {
       setBusy(false)
@@ -798,6 +781,20 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
                 className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
               />
             </div>
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={createDraft.fileUpload}
+                  onChange={(e) => setCreateDraft((p) => ({ ...p, fileUpload: e.target.checked }))}
+                  className="h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span className="text-base font-semibold">Hujjat yuklash talab qilinadi</span>
+              </label>
+              <p className={`text-sm ${subtitle}`}>
+                Yoqilsa, o'qituvchi ushbu mezon uchun fayl yuklash imkoniyatiga ega bo'ladi.
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
@@ -949,6 +946,10 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
                 <p className={`text-xs font-semibold ${meta}`}>Maks. ball:</p>
                 <p className="mt-1 font-semibold tabular-nums">{criterionModal.row.maxScore}</p>
               </div>
+              <div>
+                <p className={`text-xs font-semibold ${meta}`}>Hujjat yuklash:</p>
+                <p className="mt-1 font-semibold">{criterionModal.row.fileUpload ? "Talab qilinadi" : "Talab qilinmaydi"}</p>
+              </div>
             </div>
           </div>
         )}
@@ -999,6 +1000,17 @@ export default function Criteria({ dark, permissions = [], isAdmin = false }) {
                   onChange={(e) => setEditCriterionDraft((p) => ({ ...p, maxScore: e.target.value }))}
                   className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={editCriterionDraft.fileUpload}
+                    onChange={(e) => setEditCriterionDraft((p) => ({ ...p, fileUpload: e.target.checked }))}
+                    className="h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <span className="text-base font-semibold">Hujjat yuklash talab qilinadi</span>
+                </label>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">

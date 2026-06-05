@@ -67,7 +67,7 @@ export default function AdminLogin({ onSuccess }) {
               className="h-[88px] w-[88px] rounded-full border border-slate-200 object-cover shadow-sm"
             />
             <h1 id="admin-login-title" className="mt-5 text-2xl font-bold tracking-tight text-slate-900">
-              Tizimga Kirish
+              Admin Penelga Kirish
             </h1>
           </div>
 
