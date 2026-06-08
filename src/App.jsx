@@ -9,7 +9,7 @@ import { fetchAllCriterionRows } from "./api/categories"
 import { fetchAllSections } from "./api/criteriaApi"
 import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens } from "./api/auth"
 import { fetchAllTeachers, saveTeacher } from "./api/teachers"
-import { fetchTeacherDocuments, saveTeacherDocument } from "./api/teacherDocuments"
+import { deleteTeacherResource, fetchTeacherDocuments, saveTeacherDocument } from "./api/teacherDocuments"
 import { getFileDownloadUrl } from "./api/files"
 import { fetchUserByUsername } from "./api/users"
 import { CRITERIA as DEFAULT_CRITERIA } from "./data/criteria.js"
@@ -149,6 +149,8 @@ function App() {
   const [uploadState, setUploadState] = useState({})
   const [teacherDocumentIds, setTeacherDocumentIds] = useState({})
   const [uploadError, setUploadError] = useState("")
+  const [uploadingCriterionIds, setUploadingCriterionIds] = useState({})
+  const [pageLoading, setPageLoading] = useState(false)
   const [newTeacherForm, setNewTeacherForm] = useState({
     fullName: "",
     login: "",
@@ -302,6 +304,16 @@ function App() {
   useEffect(() => {
     if (!loginOpen) setLoginPasswordVisible(false)
   }, [loginOpen])
+
+  useEffect(() => {
+    setPageLoading(false)
+  }, [activePage])
+
+  const handleNavigate = (page) => {
+    if (page === activePage) return
+    setPageLoading(true)
+    setActivePage(page)
+  }
 
   const categoryMaxScore = useMemo(
     () =>
@@ -620,6 +632,7 @@ function App() {
     if (evidenceType !== "file" && !state.link?.trim()) return
 
     setUploadError("")
+    setUploadingCriterionIds((prev) => ({ ...prev, [criterionId]: true }))
     try {
       const saved = await saveTeacherDocument({
         teacherDocumentId,
@@ -634,6 +647,8 @@ function App() {
       setUploadState((prev) => ({ ...prev, [criterionId]: { type: "file", link: "", comment: "" } }))
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Hujjatni yuklab bo'lmadi.")
+    } finally {
+      setUploadingCriterionIds((prev) => ({ ...prev, [criterionId]: false }))
     }
   }
 
@@ -651,7 +666,12 @@ function App() {
     loadDocs()
   }, [currentUser])
 
-  const deleteSubmission = (submissionId) => {
+  const deleteSubmission = async (submissionId) => {
+    try {
+      await deleteTeacherResource(submissionId)
+    } catch {
+      // Agar API orqali o'chirishda xatolik bo'lsa ham UI dan olib tashlaymiz
+    }
     setSubmissions((prev) => prev.filter((s) => s.id !== submissionId))
   }
 
@@ -982,7 +1002,7 @@ function App() {
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <Navbar
           activePage={activePage}
-          onNavigate={setActivePage}
+          onNavigate={handleNavigate}
           currentUser={currentUser}
           logoSrc={logoImg}
           logoAlt="Urganch DPI logo"
@@ -1133,9 +1153,14 @@ function App() {
                           <p className="mb-1 text-center text-xs font-semibold text-transparent">.</p>
                           <button
                             onClick={() => submitCriterionFile(criterion.id)}
-                            className="min-h-12 min-w-0 w-full rounded-lg bg-indigo-600 px-2 py-3 text-center text-xs font-semibold text-white"
+                            disabled={uploadingCriterionIds[criterion.id]}
+                            className="min-h-12 min-w-0 w-full cursor-pointer rounded-lg bg-indigo-600 px-2 py-3 text-center text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
                           >
-                            Yuklash
+                            {uploadingCriterionIds[criterion.id]
+                              ? "Kuting..."
+                              : uploadModel.type === "file"
+                                ? "Yuklash"
+                                : "Yuborish"}
                           </button>
                         </div>
                       </div>
@@ -1326,6 +1351,17 @@ function App() {
           </div>
         </div>
       )}
+        {pageLoading && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-10 py-8 shadow-2xl">
+              <svg className="h-10 w-10 animate-spin text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-lg font-semibold text-slate-700">Kuting...</p>
+            </div>
+          </div>
+        )}
     </main>
   )
 }

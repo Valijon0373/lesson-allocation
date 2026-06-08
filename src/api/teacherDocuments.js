@@ -196,7 +196,7 @@ export async function fetchTeacherDocuments(teacherId) {
 export async function saveTeacherDocument(body) {
   const teacherDocumentId = String(body.teacherDocumentId ?? "").trim()
   if (!teacherDocumentId) {
-    throw new Error("Ushbu mezon uchun hujjat identifikatori topilmadi. Sahifani yangilab qayta urinib ko'ring.")
+    throw new Error("Ushbu mezon uchun hujjat topilmadi. Sahifani yangilab qayta urinib ko'ring.")
   }
 
   const formData = new FormData()
