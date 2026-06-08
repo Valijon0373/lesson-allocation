@@ -466,7 +466,7 @@ function App() {
   const myCategoryScores = managedTeacherId ? categoryScoresForTeacher(managedTeacherId) : {}
 
   const mySubmissions = submissions.filter((s) => s.teacherId === managedTeacherId)
-  const recentUploads = [...mySubmissions].sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)).slice(0, 5)
+  const recentUploads = [...mySubmissions].sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))
 
   const missingDocsCount = managedTeacherId
     ? criteriaList.filter((criterion) => !mySubmissions.some((s) => s.criterionId === criterion.id)).length
@@ -701,7 +701,7 @@ function App() {
         <p className="text-sm uppercase tracking-wider text-indigo-100">Statistika</p>
         <h1 className="mt-2 text-3xl font-bold">Nizom monitoring platformasi</h1>
         <p className="mx-auto mt-2 max-w-3xl text-indigo-50">
-          Jami {totalMaxScore} ball bo'yicha progress, hujjatlar holati{currentUser?.role === "teacher" ? "." : " va reyting."}
+          Jami 110 ball bo'yicha progress, hujjatlar holati{currentUser?.role === "teacher" ? "." : " va reyting."}
         </p>
       </header>
 
@@ -793,7 +793,7 @@ function App() {
             {currentUser?.role !== "teacher" ? (
               <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 max-h-96 space-y-2 overflow-y-auto">
                   {ranking.map((item, index) => (
                     <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
                       <p className="text-sm text-slate-700">
@@ -807,7 +807,7 @@ function App() {
             ) : (
               <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 max-h-60 space-y-2 overflow-y-auto">
                   {recentUploads.map((upload) => {
                     const criterion = criteriaList.find((c) => c.id === upload.criterionId)
                     return (
@@ -854,10 +854,10 @@ function App() {
             </article>
           )}
 
-          {currentUser?.role !== "teacher" && (
+          {currentUser?.role !== "teacher" && currentUser?.role !== "expert" && (
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 max-h-60 space-y-2 overflow-y-auto">
                 {recentUploads.map((upload) => {
                   const criterion = criteriaList.find((c) => c.id === upload.criterionId)
                   return (
