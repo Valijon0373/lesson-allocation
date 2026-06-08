@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Eye, EyeOff, X } from "lucide-react"
+import { Download, Eye, EyeOff, MessageSquareText, Trash2, X } from "lucide-react"
 import bgVideo from "./assets/bg.mp4"
 import logoImg from "./assets/logo.jpg"
 import Footer from "./components/Footer.jsx"
@@ -1174,43 +1174,61 @@ function App() {
                           <p className="font-medium text-slate-800">{submission.fileName}</p>
                           <p className="text-xs text-slate-500">{formatFileSize(submission.fileSize)}</p>
                         </div>
-                        {submission.fileDataUrl || (submission.evidenceType === "file" && submission.fileName) ? (
-                          <a
-                            className="mt-1 inline-block text-xs font-semibold text-indigo-700"
-                            href={
-                              submission.fileDataUrl ||
-                              submission.url ||
-                              getFileDownloadUrl(submission.fileName)
-                            }
-                            download={submission.fileName}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Ochish/Yuklab olish
-                          </a>
-                        ) : null}
-                        {submission.url && submission.evidenceType !== "file" && (
-                          <a
-                            className="mt-1 block break-all text-xs font-semibold text-indigo-700"
-                            href={submission.url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {submission.url}
-                          </a>
-                        )}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {(submission.fileDataUrl || (submission.evidenceType === "file" && submission.fileName)) ? (
+                            <>
+                              <a
+                                className="inline-flex items-center rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+                                href={
+                                  submission.fileDataUrl ||
+                                  submission.url ||
+                                  getFileDownloadUrl(submission.fileName)
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Eye className="mr-1 h-3.5 w-3.5" />
+                                Ochish
+                              </a>
+                              <a
+                                className="inline-flex items-center rounded-md border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
+                                href={
+                                  submission.fileDataUrl ||
+                                  submission.url ||
+                                  getFileDownloadUrl(submission.fileName)
+                                }
+                                download={submission.fileName}
+                              >
+                                <Download className="mr-1 h-3.5 w-3.5" />
+                                Yuklab olish
+                              </a>
+                            </>
+                          ) : null}
+                          {submission.url && submission.evidenceType !== "file" && (
+                            <a
+                              className="inline-flex items-center rounded-md border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
+                              href={submission.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Havola
+                            </a>
+                          )}
+                          {currentUser.role === "teacher" && (
+                            <button
+                              onClick={() => deleteSubmission(submission.id)}
+                              className="inline-flex items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                            >
+                              <Trash2 className="mr-1 h-3.5 w-3.5" />
+                              O'chirish
+                            </button>
+                          )}
+                        </div>
                         {submission.comment && (
-                          <p className="mt-1 text-xs text-slate-600">
+                          <p className="mt-3 text-base text-slate-600">
+                            <MessageSquareText className="mr-1.5 inline h-4 w-4 text-slate-500" />
                             <span className="font-semibold text-slate-700">Izoh:</span> {submission.comment}
                           </p>
-                        )}
-                        {currentUser.role === "teacher" && (
-                          <button
-                            onClick={() => deleteSubmission(submission.id)}
-                            className="mt-2 rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700"
-                          >
-                            O'chirish
-                          </button>
                         )}
                       </div>
                     ))}

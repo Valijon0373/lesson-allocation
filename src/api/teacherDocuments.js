@@ -61,14 +61,19 @@ function mapResourceSubmission(resource, teacherId, criterionId, teacherDocument
 
   const evidenceType = mapResourceEvidenceType(raw.type)
   const link = String(raw.link ?? raw.url ?? "")
-  const fileName =
+  const serverFileName = String(raw.fileName ?? raw.fileNameOnServer ?? "")
+  const resolvedFileName =
     evidenceType === "video"
       ? "Video link"
       : evidenceType === "link"
         ? "Web link"
-        : link
-          ? link.split("/").pop() || "Hujjat"
-          : "Hujjat"
+        : serverFileName
+          ? serverFileName
+          : link
+            ? link.split("/").pop() || "Hujjat"
+            : "Hujjat"
+
+  const resolvedFileDataUrl = String(raw.fileDataUrl ?? raw.fileUrl ?? raw.downloadUrl ?? "")
 
   return {
     id: String(id),
@@ -76,11 +81,15 @@ function mapResourceSubmission(resource, teacherId, criterionId, teacherDocument
     teacherId,
     criterionId,
     evidenceType,
-    fileName,
-    fileSize: 0,
-    fileType: evidenceType === "file" ? "application/octet-stream" : "url",
-    fileDataUrl: "",
-    url: evidenceType === "file" && link ? link : evidenceType === "file" ? getFileDownloadUrl(fileName) : link,
+    fileName: resolvedFileName,
+    fileSize: Number(raw.fileSize ?? raw.size ?? 0),
+    fileType: evidenceType === "file"
+      ? (String(raw.fileType ?? raw.mimeType ?? "") || "application/octet-stream")
+      : "url",
+    fileDataUrl: resolvedFileDataUrl,
+    url: evidenceType === "file"
+      ? (link || resolvedFileDataUrl || getFileDownloadUrl(resolvedFileName))
+      : link,
     comment: String(raw.description ?? raw.comment ?? ""),
     uploadedAt: String(raw.uploadedAt ?? raw.createdAt ?? new Date().toISOString()),
   }
@@ -149,6 +158,13 @@ function mapSaveResponse(data, body) {
   const raw = data && typeof data === "object" ? /** @type {Record<string, unknown>} */ (data) : {}
   const id = raw.id ?? raw.resourceId
   const link = String(raw.link ?? raw.url ?? body.url ?? "")
+  const serverFileName = String(raw.fileName ?? raw.fileNameOnServer ?? "")
+  const resolvedFileDataUrl = String(raw.fileDataUrl ?? raw.fileUrl ?? raw.downloadUrl ?? "")
+
+  const resolvedFileName =
+    serverFileName ||
+    body.file?.name ||
+    (body.evidenceType === "video" ? "Video link" : body.evidenceType === "link" ? "Web link" : "Hujjat")
 
   return {
     id: id != null ? String(id) : crypto.randomUUID(),
@@ -156,16 +172,15 @@ function mapSaveResponse(data, body) {
     teacherId: String(body.teacherId),
     criterionId: String(body.criterionId),
     evidenceType: body.evidenceType,
-    fileName:
-      body.file?.name ??
-      (body.evidenceType === "video" ? "Video link" : body.evidenceType === "link" ? "Web link" : "Hujjat"),
-    fileSize: body.file?.size ?? 0,
-    fileType: body.file?.type ?? (body.evidenceType === "file" ? "application/octet-stream" : "url"),
-    fileDataUrl: "",
+    fileName: resolvedFileName,
+    fileSize: body.file?.size ?? Number(raw.fileSize ?? raw.size ?? 0),
+    fileType: body.file?.type ??
+      (String(raw.fileType ?? raw.mimeType ?? "") || (body.evidenceType === "file" ? "application/octet-stream" : "url")),
+    fileDataUrl: resolvedFileDataUrl,
     url:
       body.evidenceType === "file"
-        ? link || getFileDownloadUrl(body.file?.name ?? "Hujjat")
-        : link || String(body.url ?? ""),
+        ? (link || resolvedFileDataUrl || getFileDownloadUrl(resolvedFileName))
+        : (link || String(body.url ?? "")),
     comment: String(body.comment ?? raw.description ?? ""),
     uploadedAt: new Date().toISOString(),
   }
