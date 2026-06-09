@@ -10,18 +10,20 @@ import OqituvchilarPage from "./components/OqituvchilarPage.jsx"
 import { fetchAllCriterionRows } from "./api/categories"
 import { fetchAllSections } from "./api/criteriaApi"
 import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens } from "./api/auth"
+import { fetchAllDepartments } from "./api/departments"
+import { fetchAllFaculties } from "./api/faculties"
+import { fetchAllPositions } from "./api/positions"
 import { fetchAllTeachers, saveTeacher } from "./api/teachers"
 import { deleteTeacherResource, fetchTeacherDocuments, saveTeacherDocument } from "./api/teacherDocuments"
 import { getFileDownloadUrl } from "./api/files"
-import { fetchUserByUsername } from "./api/users"
+import {
+  canAccessMainApp,
+  isExpertApiRoles,
+  parseRolesFromAccessToken,
+  resolveMainAppRole,
+} from "./api/roles"
+import { mapApiRoleToUi, mapUserFromLoginBody, fetchUserByUsername } from "./api/users"
 import { CRITERIA as DEFAULT_CRITERIA } from "./data/criteria.js"
-
-const USERS = [
-  { id: "u-admin", fullName: "Platforma Admin", role: "admin", login: "admin", password: "12345" },
-  { id: "u-head", fullName: "Kafedra mudiri", role: "head", login: "mudir", password: "12345" },
-  { id: "u-dean", fullName: "Fakultet dekani", role: "dean", login: "dekan", password: "12345" },
-  { id: "u-expert", fullName: "Ekspert tekshiruvchi", role: "expert", login: "expert", password: "12345" },
-]
 
 const ROLE_LABELS = {
   admin: "Administrator",
@@ -115,6 +117,7 @@ function mapTeachersFromApi(list) {
     password: "",
     departmentId: teacher.departmentId,
     department: teacher.kafedra || "",
+    facultyName: teacher.fakultet || "",
     positionId: teacher.positionId ?? "",
   }))
 }
@@ -134,6 +137,45 @@ function isTeacherUser(user) {
   return isTeacherAccount(user)
 }
 
+/**
+ * @param {string} loginTrim
+ * @param {Awaited<ReturnType<typeof login>>} tokens
+ * @param {ReturnType<typeof mapTeachersFromApi>} teacherList
+ */
+async function resolveLoginIdentity(loginTrim, tokens, teacherList) {
+  let matched = findTeacherByLogin(teacherList, loginTrim)
+  let updatedTeachers = null
+
+  if (!matched) {
+    const list = await fetchAllTeachers()
+    const mapped = mapTeachersFromApi(list)
+    matched = findTeacherByLogin(mapped, loginTrim)
+    if (matched) updatedTeachers = mapped
+  }
+
+  const tokenRoles = Array.isArray(tokens.roles) ? tokens.roles : []
+
+  let user = null
+  try {
+    user = await fetchUserByUsername(loginTrim)
+  } catch {
+    user = mapUserFromLoginBody(tokens.raw, loginTrim)
+  }
+
+  if (!user && tokenRoles.length > 0) {
+    user = {
+      id: loginTrim,
+      fio: loginTrim,
+      login: loginTrim,
+      izoh: "",
+      role: isExpertApiRoles(tokenRoles) ? "Komissiya" : mapApiRoleToUi(tokenRoles[0]),
+      roles: tokenRoles,
+    }
+  }
+
+  return { matched, updatedTeachers, user, tokenRoles }
+}
+
 function App() {
   const [activePage, setActivePage] = useState("dashboard")
   const [loginOpen, setLoginOpen] = useState(false)
@@ -144,7 +186,6 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState("")
   const [viewingTeacher, setViewingTeacher] = useState(null)
-  const [users] = useState(USERS)
   const [teachers, setTeachers] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [evaluations, setEvaluations] = useState({})
@@ -169,7 +210,9 @@ function App() {
   const [positionsLoading, setPositionsLoading] = useState(false)
   const [positionsError, setPositionsError] = useState("")
   const [teacherLoadError, setTeacherLoadError] = useState("")
+  const [teachersLoading, setTeachersLoading] = useState(false)
   const [criteriaLoadError, setCriteriaLoadError] = useState("")
+  const [teacherDocsLoading, setTeacherDocsLoading] = useState(false)
   const [authSessionKey, setAuthSessionKey] = useState(0)
   const [evalDraft, setEvalDraft] = useState({})
 
@@ -214,8 +257,10 @@ function App() {
   const loadTeachersFromApi = useCallback(async () => {
     if (!getAccessToken()) {
       setTeacherLoadError("")
+      setTeachersLoading(false)
       return
     }
+    setTeachersLoading(true)
     try {
       const list = await fetchAllTeachers()
       setTeachers(mapTeachersFromApi(list))
@@ -223,6 +268,50 @@ function App() {
       setTeacherLoadError("")
     } catch (error) {
       setTeacherLoadError(error instanceof Error ? error.message : "O'qituvchilarni yuklab bo'lmadi")
+    } finally {
+      setTeachersLoading(false)
+    }
+  }, [])
+
+  const loadReferenceDataFromApi = useCallback(async () => {
+    if (!getAccessToken()) return
+    setDepartmentsLoading(true)
+    setPositionsLoading(true)
+    setDepartmentsError("")
+    setPositionsError("")
+    try {
+      const faculties = await fetchAllFaculties()
+      const facultyNames = Object.fromEntries(faculties.map((faculty) => [faculty.id, faculty.nameUz]))
+      const departmentRows = await fetchAllDepartments(facultyNames)
+      const normalizedDepartments = departmentRows.map((department) => ({
+        id: department.id,
+        name: department.nameUz,
+        facultyId: department.facultyId,
+        facultyName: department.fakultet,
+        order: 0,
+      }))
+      if (normalizedDepartments.length > 0) {
+        setDepartments(normalizedDepartments)
+        setNewTeacherForm((prev) => ({
+          ...prev,
+          departmentId: prev.departmentId || normalizedDepartments[0].id,
+        }))
+      }
+      const positionRows = await fetchAllPositions()
+      setPositions(
+        positionRows.map((position, index) => ({
+          id: position.id,
+          name: position.nameUz,
+          departmentId: "",
+          order: index,
+        })),
+      )
+    } catch (error) {
+      setDepartmentsError(error instanceof Error ? error.message : "Kafedralarni yuklashda xatolik yuz berdi.")
+      setPositionsError(error instanceof Error ? error.message : "Lavozimlarni yuklashda xatolik yuz berdi.")
+    } finally {
+      setDepartmentsLoading(false)
+      setPositionsLoading(false)
     }
   }, [])
 
@@ -233,7 +322,8 @@ function App() {
 
   useEffect(() => {
     loadTeachersFromApi()
-  }, [loadTeachersFromApi, authSessionKey])
+    loadReferenceDataFromApi()
+  }, [loadTeachersFromApi, loadReferenceDataFromApi, authSessionKey])
 
   useEffect(() => {
     loadCriteriaFromApi()
@@ -256,6 +346,7 @@ function App() {
           if (!cancelled && mapped.length) setTeachers(mapped)
         }
 
+        const tokenRoles = parseRolesFromAccessToken(getAccessToken())
         let user = null
         try {
           user = await fetchUserByUsername(username)
@@ -263,28 +354,45 @@ function App() {
           user = null
         }
 
-        if (!matched && !isTeacherAccount(user)) return
+        if (!user && tokenRoles.length > 0) {
+          user = {
+            id: username,
+            fio: username,
+            login: username,
+            izoh: "",
+            role: isExpertApiRoles(tokenRoles) ? "Komissiya" : mapApiRoleToUi(tokenRoles[0]),
+            roles: tokenRoles,
+          }
+        }
 
-        const teacherUser =
+        if (!canAccessMainApp({ user, matchedTeacher: matched, tokenRoles })) return
+
+        const appRole = resolveMainAppRole({ user, matchedTeacher: matched, tokenRoles })
+        const restoredUser =
           matched ??
           (user
             ? {
                 id: user.id,
                 fullName: user.fio,
-                role: "teacher",
+                role: appRole,
                 login: user.login,
                 password: "",
                 departmentId: "",
                 department: "",
                 positionId: "",
+                roles: user.roles,
               }
             : null)
 
-        if (!teacherUser || cancelled) return
+        if (!restoredUser || cancelled) return
 
-        setCurrentUser(teacherUser)
-        setSelectedTeacherId(teacherUser.id)
-        setActivePage("mezonlar")
+        setCurrentUser(restoredUser)
+        if (appRole === "teacher") {
+          setSelectedTeacherId(restoredUser.id)
+          setActivePage("mezonlar")
+        } else if (appRole === "expert") {
+          setActivePage("oqituvchilar")
+        }
         setAuthSessionKey((key) => key + 1)
       } catch {
         if (!cancelled) clearAuthTokens()
@@ -499,71 +607,69 @@ function App() {
       return
     }
 
-    const foundLocal = users.find((u) => u.login === loginTrim && u.password === loginForm.password)
-    if (foundLocal) {
-      setCurrentUser(foundLocal)
-      if (foundLocal.role === "teacher") {
-        setSelectedTeacherId(foundLocal.id)
-        setActivePage("mezonlar")
-      }
-      setLoginError("")
-      setLoginOpen(false)
-      setLoginForm({ login: "", password: "" })
-      return
-    }
-
     setLoginLoading(true)
     setLoginError("")
     try {
       const tokens = await login(loginTrim, loginForm.password)
+      const { matched, updatedTeachers, user, tokenRoles } = await resolveLoginIdentity(
+        loginTrim,
+        tokens,
+        teachers,
+      )
 
-      let matched = findTeacherByLogin(teachers, loginTrim)
-      if (!matched) {
-        const list = await fetchAllTeachers()
-        const mapped = mapTeachersFromApi(list)
-        matched = findTeacherByLogin(mapped, loginTrim)
-        if (matched) setTeachers(mapped)
-      }
+      if (updatedTeachers) setTeachers(updatedTeachers)
 
-      let user = null
-      try {
-        user = await fetchUserByUsername(loginTrim)
-      } catch {
-        user = null
-      }
-
-      if (!matched && !isTeacherAccount(user)) {
+      if (!canAccessMainApp({ user, matchedTeacher: matched, tokenRoles })) {
         clearAuthTokens()
-        setLoginError("Bu login faqat o'qituvchilar uchun.")
+        setLoginError("Bu login uchun ruxsat yo'q.")
         return
       }
 
       setAuthTokens({
         ...tokens,
         username: loginTrim,
-        roles: user?.roles,
+        roles: user?.roles ?? tokenRoles,
       })
 
-      const teacherUser = matched ?? {
-        id: user.id,
-        fullName: user.fio,
-        role: "teacher",
-        login: user.login,
-        password: "",
-        departmentId: "",
-        department: "",
-        positionId: "",
+      const appRole = resolveMainAppRole({ user, matchedTeacher: matched, tokenRoles })
+      const appUser =
+        matched ??
+        (user
+          ? {
+              id: user.id,
+              fullName: user.fio,
+              role: appRole,
+              login: user.login,
+              password: "",
+              departmentId: "",
+              department: "",
+              positionId: "",
+              roles: user.roles ?? tokenRoles,
+            }
+          : null)
+
+      if (!appUser) {
+        clearAuthTokens()
+        setLoginError("Foydalanuvchi ma'lumotlari topilmadi.")
+        return
       }
 
-      setCurrentUser(teacherUser)
-      setSelectedTeacherId(teacherUser.id)
+      setCurrentUser(appUser)
       setAuthSessionKey((key) => key + 1)
-      setActivePage("mezonlar")
+      if (appRole === "teacher") {
+        setSelectedTeacherId(appUser.id)
+        setActivePage("mezonlar")
+      } else if (appRole === "expert") {
+        setViewingTeacher(null)
+        setActivePage("oqituvchilar")
+      } else {
+        setActivePage("dashboard")
+      }
       setLoginOpen(false)
       setLoginForm({ login: "", password: "" })
-    } catch {
+    } catch (error) {
       clearAuthTokens()
-      setLoginError("Login yoki parol noto'g'ri.")
+      setLoginError(error instanceof Error ? error.message : "Login yoki parol noto'g'ri.")
     } finally {
       setLoginLoading(false)
     }
@@ -588,7 +694,7 @@ function App() {
       setNewTeacherError("Kafedra topilmadi. Qayta tanlang.")
       return
     }
-    const loginUsed = [...users, ...teachers].some((u) => u.login.toLowerCase() === login.toLowerCase())
+    const loginUsed = teachers.some((u) => u.login.toLowerCase() === login.toLowerCase())
     if (loginUsed) {
       setNewTeacherError("Bu login band. Boshqa login tanlang.")
       return
@@ -679,25 +785,32 @@ function App() {
   // Load documents for selected teacher when expert/admin/dean/head views a teacher
   useEffect(() => {
     if (!currentUser || isTeacherUser(currentUser)) return
-    if (viewingTeacher?._static) return
     const teacherId = viewingTeacher?.id || selectedTeacherId
-    if (!teacherId) return
+    if (!teacherId || !getAccessToken()) return
+    let cancelled = false
     const loadDocs = async () => {
+      setTeacherDocsLoading(true)
       try {
         const { submissions: list, documentIdByCriterion } = await fetchTeacherDocuments(teacherId)
+        if (cancelled) return
         setTeacherDocumentIds((prev) => ({ ...prev, ...documentIdByCriterion }))
-        if (list.length) {
-          setSubmissions((prev) => {
-            const others = prev.filter((p) => p.teacherId !== teacherId)
-            return [...list, ...others]
-          })
-        }
+        setSubmissions((prev) => {
+          const others = prev.filter((p) => p.teacherId !== teacherId)
+          return [...list, ...others]
+        })
       } catch {
-        // API xatoligida local holat saqlanadi
+        if (!cancelled) {
+          setSubmissions((prev) => prev.filter((p) => p.teacherId !== teacherId))
+        }
+      } finally {
+        if (!cancelled) setTeacherDocsLoading(false)
       }
     }
     loadDocs()
-  }, [selectedTeacherId, currentUser, viewingTeacher])
+    return () => {
+      cancelled = true
+    }
+  }, [selectedTeacherId, currentUser, viewingTeacher, authSessionKey])
 
   const deleteSubmission = async (submissionId) => {
     try {
@@ -1095,14 +1208,11 @@ function App() {
             ranking={ranking}
             positions={positions}
             departments={departments}
-            currentUser={currentUser}
+            loading={teachersLoading}
+            loadError={teacherLoadError}
             onSelectTeacher={(teacher) => {
-              if (teacher._static) {
-                setViewingTeacher(teacher)
-              } else {
-                setViewingTeacher(null)
-                setSelectedTeacherId(teacher.id)
-              }
+              setViewingTeacher(teacher)
+              setSelectedTeacherId(teacher.id)
               setActivePage("mezonlar")
             }}
           />
@@ -1122,6 +1232,11 @@ function App() {
             {teacherLoadError && currentUser.role !== "teacher" && (
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                 {teacherLoadError}
+              </p>
+            )}
+            {teacherDocsLoading && !isTeacherUser(currentUser) && activeTeacher && (
+              <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                {activeTeacher.fullName} uchun yuklangan hujjatlar yuklanmoqda...
               </p>
             )}
 

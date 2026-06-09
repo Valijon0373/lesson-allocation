@@ -5,6 +5,7 @@ import {
   normalizePermissionKey,
 } from "../data/permissionLabels"
 import { apiRequest, unwrapPayload } from "./client"
+import { extractApiRoles, normalizeApiRoleToken } from "./roles"
 
 /**
  * @typedef {{ id: string, fio: string, login: string, izoh: string, role: string, roles?: string[], permissions?: string[], status?: string }} UserRow
@@ -32,7 +33,7 @@ const API_ROLE_BY_UI = {
 
 /** @param {unknown} role */
 export function mapApiRoleToUi(role) {
-  const key = String(role ?? "").toUpperCase()
+  const key = normalizeApiRoleToken(role)
   return UI_ROLE_BY_API[key] ?? String(role ?? "")
 }
 
@@ -118,8 +119,8 @@ export function mapUser(item) {
   if (login == null) return null
   const id = raw.id ?? raw.userId ?? login
 
-  const roles = Array.isArray(raw.roles) ? raw.roles.map(String) : []
-  const primaryRole = roles[0] ?? raw.roleName ?? raw.role
+  const roles = extractApiRoles(raw)
+  const primaryRole = roles[0] ?? normalizeApiRoleToken(raw.roleName ?? raw.role)
 
   return {
     id: String(id),
@@ -149,6 +150,31 @@ export async function fetchUserByUsername(username) {
   const mapped = mapUser(unwrapPayload(json))
   if (!mapped) throw new Error("Foydalanuvchi topilmadi")
   return mapped
+}
+
+/**
+ * Login javobidan foydalanuvchini o'qish (GET /api/users ishlamasa).
+ * @param {unknown} raw
+ * @param {string} username
+ * @returns {UserRow | null}
+ */
+export function mapUserFromLoginBody(raw, username) {
+  if (!raw || typeof raw !== "object") return null
+  const data = unwrapPayload(raw)
+  const root = /** @type {Record<string, unknown>} */ (data)
+  const nested = root.user ?? root.userDetails ?? root.profile ?? root
+  const candidate =
+    nested && typeof nested === "object"
+      ? {
+          .../** @type {Record<string, unknown>} */ (nested),
+          username:
+            /** @type {Record<string, unknown>} */ (nested).username ??
+            /** @type {Record<string, unknown>} */ (nested).login ??
+            username,
+        }
+      : { ...root, username: root.username ?? root.login ?? username }
+
+  return mapUser(candidate)
 }
 
 /** @returns {Promise<UserRow[]>} */

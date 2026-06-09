@@ -1,4 +1,5 @@
 import { apiRequest } from "./client"
+import { extractApiRoles, normalizeApiRoleToken, parseRolesFromAccessToken } from "./roles"
 import { clearAuthStorage } from "./session"
 import { fetchUserByUsername } from "./users"
 
@@ -16,8 +17,8 @@ export function hasAdminRole(roles) {
   if (!Array.isArray(roles)) return false
   // Admin panelga kirishga ruxsat berilgan rollar.
   // Backenddagi role nomlari: ADMIN, MODERATOR(Komissiya), TEACHER(Foydalanuvchi)
-  const allowed = new Set(["ADMIN", "MODERATOR", "COMMISSION", "TEACHER", "USER"])
-  return roles.some((r) => allowed.has(String(r).toUpperCase()))
+  const allowed = new Set(["ADMIN", "MODERATOR", "COMMISSION", "KOMISSIYA", "TEACHER", "USER"])
+  return roles.some((r) => allowed.has(normalizeApiRoleToken(r)))
 }
 
 export function getAccessToken() {
@@ -139,11 +140,17 @@ export async function login(username, password) {
     throw new Error("Login javobida token topilmadi")
   }
 
+  const tokenRoles = parseRolesFromAccessToken(accessToken)
+  const bodyRoles = extractApiRoles(data)
+  const roles = [...new Set([...tokenRoles, ...bodyRoles])]
+
   const tokens = {
     accessToken,
     refreshToken: typeof data.refreshToken === "string" ? data.refreshToken : undefined,
     tokenType: typeof data.tokenType === "string" ? data.tokenType : undefined,
     username,
+    roles,
+    raw: data,
   }
   setAuthTokens(tokens)
   return tokens

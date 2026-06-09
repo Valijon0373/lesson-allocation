@@ -1,69 +1,13 @@
 import { useMemo, useState } from "react"
 import { Eye, Search, SlidersHorizontal, TrendingUp } from "lucide-react"
 
-const STATIC_TEACHERS = [
-  {
-    id: "static-1",
-    fullName: "Abdullayev Alisher Karimovich",
-    faculty: "Aniq va tabiiy fanlar fakulteti",
-    department: "Axborot texnologiyalari kafedrasi",
-    positionName: "Dotsent",
-    total: 95,
-    _static: true,
-  },
-  {
-    id: "static-2",
-    fullName: "Karimova Dilnoza Baxtiyorovna",
-    faculty: "Aniq va tabiiy fanlar fakulteti",
-    department: "Matematika kafedrasi",
-    positionName: "Katta o'qituvchi",
-    total: 88,
-    _static: true,
-  },
-  {
-    id: "static-3",
-    fullName: "Raximov Botir Salimovich",
-    faculty: "Aniq va tabiiy fanlar fakulteti",
-    department: "Fizika va astronomiya kafedrasi",
-    positionName: "Professor",
-    total: 102,
-    _static: true,
-  },
-  {
-    id: "static-4",
-    fullName: "Yusupova Malika Rustamovna",
-    faculty: "Aniq va tabiiy fanlar fakulteti",
-    department: "Kimyo va biologiya kafedrasi",
-    positionName: "Assistent",
-    total: 76,
-    _static: true,
-  },
-  {
-    id: "static-5",
-    fullName: "Toshmatov Javlon Erkinovich",
-    faculty: "Filologiya fakulteti",
-    department: "Biologiya kafedrasi",
-    positionName: "Dotsent",
-    total: 91,
-    _static: true,
-  },
-  {
-    id: "static-6",
-    fullName: "Xolmatova Sevara Nodirovna",
-    faculty: "Ijtimoiy va amaliy fanlar fakulteti",
-    department: "Tarix va ijtimoiy fanlar kafedrasi",
-    positionName: "O'qituvchi",
-    total: 83,
-    _static: true,
-  },
-]
-
 export default function OqituvchilarPage({
   teachers,
   ranking,
   positions,
   departments,
-  currentUser,
+  loading = false,
+  loadError = "",
   onSelectTeacher,
 }) {
   const [searchDraft, setSearchDraft] = useState("")
@@ -73,14 +17,12 @@ export default function OqituvchilarPage({
   const [openActionsFor, setOpenActionsFor] = useState(null)
 
   const getTeacherFaculty = (teacher) => {
-    if (teacher._static) return teacher.faculty || ""
     if (teacher.facultyName) return teacher.facultyName
     const dept = departments.find((d) => d.id === teacher.departmentId)
     return dept?.facultyName || ""
   }
 
   const getTeacherDepartment = (teacher) => {
-    if (teacher._static) return teacher.department || ""
     return (
       departments.find((d) => d.id === teacher.departmentId)?.name ||
       teacher.department ||
@@ -88,19 +30,10 @@ export default function OqituvchilarPage({
     )
   }
 
-  // Merge real ranking with static data (deduplicate)
-  const merged = useMemo(() => {
-    const realIds = new Set(ranking.map((t) => String(t.id)))
-    const staticOnly = STATIC_TEACHERS.filter(
-      (s) => !realIds.has(String(s.id))
-    )
-    return [...ranking, ...staticOnly]
-  }, [ranking])
+  const merged = useMemo(() => ranking, [ranking])
 
   const facultyOptions = useMemo(() => {
-    const names = new Set(
-      merged.map(getTeacherFaculty).filter(Boolean)
-    )
+    const names = new Set(merged.map(getTeacherFaculty).filter(Boolean))
     return [...names].sort((a, b) => a.localeCompare(b, "uz"))
   }, [merged, departments])
 
@@ -112,7 +45,7 @@ export default function OqituvchilarPage({
           return getTeacherFaculty(teacher) === facultyFilter
         })
         .map(getTeacherDepartment)
-        .filter(Boolean)
+        .filter(Boolean),
     )
     return [...names].sort((a, b) => a.localeCompare(b, "uz"))
   }, [merged, departments, facultyFilter])
@@ -126,12 +59,9 @@ export default function OqituvchilarPage({
 
     const q = searchQuery.trim().toLowerCase()
     if (!q) return true
-    const posName =
-      teacher._static
-        ? teacher.positionName
-        : positions.find((p) => p.id === teacher.positionId)?.name || ""
+    const posName = positions.find((p) => p.id === teacher.positionId)?.name || ""
     return [teacher.fullName, deptName, posName, facultyName].some((v) =>
-      String(v).toLowerCase().includes(q)
+      String(v).toLowerCase().includes(q),
     )
   })
 
@@ -146,6 +76,12 @@ export default function OqituvchilarPage({
                   O'qituvchilar
                 </h2>
               </div>
+
+              {loadError && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  O'qituvchilarni API dan yuklashda xatolik: {loadError}
+                </p>
+              )}
 
               {/* Filters */}
               <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
@@ -224,114 +160,119 @@ export default function OqituvchilarPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTeachers.map((teacher, index) => {
-                      const isStatic = teacher._static
-                      const facultyName = isStatic
-                        ? teacher.faculty
-                        : teacher.facultyName ||
+                    {loading && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="border border-slate-200 px-4 py-8 text-center text-sm text-slate-500"
+                        >
+                          O'qituvchilar yuklanmoqda...
+                        </td>
+                      </tr>
+                    )}
+                    {!loading &&
+                      filteredTeachers.map((teacher, index) => {
+                        const facultyName =
+                          teacher.facultyName ||
                           (teacher.departmentId
                             ? (() => {
-                                const dept = departments.find(
-                                  (d) => d.id === teacher.departmentId
-                                )
+                                const dept = departments.find((d) => d.id === teacher.departmentId)
                                 return dept?.facultyName || ""
                               })()
                             : "") ||
                           "-"
-                      const posName = isStatic
-                        ? teacher.positionName
-                        : (teacher.positionId
+                        const posName =
+                          (teacher.positionId
                             ? positions.find((p) => p.id === teacher.positionId)?.name
                             : null) || "-"
-                      const deptName = isStatic
-                        ? teacher.department
-                        : (teacher.departmentId
+                        const deptName =
+                          (teacher.departmentId
                             ? departments.find((d) => d.id === teacher.departmentId)?.name
                             : null) ||
                           teacher.department ||
                           "-"
-                      return (
-                        <tr key={teacher.id}>
-                          <td className="border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-900">
-                            {index + 1}
-                          </td>
-                          <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
-                            {facultyName}
-                          </td>
-                          <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
-                            {deptName}
-                          </td>
-                          <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
-                            {posName}
-                          </td>
-                          <td className="border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
-                            {teacher.fullName}
-                          </td>
-                          <td className="border border-slate-200 px-4 py-3">
-                            <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                              {teacher.total} ball
-                            </span>
-                          </td>
-                          <td className="border border-slate-200 px-4 py-3 text-center">
-                            <div className="relative inline-flex">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setOpenActionsFor((prev) =>
-                                    prev === teacher.id ? null : teacher.id
-                                  )
-                                }
-                                className="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2.5 text-slate-700 transition-colors hover:bg-slate-100"
-                                aria-label="Amallar menyusi"
-                                aria-expanded={openActionsFor === teacher.id}
-                              >
-                                <SlidersHorizontal
-                                  className="h-5 w-5"
-                                  strokeWidth={1.9}
-                                  aria-hidden
-                                />
-                              </button>
+                        return (
+                          <tr key={teacher.id}>
+                            <td className="border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-900">
+                              {index + 1}
+                            </td>
+                            <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
+                              {facultyName}
+                            </td>
+                            <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
+                              {deptName}
+                            </td>
+                            <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
+                              {posName}
+                            </td>
+                            <td className="border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
+                              {teacher.fullName}
+                            </td>
+                            <td className="border border-slate-200 px-4 py-3">
+                              <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                                {teacher.total} ball
+                              </span>
+                            </td>
+                            <td className="border border-slate-200 px-4 py-3 text-center">
+                              <div className="relative inline-flex">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setOpenActionsFor((prev) =>
+                                      prev === teacher.id ? null : teacher.id,
+                                    )
+                                  }
+                                  className="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2.5 text-slate-700 transition-colors hover:bg-slate-100"
+                                  aria-label="Amallar menyusi"
+                                  aria-expanded={openActionsFor === teacher.id}
+                                >
+                                  <SlidersHorizontal
+                                    className="h-5 w-5"
+                                    strokeWidth={1.9}
+                                    aria-hidden
+                                  />
+                                </button>
 
-                              {openActionsFor === teacher.id && (
-                                <div className="absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionsFor(null)
-                                      onSelectTeacher(teacher)
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50"
-                                  >
-                                    <Eye
-                                      className="h-4 w-4 shrink-0"
-                                      strokeWidth={1.75}
-                                      aria-hidden
-                                    />
-                                    Ko'rish
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenActionsFor(null)
-                                      if (!isStatic) onSelectTeacher(teacher)
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-                                  >
-                                    <TrendingUp
-                                      className="h-4 w-4 shrink-0"
-                                      strokeWidth={1.75}
-                                      aria-hidden
-                                    />
-                                    Reyting
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                    {filteredTeachers.length === 0 && (
+                                {openActionsFor === teacher.id && (
+                                  <div className="absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenActionsFor(null)
+                                        onSelectTeacher(teacher)
+                                      }}
+                                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                                    >
+                                      <Eye
+                                        className="h-4 w-4 shrink-0"
+                                        strokeWidth={1.75}
+                                        aria-hidden
+                                      />
+                                      Ko'rish
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenActionsFor(null)
+                                        onSelectTeacher(teacher)
+                                      }}
+                                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                    >
+                                      <TrendingUp
+                                        className="h-4 w-4 shrink-0"
+                                        strokeWidth={1.75}
+                                        aria-hidden
+                                      />
+                                      Reyting
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    {!loading && filteredTeachers.length === 0 && (
                       <tr>
                         <td
                           colSpan={7}
@@ -339,7 +280,9 @@ export default function OqituvchilarPage({
                         >
                           {searchQuery || facultyFilter !== "all" || departmentFilter !== "all"
                             ? "Qidiruv bo'yicha natija topilmadi."
-                            : "Hozircha o'qituvchilar ro'yxati bo'sh."}
+                            : teachers.length === 0
+                              ? "API dan o'qituvchilar topilmadi. Tizimga API orqali kiring."
+                              : "Hozircha o'qituvchilar ro'yxati bo'sh."}
                         </td>
                       </tr>
                     )}
@@ -348,6 +291,7 @@ export default function OqituvchilarPage({
               </div>
 
               {(searchQuery || facultyFilter !== "all" || departmentFilter !== "all") &&
+                !loading &&
                 filteredTeachers.length === 0 && (
                 <p className="text-center text-sm text-slate-500">
                   Qidiruv bo'yicha natija topilmadi.
