@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Commet } from "react-loading-indicators"
-import { Download, Eye, EyeOff, MessageSquareText, Trash2, X } from "lucide-react"
+import { ArrowLeft, Download, Eye, EyeOff, MessageSquareText, Trash2, X } from "lucide-react"
 import bgVideo from "./assets/bg.mp4"
 import logoImg from "./assets/logo.jpg"
 import Footer from "./components/Footer.jsx"
 import HomeHeroBrand from "./components/HomeHeroBrand.jsx"
 import Navbar from "./components/Navbar.jsx"
+import OqituvchilarPage from "./components/OqituvchilarPage.jsx"
 import { fetchAllCriterionRows } from "./api/categories"
 import { fetchAllSections } from "./api/criteriaApi"
 import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens } from "./api/auth"
@@ -142,6 +143,7 @@ function App() {
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState("")
+  const [viewingTeacher, setViewingTeacher] = useState(null)
   const [users] = useState(USERS)
   const [teachers, setTeachers] = useState([])
   const [submissions, setSubmissions] = useState([])
@@ -169,6 +171,7 @@ function App() {
   const [teacherLoadError, setTeacherLoadError] = useState("")
   const [criteriaLoadError, setCriteriaLoadError] = useState("")
   const [authSessionKey, setAuthSessionKey] = useState(0)
+  const [evalDraft, setEvalDraft] = useState({})
 
   const loadCriteriaFromApi = useCallback(async () => {
     if (!getAccessToken()) {
@@ -435,7 +438,9 @@ function App() {
     }
   }, [newTeacherForm.departmentId])
 
-  const managedTeacherId = isTeacherUser(currentUser) ? currentUser.id : selectedTeacherId
+  const managedTeacherId = isTeacherUser(currentUser)
+    ? currentUser.id
+    : viewingTeacher?.id || selectedTeacherId
   const visibleCategories = currentUser ? roleVisibleCategories[currentUser.role] ?? allCategories : allCategories
 
   const visibleCriteria = criteriaList.filter((c) => visibleCategories.includes(c.category))
@@ -460,7 +465,8 @@ function App() {
       .sort((a, b) => b.total - a.total)
   }, [teachers, evaluations])
 
-  const activeTeacher = teachers.find((t) => t.id === managedTeacherId)
+  const activeTeacher =
+    viewingTeacher || teachers.find((t) => t.id === managedTeacherId) || null
   const myTotalScore = managedTeacherId ? totalScoreForTeacher(managedTeacherId) : 0
   const myPercent = totalMaxScore > 0 ? Math.round((myTotalScore / totalMaxScore) * 100) : 0
   const myCategoryScores = managedTeacherId ? categoryScoresForTeacher(managedTeacherId) : {}
@@ -623,7 +629,7 @@ function App() {
   }
 
   const submitCriterionFile = async (criterionId) => {
-    if (!currentUser || currentUser.role !== "teacher") return
+    if (!currentUser || !isTeacherUser(currentUser)) return
     const state = uploadState[criterionId] ?? { type: "file", link: "", comment: "" }
     const evidenceType = state.type || "file"
     const teacherDocumentId = teacherDocumentIds[criterionId]
@@ -657,7 +663,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== "teacher") return
+    if (!currentUser || !isTeacherUser(currentUser)) return
     const loadDocs = async () => {
       try {
         const { submissions: list, documentIdByCriterion } = await fetchTeacherDocuments(currentUser.id)
@@ -670,6 +676,29 @@ function App() {
     loadDocs()
   }, [currentUser])
 
+  // Load documents for selected teacher when expert/admin/dean/head views a teacher
+  useEffect(() => {
+    if (!currentUser || isTeacherUser(currentUser)) return
+    if (viewingTeacher?._static) return
+    const teacherId = viewingTeacher?.id || selectedTeacherId
+    if (!teacherId) return
+    const loadDocs = async () => {
+      try {
+        const { submissions: list, documentIdByCriterion } = await fetchTeacherDocuments(teacherId)
+        setTeacherDocumentIds((prev) => ({ ...prev, ...documentIdByCriterion }))
+        if (list.length) {
+          setSubmissions((prev) => {
+            const others = prev.filter((p) => p.teacherId !== teacherId)
+            return [...list, ...others]
+          })
+        }
+      } catch {
+        // API xatoligida local holat saqlanadi
+      }
+    }
+    loadDocs()
+  }, [selectedTeacherId, currentUser, viewingTeacher])
+
   const deleteSubmission = async (submissionId) => {
     try {
       await deleteTeacherResource(submissionId)
@@ -679,19 +708,40 @@ function App() {
     setSubmissions((prev) => prev.filter((s) => s.id !== submissionId))
   }
 
-  const upsertEvaluation = (teacherId, criterionId, field, value) => {
+  const updateEvalDraft = (teacherId, criterionId, field, value) => {
     const key = `${teacherId}_${criterionId}`
-    const current = evaluations[key] ?? { score: 0, comment: "", status: "pending" }
-    let nextValue = value
-    if (field === "score") {
-      const criterion = criteriaList.find((c) => c.id === criterionId)
-      const parsed = Number(value)
-      if (Number.isNaN(parsed) || !criterion) return
-      nextValue = Math.max(0, Math.min(criterion.maxScore, parsed))
+    setEvalDraft((prev) => {
+      const saved = getEvaluation(evaluations, teacherId, criterionId)
+      const base = prev[key] ?? {
+        score: String(saved.score ?? ""),
+        comment: saved.comment || "",
+      }
+      return { ...prev, [key]: { ...base, [field]: value } }
+    })
+  }
+
+  const submitCriterionEvaluation = (teacherId, criterionId) => {
+    const criterion = criteriaList.find((c) => c.id === criterionId)
+    if (!criterion) return
+    const key = `${teacherId}_${criterionId}`
+    const saved = getEvaluation(evaluations, teacherId, criterionId)
+    const draft = evalDraft[key] ?? {
+      score: String(saved.score ?? ""),
+      comment: saved.comment || "",
     }
+    const trimmed = String(draft.score).trim()
+    if (trimmed === "" || Number.isNaN(Number(trimmed))) return
+
+    const score = Math.max(0, Math.min(criterion.maxScore, Number(trimmed)))
+    const comment = String(draft.comment || "").trim()
+
     setEvaluations((prev) => ({
       ...prev,
-      [key]: { ...current, [field]: nextValue },
+      [key]: { score, comment, status: "approved" },
+    }))
+    setEvalDraft((prev) => ({
+      ...prev,
+      [key]: { score: String(score), comment },
     }))
   }
 
@@ -701,7 +751,7 @@ function App() {
         <p className="text-sm uppercase tracking-wider text-indigo-100">Statistika</p>
         <h1 className="mt-2 text-3xl font-bold">Nizom monitoring platformasi</h1>
         <p className="mx-auto mt-2 max-w-3xl text-indigo-50">
-          Jami 110 ball bo'yicha progress, hujjatlar holati{currentUser?.role === "teacher" ? "." : " va reyting."}
+          Jami 110 ball bo'yicha progress, hujjatlar holati{isTeacherUser(currentUser) ? "." : " va reyting."}
         </p>
       </header>
 
@@ -721,7 +771,7 @@ function App() {
 
       {currentUser && (
         <>
-          {currentUser.role !== "teacher" && (
+          {!isTeacherUser(currentUser) && currentUser?.role !== "expert" && (
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <label className="text-sm font-medium text-slate-700">O'qituvchini tanlang</label>
               <select
@@ -738,6 +788,7 @@ function App() {
             </div>
           )}
 
+          {currentUser?.role !== "expert" && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">Jami ball</p>
@@ -751,14 +802,18 @@ function App() {
               <p className="text-sm text-slate-500">Yetishmayotgan hujjatlar</p>
               <p className="mt-2 text-3xl font-bold text-amber-700">{missingDocsCount}</p>
             </article>
+            {!isTeacherUser(currentUser) && (
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">Statuslar</p>
               <p className="mt-2 text-sm font-semibold text-slate-800">
                 Kutilmoqda: {statuses.pending} | Tasdiq: {statuses.approved} | Rad: {statuses.rejected}
               </p>
             </article>
+            )}
           </div>
+          )}
 
+          {currentUser?.role !== "expert" && (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="mb-2 text-sm font-medium text-slate-600">
               Ko'rsatkich ({activeTeacher?.fullName})
@@ -767,6 +822,7 @@ function App() {
               <div className="h-full bg-indigo-600" style={{ width: `${myPercent}%` }} />
             </div>
           </div>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -790,7 +846,7 @@ function App() {
               </div>
             </article>
 
-            {currentUser?.role !== "teacher" ? (
+            {!isTeacherUser(currentUser) ? (
               <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
                 <div className="mt-3 max-h-96 space-y-2 overflow-y-auto">
@@ -825,7 +881,7 @@ function App() {
             )}
           </div>
 
-          {currentUser?.role === "teacher" && (
+          {isTeacherUser(currentUser) && (
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-900">Qo'shilgan bo'lim va mezonlar</h3>
               <div className="mt-3 space-y-4">
@@ -1020,7 +1076,11 @@ function App() {
           }}
           onOpenLogin={() => setLoginOpen(true)}
         />
-        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-6 pt-[calc(4.25rem+1rem)] sm:px-6 sm:pt-[calc(4.75rem+1rem)] lg:px-8">
+        <div
+          className={`mx-auto flex w-full flex-1 flex-col pb-6 pt-[calc(4.25rem+1rem)] sm:pt-[calc(4.75rem+1rem)] ${
+            activePage === "oqituvchilar" ? "px-0" : "max-w-7xl px-4 sm:px-6 lg:px-8"
+          }`}
+        >
         {!currentUser ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-4 sm:py-6">
             <section className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 overflow-hidden rounded-3xl border border-white/15 bg-white/10 px-6 py-8 shadow-2xl shadow-slate-950/40 backdrop-blur-md sm:px-8 sm:py-10 md:gap-8 md:py-11">
@@ -1029,12 +1089,29 @@ function App() {
           </div>
         ) : activePage === "dashboard" ? (
           renderDashboard()
+        ) : activePage === "oqituvchilar" ? (
+          <OqituvchilarPage
+            teachers={teachers}
+            ranking={ranking}
+            positions={positions}
+            departments={departments}
+            currentUser={currentUser}
+            onSelectTeacher={(teacher) => {
+              if (teacher._static) {
+                setViewingTeacher(teacher)
+              } else {
+                setViewingTeacher(null)
+                setSelectedTeacherId(teacher.id)
+              }
+              setActivePage("mezonlar")
+            }}
+          />
         ) : (
           <section className="space-y-6">
             <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-center text-white shadow-xl">
               <h1 className="text-3xl font-bold">Mezonlar bo'limi</h1>
               <p className="mx-auto mt-2 max-w-3xl text-indigo-100">
-                Har bir mezon uchun tavsif, maksimal ball, kerakli hujjatlar, upload va ekspert izohi.
+                Har bir mezon uchun tavsif, maksimal ball, kerakli hujjatlar, yuklash va ekspert izohi.
               </p>
             </header>
             {criteriaLoadError && (
@@ -1056,20 +1133,44 @@ function App() {
               </p>
             )}
 
-            {currentUser.role !== "teacher" && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <label className="text-sm font-medium text-slate-700">Baholanayotgan o'qituvchi</label>
-                <select
-                  value={selectedTeacherId}
-                  onChange={(e) => setSelectedTeacherId(e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            {!isTeacherUser(currentUser) && activeTeacher && (
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm text-center">
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                  Baholanayotgan o'qituvchi
+                </p>
+                <p className="mt-1 text-lg font-bold text-slate-900">{activeTeacher.fullName}</p>
+                <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-slate-600">
+                  {(activeTeacher.faculty || activeTeacher.facultyName) && (
+                    <span>Fakultet: {activeTeacher.faculty || activeTeacher.facultyName}</span>
+                  )}
+                  {(activeTeacher.department ||
+                    departments.find((d) => d.id === activeTeacher.departmentId)?.name) && (
+                    <span>
+                      Kafedra:{" "}
+                      {activeTeacher.department ||
+                        departments.find((d) => d.id === activeTeacher.departmentId)?.name}
+                    </span>
+                  )}
+                  {(activeTeacher.positionName ||
+                    positions.find((p) => p.id === activeTeacher.positionId)?.name) && (
+                    <span>
+                      Lavozim:{" "}
+                      {activeTeacher.positionName ||
+                        positions.find((p) => p.id === activeTeacher.positionId)?.name}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewingTeacher(null)
+                    setActivePage("oqituvchilar")
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
                 >
-                  {teachers.map((teacher) => (
-                    <option key={teacher.id} value={teacher.id}>
-                      {teacher.fullName}
-                    </option>
-                  ))}
-                </select>
+                  <ArrowLeft className="h-4 w-4" strokeWidth={2} />
+                  O'qituvchilar ro'yxatiga qaytish
+                </button>
               </div>
             )}
 
@@ -1081,6 +1182,11 @@ function App() {
 
             {visibleCriteria.map((criterion) => {
               const evalData = getEvaluation(evaluations, managedTeacherId, criterion.id)
+              const evalDraftKey = `${managedTeacherId}_${criterion.id}`
+              const evalForm = evalDraft[evalDraftKey] ?? {
+                score: String(evalData.score ?? ""),
+                comment: evalData.comment || "",
+              }
               const criterionSubmissions = submissions.filter(
                 (s) => s.teacherId === managedTeacherId && s.criterionId === criterion.id
               )
@@ -1171,6 +1277,12 @@ function App() {
                     </div>
                   )}
 
+                  {!isTeacherUser(currentUser) && criterionSubmissions.length > 0 && (
+                    <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Yuklangan hujjatlar ({criterionSubmissions.length})
+                    </p>
+                  )}
+
                   <div className="mt-4 space-y-2">
                     {criterionSubmissions.map((submission) => (
                       <div key={submission.id} className="rounded-lg bg-slate-50 p-3 text-sm">
@@ -1218,7 +1330,7 @@ function App() {
                               Havola
                             </a>
                           )}
-                          {currentUser.role === "teacher" && (
+                          {isTeacherUser(currentUser) && (
                             <button
                               onClick={() => deleteSubmission(submission.id)}
                               className="inline-flex items-center rounded-md border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
@@ -1244,33 +1356,49 @@ function App() {
                   <div className="mt-4 rounded-xl bg-emerald-50 p-3">
                     <p className="text-sm font-semibold text-emerald-900">Ekspert izohi</p>
                     {canEvaluate ? (
-                      <div className="mt-2 grid gap-2 md:grid-cols-3">
+                      <div className="mt-2 space-y-2">
+                        <div className="flex flex-wrap items-end gap-2">
+                          <label className="min-w-[7rem] flex-1 sm:max-w-[10rem]">
+                            <span className="mb-1 block text-xs font-medium text-emerald-800">
+                              Ball (max {criterion.maxScore})
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              max={criterion.maxScore}
+                              step="1"
+                              value={evalForm.score}
+                              onChange={(e) =>
+                                updateEvalDraft(managedTeacherId, criterion.id, "score", e.target.value)
+                              }
+                              placeholder="0"
+                              className="w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => submitCriterionEvaluation(managedTeacherId, criterion.id)}
+                            className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                          >
+                            Baxolash
+                          </button>
+                        </div>
                         <input
-                          type="number"
-                          min={0}
-                          max={criterion.maxScore}
-                          value={evalData.score}
-                          onChange={(e) => upsertEvaluation(managedTeacherId, criterion.id, "score", e.target.value)}
-                          className="rounded-lg border border-emerald-300 px-3 py-2 text-sm"
-                        />
-                        <select
-                          value={evalData.status}
-                          onChange={(e) => upsertEvaluation(managedTeacherId, criterion.id, "status", e.target.value)}
-                          className="rounded-lg border border-emerald-300 px-3 py-2 text-sm"
-                        >
-                          <option value="pending">Kutilmoqda</option>
-                          <option value="approved">Tasdiqlangan</option>
-                          <option value="rejected">Rad etilgan</option>
-                        </select>
-                        <input
-                          value={evalData.comment}
-                          onChange={(e) => upsertEvaluation(managedTeacherId, criterion.id, "comment", e.target.value)}
+                          value={evalForm.comment}
+                          onChange={(e) =>
+                            updateEvalDraft(managedTeacherId, criterion.id, "comment", e.target.value)
+                          }
                           placeholder="Izoh yozing..."
-                          className="rounded-lg border border-emerald-300 px-3 py-2 text-sm md:col-span-3"
+                          className="w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                         />
                       </div>
                     ) : (
-                      <p className="mt-2 text-sm text-emerald-800">{evalData.comment || "Hozircha izoh yo'q."}</p>
+                      <div className="mt-2 space-y-1 text-sm text-emerald-800">
+                        <p>
+                          <span className="font-semibold">Ball:</span> {evalData.score}
+                        </p>
+                        <p>{evalData.comment || "Hozircha izoh yo'q."}</p>
+                      </div>
                     )}
                   </div>
                 </article>

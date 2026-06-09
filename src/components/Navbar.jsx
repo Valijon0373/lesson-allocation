@@ -11,7 +11,7 @@ export default function Navbar({
   onOpenLogin,
 }) {
   return (
-    <nav className="fixed left-0 right-0 top-0 z-50 border-b border-white/15 bg-white/15 shadow-lg shadow-slate-950/15 backdrop-blur-xl backdrop-saturate-150">
+    <nav className="fixed left-0 right-0 top-0 z-50 border-b border-slate-700/80 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 shadow-lg shadow-slate-950/40">
       <div className="flex h-[4.25rem] w-full items-center justify-between px-5 sm:h-[4.75rem] sm:px-6 lg:px-10">
         <div className="flex items-center gap-2">
           {currentUser ? (
@@ -19,25 +19,40 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={() => onNavigate("dashboard")}
-                className={`rounded-lg px-5 py-2.5 text-sm font-semibold backdrop-blur-sm ${
+                className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
                   activePage === "dashboard"
                     ? "bg-white text-indigo-700 shadow-md shadow-slate-900/15"
-                    : "border border-white/25 bg-white/20 text-white/90 shadow-inner shadow-white/5"
+                    : "border border-white/25 bg-slate-700/50 text-white/90"
                 }`}
               >
                 Statistika
               </button>
+              {currentUser?.role === "expert" && (
+              <button
+                type="button"
+                onClick={() => onNavigate("oqituvchilar")}
+                className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
+                  activePage === "oqituvchilar"
+                    ? "bg-white text-indigo-700 shadow-md shadow-slate-900/15"
+                    : "border border-white/25 bg-slate-700/50 text-white/90"
+                }`}
+              >
+                O'qituvchilar
+              </button>
+              )}
+              {currentUser?.role !== "expert" && (
               <button
                 type="button"
                 onClick={() => onNavigate("mezonlar")}
-                className={`rounded-lg px-5 py-2.5 text-sm font-semibold backdrop-blur-sm ${
+                className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
                   activePage === "mezonlar"
                     ? "bg-white text-indigo-700 shadow-md shadow-slate-900/15"
-                    : "border border-white/25 bg-white/20 text-white/90 shadow-inner shadow-white/5"
+                    : "border border-white/25 bg-slate-700/50 text-white/90"
                 }`}
               >
                 Mezonlar
               </button>
+              )}
             </>
           ) : (
             <div className="flex items-center gap-3">
@@ -67,7 +82,7 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={onLogout}
-                className="rounded-lg border border-white/20 bg-slate-950/60 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm"
+                className="rounded-lg border border-white/20 bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Chiqish
               </button>
