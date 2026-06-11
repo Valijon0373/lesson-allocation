@@ -228,6 +228,7 @@ export default function AdminDashboard() {
       ids.push("kafedralar")
     if (hasAnyPermission(["position_view", "position_create", "position_edit", "position_delete"])) ids.push("lavozim")
     if (hasAnyPermission(["user_view", "user_create", "user_edit", "user_delete"])) ids.push("foydalanuvchilar")
+    if (hasAnyPermission(["teacher_view", "teacher_create", "teacher_edit", "teacher_delete"])) ids.push("oqituvchilar")
     if (
       hasAnyPermission(["criteria_view", "criteria_create", "criteria_edit", "criteria_delete"]) ||
       hasAnyPermission(["category_view", "category_create", "category_edit", "category_delete"])

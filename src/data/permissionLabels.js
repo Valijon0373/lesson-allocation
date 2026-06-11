@@ -30,6 +30,21 @@ export const PERMISSION_LABELS_UZ = {
   CRITERIA_EDIT: "Mezonni tahrirlash",
   CRITERIA_DELETE: "Mezonni o'chirish",
 
+  TEACHER_VIEW: "O'qituvchilarni ko'rish",
+  TEACHER_CREATE: "O'qituvchi qo'shish",
+  TEACHER_EDIT: "O'qituvchini tahrirlash",
+  TEACHER_DELETE: "O'qituvchini o'chirish",
+
+  DOCUMENT_VIEW: "Hujjatlarni ko'rish",
+  DOCUMENT_CREATE: "Hujjat qo'shish",
+  DOCUMENT_EDIT: "Hujjatni tahrirlash",
+  DOCUMENT_DELETE: "Hujjatni o'chirish",
+
+  RESOURCE_VIEW: "Resurslarni ko'rish",
+  RESOURCE_CREATE: "Resurs qo'shish",
+  RESOURCE_EDIT: "Resursni tahrirlash",
+  RESOURCE_DELETE: "Resursni o'chirish",
+
   PERMISSION_VIEW: "Ruxsatlarni ko'rish",
   PERMISSION_CREATE: "Ruxsat qo'shish",
   PERMISSION_EDIT: "Ruxsatni tahrirlash",

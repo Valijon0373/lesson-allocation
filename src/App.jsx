@@ -14,7 +14,7 @@ import { fetchAllDepartments } from "./api/departments"
 import { fetchAllFaculties } from "./api/faculties"
 import { fetchAllPositions } from "./api/positions"
 import { fetchAllTeachers, saveTeacher } from "./api/teachers"
-import { deleteTeacherResource, fetchTeacherDocuments, saveTeacherDocument } from "./api/teacherDocuments"
+import { deleteTeacherResource, fetchTeacherDocuments, saveTeacherDocument, setDocumentBall } from "./api/teacherDocuments"
 import { getFileDownloadUrl } from "./api/files"
 import {
   canAccessMainApp,
@@ -31,11 +31,6 @@ const ROLE_LABELS = {
   dean: "Dekan",
   teacher: "O'qituvchi",
   expert: "Ekspert/Tekshiruvchi",
-}
-
-const STORAGE_KEYS = {
-  submissions: "nizom_submissions_v2",
-  evaluations: "nizom_evaluations_v2",
 }
 
 const POSITIONS_API_URL = "/api/positions"
@@ -87,16 +82,6 @@ function normalizeDepartments(payload) {
     .filter(Boolean)
 }
 
-function parseStorage(key, fallback) {
-  const raw = localStorage.getItem(key)
-  if (!raw) return fallback
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return fallback
-  }
-}
-
 function formatFileSize(size) {
   if (!size) return "-"
   if (size < 1024) return `${size} B`
@@ -106,6 +91,14 @@ function formatFileSize(size) {
 
 function getEvaluation(evaluations, teacherId, criterionId) {
   return evaluations[`${teacherId}_${criterionId}`] ?? { score: 0, comment: "", status: "pending" }
+}
+
+function mergeTeacherEvaluations(teacherId, evaluationsByCriterion, prev) {
+  const next = { ...prev }
+  for (const [criterionId, evalData] of Object.entries(evaluationsByCriterion ?? {})) {
+    next[`${teacherId}_${criterionId}`] = evalData
+  }
+  return next
 }
 
 function mapTeachersFromApi(list) {
@@ -193,7 +186,9 @@ function App() {
   const [uploadState, setUploadState] = useState({})
   const [teacherDocumentIds, setTeacherDocumentIds] = useState({})
   const [uploadError, setUploadError] = useState("")
+  const [evalError, setEvalError] = useState("")
   const [uploadingCriterionIds, setUploadingCriterionIds] = useState({})
+  const [evaluatingCriterionIds, setEvaluatingCriterionIds] = useState({})
   const [pageLoading, setPageLoading] = useState(false)
   const [newTeacherForm, setNewTeacherForm] = useState({
     fullName: "",
@@ -316,11 +311,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    setSubmissions(parseStorage(STORAGE_KEYS.submissions, []))
-    setEvaluations(parseStorage(STORAGE_KEYS.evaluations, {}))
-  }, [])
-
-  useEffect(() => {
     loadTeachersFromApi()
     loadReferenceDataFromApi()
   }, [loadTeachersFromApi, loadReferenceDataFromApi, authSessionKey])
@@ -404,14 +394,6 @@ function App() {
       cancelled = true
     }
   }, [currentUser, teachers])
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions))
-  }, [submissions])
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.evaluations, JSON.stringify(evaluations))
-  }, [evaluations])
 
   useEffect(() => {
     if (!loginOpen) setLoginPasswordVisible(false)
@@ -772,9 +754,11 @@ function App() {
     if (!currentUser || !isTeacherUser(currentUser)) return
     const loadDocs = async () => {
       try {
-        const { submissions: list, documentIdByCriterion } = await fetchTeacherDocuments(currentUser.id)
+        const { submissions: list, documentIdByCriterion, evaluationsByCriterion } =
+          await fetchTeacherDocuments(currentUser.id)
         setTeacherDocumentIds(documentIdByCriterion)
-        if (list.length) setSubmissions((prev) => [...list, ...prev.filter((p) => p.teacherId !== currentUser.id)])
+        setSubmissions((prev) => [...list, ...prev.filter((p) => p.teacherId !== currentUser.id)])
+        setEvaluations((prev) => mergeTeacherEvaluations(currentUser.id, evaluationsByCriterion, prev))
       } catch {
         // API xatoligida local holat saqlanadi
       }
@@ -791,13 +775,15 @@ function App() {
     const loadDocs = async () => {
       setTeacherDocsLoading(true)
       try {
-        const { submissions: list, documentIdByCriterion } = await fetchTeacherDocuments(teacherId)
+        const { submissions: list, documentIdByCriterion, evaluationsByCriterion } =
+          await fetchTeacherDocuments(teacherId)
         if (cancelled) return
         setTeacherDocumentIds((prev) => ({ ...prev, ...documentIdByCriterion }))
         setSubmissions((prev) => {
           const others = prev.filter((p) => p.teacherId !== teacherId)
           return [...list, ...others]
         })
+        setEvaluations((prev) => mergeTeacherEvaluations(teacherId, evaluationsByCriterion, prev))
       } catch {
         if (!cancelled) {
           setSubmissions((prev) => prev.filter((p) => p.teacherId !== teacherId))
@@ -833,7 +819,7 @@ function App() {
     })
   }
 
-  const submitCriterionEvaluation = (teacherId, criterionId) => {
+  const submitCriterionEvaluation = async (teacherId, criterionId) => {
     const criterion = criteriaList.find((c) => c.id === criterionId)
     if (!criterion) return
     const key = `${teacherId}_${criterionId}`
@@ -847,15 +833,34 @@ function App() {
 
     const score = Math.max(0, Math.min(criterion.maxScore, Number(trimmed)))
     const comment = String(draft.comment || "").trim()
+    const teacherDocumentId = teacherDocumentIds[criterionId]
 
-    setEvaluations((prev) => ({
-      ...prev,
-      [key]: { score, comment, status: "approved" },
-    }))
-    setEvalDraft((prev) => ({
-      ...prev,
-      [key]: { score: String(score), comment },
-    }))
+    if (!teacherDocumentId) {
+      setEvalError("Ushbu mezon uchun hujjat topilmadi. Sahifani yangilab qayta urinib ko'ring.")
+      return
+    }
+
+    setEvalError("")
+    setEvaluatingCriterionIds((prev) => ({ ...prev, [criterionId]: true }))
+    try {
+      await setDocumentBall({
+        documentId: teacherDocumentId,
+        ball: score,
+        comment,
+      })
+      setEvaluations((prev) => ({
+        ...prev,
+        [key]: { score, comment, status: "approved" },
+      }))
+      setEvalDraft((prev) => ({
+        ...prev,
+        [key]: { score: String(score), comment },
+      }))
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : "Ball saqlanmadi.")
+    } finally {
+      setEvaluatingCriterionIds((prev) => ({ ...prev, [criterionId]: false }))
+    }
   }
 
   const renderDashboard = () => (
@@ -1294,6 +1299,11 @@ function App() {
                 {uploadError}
               </div>
             ) : null}
+            {evalError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {evalError}
+              </div>
+            ) : null}
 
             {visibleCriteria.map((criterion) => {
               const evalData = getEvaluation(evaluations, managedTeacherId, criterion.id)
@@ -1493,9 +1503,10 @@ function App() {
                           <button
                             type="button"
                             onClick={() => submitCriterionEvaluation(managedTeacherId, criterion.id)}
-                            className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                            disabled={evaluatingCriterionIds[criterion.id]}
+                            className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
                           >
-                            Baxolash
+                            {evaluatingCriterionIds[criterion.id] ? "Saqlanmoqda..." : "Baxolash"}
                           </button>
                         </div>
                         <input

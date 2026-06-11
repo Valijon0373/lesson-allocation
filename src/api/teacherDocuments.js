@@ -22,6 +22,7 @@ import { getFileDownloadUrl } from "./files"
  * @typedef {{
  *   submissions: TeacherSubmission[],
  *   documentIdByCriterion: Record<string, string>,
+ *   evaluationsByCriterion: Record<string, { score: number, comment: string, status: "approved" | "pending" }>,
  * }} TeacherDocumentsPayload
  */
 
@@ -107,6 +108,8 @@ function extractTeacherDocuments(payload, teacherId) {
   const submissions = []
   /** @type {Record<string, string>} */
   const documentIdByCriterion = {}
+  /** @type {Record<string, { score: number, comment: string, status: "approved" | "pending" }>} */
+  const evaluationsByCriterion = {}
 
   for (const item of list) {
     if (!item || typeof item !== "object") continue
@@ -124,6 +127,18 @@ function extractTeacherDocuments(payload, teacherId) {
 
     if (teacherDocumentId != null && criterionId) {
       documentIdByCriterion[criterionId] = String(teacherDocumentId)
+
+      const scoredRaw = doc.scoredBall ?? doc.scored_ball ?? doc.ball ?? doc.score
+      const scoredBall = Number(scoredRaw)
+      const expertComment = String(doc.expertComment ?? doc.expert_comment ?? doc.comment ?? "")
+      const hasScore = scoredRaw != null && scoredRaw !== "" && Number.isFinite(scoredBall)
+      const scoredTime = doc.scoredTime ?? doc.scored_time
+
+      evaluationsByCriterion[criterionId] = {
+        score: hasScore ? scoredBall : 0,
+        comment: expertComment,
+        status: hasScore || scoredTime ? "approved" : "pending",
+      }
     }
 
     const resources = Array.isArray(doc.resources) ? doc.resources : []
@@ -138,7 +153,7 @@ function extractTeacherDocuments(payload, teacherId) {
     }
   }
 
-  return { submissions, documentIdByCriterion }
+  return { submissions, documentIdByCriterion, evaluationsByCriterion }
 }
 
 /**
@@ -241,4 +256,24 @@ export async function saveTeacherDocument(body) {
  */
 export async function deleteTeacherResource(resourceId) {
   await apiRequest(`/api/documents/delete/${encodeURIComponent(String(resourceId))}`, { method: "DELETE" })
+}
+
+/**
+ * PUT /api/teacher/documents/set/ball — mezon hujjatiga ball qo'yish (Komissiya).
+ * @param {{ documentId: string | number, ball: number, comment?: string }} body
+ */
+export async function setDocumentBall(body) {
+  const documentIdRaw = body.documentId
+  const documentId = /^\d+$/.test(String(documentIdRaw))
+    ? Number(documentIdRaw)
+    : documentIdRaw
+
+  await apiRequest("/api/teacher/documents/set/ball", {
+    method: "PUT",
+    body: JSON.stringify({
+      documentId,
+      ball: body.ball,
+      comment: body.comment ?? "",
+    }),
+  })
 }
