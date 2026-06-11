@@ -90,7 +90,7 @@ function formatFileSize(size) {
 }
 
 function getEvaluation(evaluations, teacherId, criterionId) {
-  return evaluations[`${teacherId}_${criterionId}`] ?? { score: 0, comment: "", status: "pending" }
+  return evaluations[`${teacherId}_${criterionId}`] ?? { score: 0, comment: "", status: "pending", scoredBy: "" }
 }
 
 function mergeTeacherEvaluations(teacherId, evaluationsByCriterion, prev) {
@@ -187,6 +187,7 @@ function App() {
   const [teacherDocumentIds, setTeacherDocumentIds] = useState({})
   const [uploadError, setUploadError] = useState("")
   const [evalError, setEvalError] = useState("")
+  const [evalSuccess, setEvalSuccess] = useState("")
   const [uploadingCriterionIds, setUploadingCriterionIds] = useState({})
   const [evaluatingCriterionIds, setEvaluatingCriterionIds] = useState({})
   const [pageLoading, setPageLoading] = useState(false)
@@ -841,21 +842,26 @@ function App() {
     }
 
     setEvalError("")
+    setEvalSuccess("")
     setEvaluatingCriterionIds((prev) => ({ ...prev, [criterionId]: true }))
     try {
+      const evaluatorName = currentUser?.fullName ?? currentUser?.fio ?? ""
       await setDocumentBall({
         documentId: teacherDocumentId,
         ball: score,
         comment,
+        scoredBy: evaluatorName,
       })
       setEvaluations((prev) => ({
         ...prev,
-        [key]: { score, comment, status: "approved" },
+        [key]: { score, comment, status: "approved", scoredBy: evaluatorName },
       }))
       setEvalDraft((prev) => ({
         ...prev,
         [key]: { score: String(score), comment },
       }))
+      setEvalSuccess("✅ Muvaffaqiyatli baholandi")
+      setTimeout(() => setEvalSuccess(""), 3000)
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : "Ball saqlanmadi.")
     } finally {
@@ -1299,6 +1305,11 @@ function App() {
                 {uploadError}
               </div>
             ) : null}
+            {evalSuccess ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {evalSuccess}
+              </div>
+            ) : null}
             {evalError ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 {evalError}
@@ -1479,7 +1490,10 @@ function App() {
                   </div>
 
                   <div className="mt-4 rounded-xl bg-emerald-50 p-3">
-                    <p className="text-sm font-semibold text-emerald-900">Ekspert izohi</p>
+                    <p className="text-sm font-semibold text-emerald-900">
+                      Ekspert izohi
+                      {evalData.scoredBy ? ` (${evalData.scoredBy})` : ""}
+                    </p>
                     {canEvaluate ? (
                       <div className="mt-2 space-y-2">
                         <div className="flex flex-wrap items-end gap-2">

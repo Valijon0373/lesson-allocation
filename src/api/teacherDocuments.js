@@ -22,7 +22,7 @@ import { getFileDownloadUrl } from "./files"
  * @typedef {{
  *   submissions: TeacherSubmission[],
  *   documentIdByCriterion: Record<string, string>,
- *   evaluationsByCriterion: Record<string, { score: number, comment: string, status: "approved" | "pending" }>,
+ *   evaluationsByCriterion: Record<string, { score: number, comment: string, status: "approved" | "pending", scoredBy: string }>,
  * }} TeacherDocumentsPayload
  */
 
@@ -133,11 +133,23 @@ function extractTeacherDocuments(payload, teacherId) {
       const expertComment = String(doc.expertComment ?? doc.expert_comment ?? doc.comment ?? "")
       const hasScore = scoredRaw != null && scoredRaw !== "" && Number.isFinite(scoredBall)
       const scoredTime = doc.scoredTime ?? doc.scored_time
+      const scoredBy =
+        doc.scoredBy ??
+        doc.scored_by ??
+        doc.expertName ??
+        doc.expert_name ??
+        doc.evaluatorName ??
+        doc.evaluatorFullName ??
+        (typeof doc.scoredByUser === "object" && doc.scoredByUser
+          ? doc.scoredByUser.fullName ?? doc.scoredByUser.fio ?? doc.scoredByUser.name
+          : undefined) ??
+        ""
 
       evaluationsByCriterion[criterionId] = {
         score: hasScore ? scoredBall : 0,
         comment: expertComment,
         status: hasScore || scoredTime ? "approved" : "pending",
+        scoredBy: String(scoredBy ?? ""),
       }
     }
 
@@ -260,7 +272,7 @@ export async function deleteTeacherResource(resourceId) {
 
 /**
  * PUT /api/teacher/documents/set/ball — mezon hujjatiga ball qo'yish (Komissiya).
- * @param {{ documentId: string | number, ball: number, comment?: string }} body
+ * @param {{ documentId: string | number, ball: number, comment?: string, scoredBy?: string }} body
  */
 export async function setDocumentBall(body) {
   const documentIdRaw = body.documentId
@@ -274,6 +286,7 @@ export async function setDocumentBall(body) {
       documentId,
       ball: body.ball,
       comment: body.comment ?? "",
+      scoredBy: body.scoredBy ?? "",
     }),
   })
 }
