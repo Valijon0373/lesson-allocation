@@ -15,6 +15,23 @@ import { apiRequest, unwrapPayload } from "./client"
  */
 
 /**
+ * @typedef {{
+ *   teacherId: string,
+ *   teacherName: string,
+ *   resourceCount: number,
+ *   fileCount: number,
+ *   linkCount: number,
+ *   videoCount: number,
+ *   imageCount: number,
+ *   scoredBall: number,
+ *   totalBall: number,
+ *   departmentName: string,
+ *   facultyName: string,
+ *   positionName: string,
+ * }} TeacherResourceInfo
+ */
+
+/**
  * @param {unknown} item
  * @param {Record<string, string>} [facultyNames]
  * @param {Record<string, string>} [departmentNames]
@@ -201,4 +218,91 @@ export async function deleteTeacher(id) {
   await apiRequest(`/api/teachers/delete/${encodeURIComponent(String(id))}`, {
     method: "DELETE",
   })
+}
+
+/**
+ * GET /api/teachers/resource/info — komissiya uchun o'qituvchilarning resurs ma'lumotlari.
+ * @returns {Promise<TeacherResourceInfo[]>}
+ */
+export async function fetchTeachersResourceInfo() {
+  const json = await apiRequest("/api/teachers/resource/info")
+  const data = unwrapPayload(json)
+  const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
+
+  // DEBUG: API javob strukturasini konsolga chiqaramiz
+  console.log("[resource/info] raw json:", JSON.stringify(json, null, 2))
+  console.log("[resource/info] unwrapped data:", JSON.stringify(data, null, 2))
+  console.log("[resource/info] list length:", list.length)
+
+  return list
+    .map((item, idx) => {
+      if (!item || typeof item !== "object") return null
+      const raw = /** @type {Record<string, unknown>} */ (item)
+      console.log(`[resource/info] item[${idx}] keys:`, Object.keys(raw))
+
+      const teacherId = String(raw.teacherId ?? raw.teacher_id ?? raw.id ?? "")
+
+      // teacher maydoni string (F.I.O) yoki object bo'lishi mumkin
+      const teacherRaw = raw.teacher
+      const teacherObj = teacherRaw && typeof teacherRaw === "object" && !Array.isArray(teacherRaw)
+        ? /** @type {Record<string, unknown>} */ (teacherRaw)
+        : null
+
+      const teacherName = String(
+        typeof teacherRaw === "string" ? teacherRaw : "",
+      ) || String(
+        teacherObj?.fio ?? teacherObj?.fullName ?? teacherObj?.full_name ??
+        teacherObj?.teacherName ?? teacherObj?.teacher_name ??
+        teacherObj?.name ?? teacherObj?.firstName ??
+        "",
+      ) || String(
+        raw.teacherName ?? raw.teacher_name ?? raw.fio ?? raw.fullName ?? raw.full_name ??
+        raw.teacherFio ?? raw.teacher_fio ?? raw.teacherFullName ?? raw.teacher_full_name ??
+        raw.name ?? "",
+      )
+
+      // API struktura: { teacherId, faculty, department, position, teacher, totalBall, resourceCount }
+      const facultyName = String(
+        raw.faculty ?? raw.facultyName ?? raw.faculty_name ?? raw.fakultet ?? "",
+      )
+      const departmentName = String(
+        raw.department ?? raw.departmentName ?? raw.department_name ?? raw.kafedra ?? "",
+      )
+      const positionName = String(
+        raw.position ?? raw.positionName ?? raw.position_name ?? raw.lavozim ?? "",
+      )
+      const resourceCount = Number(
+        raw.resourceCount ?? raw.resource_count ?? raw.resourcesCount ?? raw.resources_count ??
+        raw.totalResources ?? raw.total_resources ?? 0,
+      )
+      // totalBall - bu scored ball (olgan bali), maxBall - maksimal ball
+      const scoredBall = Number(
+        raw.scoredBall ?? raw.scored_ball ?? raw.ball ?? raw.score ??
+        raw.totalBall ?? raw.total_ball ?? 0,
+      )
+      const totalBall = Number(
+        raw.maxBall ?? raw.max_ball ?? raw.totalMaxBall ?? raw.total_max_ball ??
+        raw.scoredBall ?? raw.scored_ball ?? raw.totalBall ?? raw.total_ball ?? 0,
+      )
+      const fileCount = Number(raw.fileCount ?? raw.file_count ?? raw.files ?? 0)
+      const linkCount = Number(raw.linkCount ?? raw.link_count ?? raw.links ?? 0)
+      const videoCount = Number(raw.videoCount ?? raw.video_count ?? raw.videos ?? 0)
+      const imageCount = Number(raw.imageCount ?? raw.image_count ?? raw.images ?? raw.rasmCount ?? raw.rasm_count ?? 0)
+
+      return {
+        teacherId,
+        teacherName,
+        resourceCount,
+        fileCount,
+        linkCount,
+        videoCount,
+        imageCount,
+        scoredBall,
+        totalBall,
+        departmentName,
+        facultyName,
+        positionName,
+      }
+    })
+    .filter(Boolean)
 }

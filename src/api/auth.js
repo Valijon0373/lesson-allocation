@@ -65,14 +65,12 @@ export async function verifyAdminSession() {
   const token = getAccessToken()
   const username = getAuthUsername()
   if (!token || !username) {
-    clearAuthTokens()
     return false
   }
 
   try {
     const user = await fetchUserByUsername(username)
     if (!hasAdminRole(user.roles)) {
-      clearAuthTokens()
       return false
     }
     setAuthTokens({
@@ -83,7 +81,12 @@ export async function verifyAdminSession() {
     })
     return true
   } catch {
-    clearAuthTokens()
+    // fetchUserByUsername muvaffaqiyatsiz bo'lsa ham tokenlarni tozalab yubormay,
+    // token mavjudligiga ishonamiz va oxirgi saqlangan role'lardan foydalanamiz
+    const storedRoles = getAuthRoles()
+    if (storedRoles.length > 0 && hasAdminRole(storedRoles)) {
+      return true
+    }
     return false
   }
 }

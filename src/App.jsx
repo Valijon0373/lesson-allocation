@@ -13,7 +13,7 @@ import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens 
 import { fetchAllDepartments } from "./api/departments"
 import { fetchAllFaculties } from "./api/faculties"
 import { fetchAllPositions } from "./api/positions"
-import { fetchAllTeachers, saveTeacher } from "./api/teachers"
+import { fetchAllTeachers, fetchTeachersResourceInfo, saveTeacher } from "./api/teachers"
 import { deleteTeacherResource, fetchTeacherDocuments, saveTeacherDocument, setDocumentBall } from "./api/teacherDocuments"
 import { getFileDownloadUrl } from "./api/files"
 import {
@@ -22,8 +22,10 @@ import {
   parseRolesFromAccessToken,
   resolveMainAppRole,
 } from "./api/roles"
+import { getAuthRoles } from "./api/auth"
 import { mapApiRoleToUi, mapUserFromLoginBody, fetchUserByUsername } from "./api/users"
 import { CRITERIA as DEFAULT_CRITERIA } from "./data/criteria.js"
+import { SESSION_EXPIRED_EVENT } from "./api/session"
 
 const ROLE_LABELS = {
   admin: "Administrator",
@@ -169,6 +171,32 @@ async function resolveLoginIdentity(loginTrim, tokens, teacherList) {
   return { matched, updatedTeachers, user, tokenRoles }
 }
 
+function useCountAnimation(target, duration = 800) {
+  const [display, setDisplay] = useState(0)
+
+  useEffect(() => {
+    if (target === 0) {
+      setDisplay(0)
+      return
+    }
+    let frame
+    const start = performance.now()
+    const animate = (now) => {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setDisplay(Math.round(eased * target))
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate)
+      }
+    }
+    frame = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(frame)
+  }, [target, duration])
+
+  return display
+}
+
 function App() {
   const [activePage, setActivePage] = useState("dashboard")
   const [loginOpen, setLoginOpen] = useState(false)
@@ -210,6 +238,9 @@ function App() {
   const [criteriaLoadError, setCriteriaLoadError] = useState("")
   const [teacherDocsLoading, setTeacherDocsLoading] = useState(false)
   const [authSessionKey, setAuthSessionKey] = useState(0)
+  const [teacherResourceInfo, setTeacherResourceInfo] = useState(/** @type {import("./api/teachers").TeacherResourceInfo[]} */ ([]))
+  const [resourceInfoLoading, setResourceInfoLoading] = useState(false)
+  const [resourceInfoError, setResourceInfoError] = useState("")
   const [evalDraft, setEvalDraft] = useState({})
 
   const loadCriteriaFromApi = useCallback(async () => {
@@ -269,6 +300,20 @@ function App() {
     }
   }, [])
 
+  const loadTeacherResourceInfo = useCallback(async () => {
+    if (!getAccessToken()) return
+    setResourceInfoLoading(true)
+    setResourceInfoError("")
+    try {
+      const info = await fetchTeachersResourceInfo()
+      setTeacherResourceInfo(info)
+    } catch (error) {
+      setResourceInfoError(error instanceof Error ? error.message : "Resurs ma'lumotlarini yuklab bo'lmadi")
+    } finally {
+      setResourceInfoLoading(false)
+    }
+  }, [])
+
   const loadReferenceDataFromApi = useCallback(async () => {
     if (!getAccessToken()) return
     setDepartmentsLoading(true)
@@ -316,6 +361,13 @@ function App() {
     loadReferenceDataFromApi()
   }, [loadTeachersFromApi, loadReferenceDataFromApi, authSessionKey])
 
+  // Komissiya o'qituvchilar sahifasiga o'tganda resource info yuklanadi
+  useEffect(() => {
+    if (activePage === "oqituvchilar" && currentUser?.role === "expert") {
+      loadTeacherResourceInfo()
+    }
+  }, [activePage, currentUser, loadTeacherResourceInfo])
+
   useEffect(() => {
     loadCriteriaFromApi()
   }, [loadCriteriaFromApi, authSessionKey])
@@ -328,66 +380,75 @@ function App() {
 
     let cancelled = false
     const restoreSession = async () => {
-      try {
-        let matched = findTeacherByLogin(teachers, username)
-        if (!matched) {
+      let matched = findTeacherByLogin(teachers, username)
+      if (!matched) {
+        try {
           const list = await fetchAllTeachers()
           const mapped = mapTeachersFromApi(list)
           matched = findTeacherByLogin(mapped, username)
           if (!cancelled && mapped.length) setTeachers(mapped)
-        }
-
-        const tokenRoles = parseRolesFromAccessToken(getAccessToken())
-        let user = null
-        try {
-          user = await fetchUserByUsername(username)
         } catch {
-          user = null
+          // fetchAllTeachers muvaffaqiyatsiz bo'lsa ham session tiklashda davom etamiz
         }
-
-        if (!user && tokenRoles.length > 0) {
-          user = {
-            id: username,
-            fio: username,
-            login: username,
-            izoh: "",
-            role: isExpertApiRoles(tokenRoles) ? "Komissiya" : mapApiRoleToUi(tokenRoles[0]),
-            roles: tokenRoles,
-          }
-        }
-
-        if (!canAccessMainApp({ user, matchedTeacher: matched, tokenRoles })) return
-
-        const appRole = resolveMainAppRole({ user, matchedTeacher: matched, tokenRoles })
-        const restoredUser =
-          matched ??
-          (user
-            ? {
-                id: user.id,
-                fullName: user.fio,
-                role: appRole,
-                login: user.login,
-                password: "",
-                departmentId: "",
-                department: "",
-                positionId: "",
-                roles: user.roles,
-              }
-            : null)
-
-        if (!restoredUser || cancelled) return
-
-        setCurrentUser(restoredUser)
-        if (appRole === "teacher") {
-          setSelectedTeacherId(restoredUser.id)
-          setActivePage("mezonlar")
-        } else if (appRole === "expert") {
-          setActivePage("oqituvchilar")
-        }
-        setAuthSessionKey((key) => key + 1)
-      } catch {
-        if (!cancelled) clearAuthTokens()
       }
+
+      let tokenRoles = parseRolesFromAccessToken(getAccessToken())
+      // JWT dan rollar topilmasa, localStorage'dagi oxirgi rollarni ishlatamiz
+      if (tokenRoles.length === 0) {
+        tokenRoles = getAuthRoles()
+      }
+
+      let user = null
+      try {
+        user = await fetchUserByUsername(username)
+      } catch {
+        user = null
+      }
+
+      if (!user && tokenRoles.length > 0) {
+        user = {
+          id: username,
+          fio: username,
+          login: username,
+          izoh: "",
+          role: isExpertApiRoles(tokenRoles) ? "Komissiya" : mapApiRoleToUi(tokenRoles[0]),
+          roles: tokenRoles,
+        }
+      }
+
+      if (!canAccessMainApp({ user, matchedTeacher: matched, tokenRoles })) {
+        if (!cancelled) setCurrentUser(null)
+        return
+      }
+
+      const appRole = resolveMainAppRole({ user, matchedTeacher: matched, tokenRoles })
+      const restoredUser =
+        matched ??
+        (user
+          ? {
+              id: user.id,
+              fullName: user.fio,
+              role: appRole,
+              login: user.login,
+              password: "",
+              departmentId: "",
+              department: "",
+              positionId: "",
+              roles: user.roles,
+            }
+          : null)
+
+      if (!restoredUser || cancelled) return
+
+      setCurrentUser(restoredUser)
+      if (appRole === "teacher") {
+        setSelectedTeacherId(restoredUser.id)
+        setActivePage("mezonlar")
+      } else if (appRole === "expert") {
+        setActivePage("oqituvchilar")
+        loadTeacherResourceInfo()
+      }
+      setAuthSessionKey((key) => key + 1)
     }
 
     restoreSession()
@@ -400,6 +461,19 @@ function App() {
     if (!loginOpen) setLoginPasswordVisible(false)
   }, [loginOpen])
 
+  // Listen for session-expired events (token genuinely expired during an API call)
+  useEffect(() => {
+    const handleExpired = () => {
+      clearAuthTokens()
+      setCurrentUser(null)
+      setCriteriaLoadError("")
+      setCriteriaList(DEFAULT_CRITERIA)
+      setAuthSessionKey((key) => key + 1)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired)
+  }, [])
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setPageLoading(false)
@@ -411,6 +485,9 @@ function App() {
     if (page === activePage) return
     setPageLoading(true)
     setActivePage(page)
+    if (page === "oqituvchilar" && currentUser?.role === "expert") {
+      loadTeacherResourceInfo()
+    }
   }
 
   const categoryMaxScore = useMemo(
@@ -565,6 +642,10 @@ function App() {
   const mySubmissions = submissions.filter((s) => s.teacherId === managedTeacherId)
   const recentUploads = [...mySubmissions].sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))
 
+  const totalUploadedFiles = mySubmissions.length
+
+  const animatedFileCount = useCountAnimation(totalUploadedFiles)
+
   const missingDocsCount = managedTeacherId
     ? criteriaList.filter((criterion) => !mySubmissions.some((s) => s.criterionId === criterion.id)).length
     : 0
@@ -645,6 +726,7 @@ function App() {
       } else if (appRole === "expert") {
         setViewingTeacher(null)
         setActivePage("oqituvchilar")
+        loadTeacherResourceInfo()
       } else {
         setActivePage("dashboard")
       }
@@ -912,30 +994,6 @@ function App() {
             </div>
           )}
 
-          {currentUser?.role !== "expert" && (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Jami ball</p>
-              <p className="mt-2 text-3xl font-bold text-indigo-700">{myTotalScore} / 110</p>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Foiz</p>
-              <p className="mt-2 text-3xl font-bold text-emerald-700">{myPercent}%</p>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Yetishmayotgan hujjatlar</p>
-              <p className="mt-2 text-3xl font-bold text-amber-700">{missingDocsCount}</p>
-            </article>
-            {!isTeacherUser(currentUser) && (
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Statuslar</p>
-              <p className="mt-2 text-sm font-semibold text-slate-800">
-                Kutilmoqda: {statuses.pending} | Tasdiq: {statuses.approved} | Rad: {statuses.rejected}
-              </p>
-            </article>
-            )}
-          </div>
-          )}
 
           {currentUser?.role !== "expert" && (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -1219,8 +1277,12 @@ function App() {
             ranking={ranking}
             positions={positions}
             departments={departments}
+            submissions={submissions}
             loading={teachersLoading}
             loadError={teacherLoadError}
+            teacherResourceInfo={teacherResourceInfo}
+            resourceInfoLoading={resourceInfoLoading}
+            resourceInfoError={resourceInfoError}
             onSelectTeacher={(teacher) => {
               setViewingTeacher(teacher)
               setSelectedTeacherId(teacher.id)
@@ -1641,7 +1703,7 @@ function App() {
           </div>
         </div>
       )}
-        {pageLoading && (
+        {(pageLoading || resourceInfoLoading) && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-10 py-8 shadow-2xl">
               <Commet color="#4f46e5" size="medium" text="Kuting..." textColor="#0a4ff2" />

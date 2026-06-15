@@ -23,6 +23,10 @@ import AdminLogin from "../../components/admin/AdminLogin"
 import { getAuthUsername, logout as apiLogout, verifyAdminSession } from "../../api/auth"
 import { fetchUserByUsername } from "../../api/users"
 import { SESSION_EXPIRED_EVENT } from "../../api/session"
+import { fetchAllTeachers } from "../../api/teachers"
+import { fetchTotalDocumentCount } from "../../api/teacherDocuments"
+import FileTypeDistribution from "./FileTypeDistribution"
+import FacultyFileBarChart from "./FacultyFileBarChart"
 
 const TEAL = "#14b8a6"
 const TEAL_BG = "bg-teal-500"
@@ -170,6 +174,8 @@ export default function AdminDashboard() {
   const adminUsername = getAuthUsername() || "admin"
   const [currentPermissions, setCurrentPermissions] = useState(/** @type {string[]} */ ([]))
   const [currentRoles, setCurrentRoles] = useState(/** @type {string[]} */ ([]))
+  const [teacherCount, setTeacherCount] = useState(0)
+  const [totalFiles, setTotalFiles] = useState(0)
   const profileRef = useRef(null)
   const mainScrollRef = useRef(null)
 
@@ -264,6 +270,29 @@ export default function AdminDashboard() {
   }, [])
 
   useEffect(() => {
+    if (!isAuthed) return
+    let cancelled = false
+    const loadStats = async () => {
+      try {
+        const teachers = await fetchAllTeachers()
+        if (!cancelled) setTeacherCount(teachers.length)
+      } catch {
+        if (!cancelled) setTeacherCount(0)
+      }
+      try {
+        const count = await fetchTotalDocumentCount()
+        if (!cancelled) setTotalFiles(count)
+      } catch {
+        if (!cancelled) setTotalFiles(0)
+      }
+    }
+    loadStats()
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthed])
+
+  useEffect(() => {
     if (!profileOpen) return
     const onDown = (e) => {
       if (e.key === "Escape") setProfileOpen(false)
@@ -288,33 +317,6 @@ export default function AdminDashboard() {
     if (!el) return
     el.scrollTo({ top: 0, behavior: "smooth" })
   }, [activeNav])
-
-  const entityStats = useMemo(
-    () => [
-      { key: "fakultetlar", label: "Fakultetlar", value: STATS.fakultetlar, color: ENTITY_COLORS.fakultetlar },
-      { key: "kafedralar", label: "Kafedralar", value: STATS.kafedralar, color: ENTITY_COLORS.kafedralar },
-      { key: "oqituvchilar", label: "O'qituvchilar", value: STATS.oqituvchilar, color: ENTITY_COLORS.oqituvchilar },
-    ],
-    []
-  )
-
-  const entityTotal = useMemo(() => entityStats.reduce((sum, s) => sum + (Number.isFinite(s.value) ? s.value : 0), 0), [entityStats])
-
-  const pieSlices = useMemo(() => {
-    const total = entityTotal
-    if (total <= 0) return entityStats.map((s) => ({ ...s, pct: 0 }))
-    return entityStats.map((s) => ({ ...s, pct: (s.value / total) * 100 }))
-  }, [entityStats, entityTotal])
-
-  const pieStyle = useMemo(() => ({ background: pieGradient(pieSlices) }), [pieSlices])
-
-  const maxBar = useMemo(() => Math.max(0, ...entityStats.map((s) => s.value ?? 0)), [entityStats])
-  const barTicks = useMemo(() => {
-    const max = maxBar
-    if (max <= 0) return [0, 1, 2, 3, 4, 5]
-    const step = Math.max(1, Math.ceil(max / 5))
-    return [0, 1, 2, 3, 4, 5].map((i) => i * step)
-  }, [maxBar])
 
   const mainTitle =
     activeNav === "dashboard"
@@ -452,7 +454,7 @@ export default function AdminDashboard() {
           <div className="mx-auto w-full max-w-6xl">
             {activeNav === "dashboard" && (
               <div className="space-y-6">
-                <EvaluationSummaryCards dark={dark} />
+                <EvaluationSummaryCards dark={dark} totalFiles={totalFiles} />
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <article
@@ -510,7 +512,7 @@ export default function AdminDashboard() {
                       <div className="min-w-0">
                         <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>O&apos;qituvchilar</p>
                         <p className={`mt-2 text-3xl font-bold tabular-nums ${dark ? "text-violet-400" : "text-violet-600"}`}>
-                          {STATS.oqituvchilar}
+                          {teacherCount}
                         </p>
                       </div>
                     </div>
@@ -518,72 +520,10 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <article
-                    className={`dashboard-stat-in rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
-                    style={{ animationDelay: "240ms" }}
-                  >
-                    <h2 className="text-lg font-semibold">Bo&apos;limlar ulushi</h2>
-                    <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
-                      <div
-                        className="dashboard-pie-in relative h-48 w-48 shrink-0 rounded-full shadow-inner ring-4 ring-white/10"
-                        style={{ ...pieStyle, animationDelay: "300ms" }}
-                      />
-                      <div className="w-full max-w-xs space-y-2">
-                        {pieSlices.map((s) => (
-                          <div key={s.key} className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-2">
-                              <span className="h-3 w-3 rounded-sm" style={{ background: s.color }} />
-                              {s.label}
-                            </span>
-                            <span className="font-semibold tabular-nums">
-                              {Math.round(s.pct)}%{" "}
-                              <span className={`${dark ? "text-slate-400" : "text-slate-500"} font-medium`}>({s.value})</span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </article>
-
-                  <article
-                    className={`dashboard-stat-in rounded-xl border p-5 shadow-sm ${dark ? "border-slate-700 bg-slate-800" : "border-slate-100 bg-white"}`}
-                    style={{ animationDelay: "300ms" }}
-                  >
-                    <h2 className="text-lg font-semibold">Bo&apos;limlar bo&apos;yicha sonlar</h2>
-                    <div className="mt-4 flex justify-between gap-1 border-b pb-1 text-[10px] font-medium text-slate-400">
-                      {barTicks.map((t) => (
-                        <span key={t} className="w-0 flex-1 text-center">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex h-52 items-end justify-between gap-2 border-l border-slate-200 pl-2 pt-2 dark:border-slate-600">
-                      {entityStats.map((c, idx) => (
-                        <div key={c.key} className="flex min-w-0 flex-1 flex-col items-center justify-end">
-                          <div
-                            className="dashboard-bar-in w-full max-w-10 rounded-t-md"
-                            style={{
-                              height: `${Math.max(8, maxBar > 0 ? (c.value / maxBar) * 168 : 8)}px`,
-                              backgroundColor: c.color,
-                              animationDelay: `${360 + idx * 70}ms`,
-                            }}
-                            title={`${c.label}: ${c.value}`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex justify-between gap-1 px-0">
-                      {entityStats.map((c) => (
-                        <p
-                          key={c.key}
-                          className="min-w-0 flex-1 -rotate-[35deg] text-center text-[9px] leading-tight text-slate-600 sm:text-[10px] dark:text-slate-400"
-                        >
-                          {c.label}
-                        </p>
-                      ))}
-                    </div>
-                  </article>
+                  <FileTypeDistribution dark={dark} />
+                  <FacultyFileBarChart dark={dark} />
                 </div>
+
               </div>
             )}
 

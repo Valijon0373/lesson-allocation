@@ -1,14 +1,46 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Eye, Search, SlidersHorizontal, TrendingUp } from "lucide-react"
+import { Commet } from "react-loading-indicators"
+
+function useCountUp(from, to, duration = 800) {
+  const [value, setValue] = useState(from)
+
+  useEffect(() => {
+    if (to === 0) {
+      setValue(0)
+      return
+    }
+    let frame
+    const start = performance.now()
+    const animate = (now) => {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setValue(Math.round(eased * to))
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate)
+      }
+    }
+    frame = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(frame)
+  }, [to, duration])
+
+  return value
+}
 
 export default function OqituvchilarPage({
   teachers,
   ranking,
   positions,
   departments,
+  submissions = [],
   loading = false,
   loadError = "",
   onSelectTeacher,
+  /** @type {import("../api/teachers").TeacherResourceInfo[]} */
+  teacherResourceInfo = [],
+  resourceInfoLoading = false,
+  resourceInfoError = "",
 }) {
   const [searchDraft, setSearchDraft] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -16,54 +48,125 @@ export default function OqituvchilarPage({
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [openActionsFor, setOpenActionsFor] = useState(null)
 
-  const getTeacherFaculty = (teacher) => {
-    if (teacher.facultyName) return teacher.facultyName
-    const dept = departments.find((d) => d.id === teacher.departmentId)
-    return dept?.facultyName || ""
-  }
+  // teacherId bo'yicha teacher obyektini topish (amallar uchun)
+  const teacherById = useMemo(() => {
+    const map = {}
+    for (const t of teachers) {
+      map[t.id] = t
+    }
+    return map
+  }, [teachers])
 
-  const getTeacherDepartment = (teacher) => {
-    return (
-      departments.find((d) => d.id === teacher.departmentId)?.name ||
-      teacher.department ||
-      ""
-    )
-  }
+  // teacherResourceInfo asosiy ma'lumot manbai
+  const hasResourceInfo = teacherResourceInfo.length > 0
 
-  const merged = useMemo(() => ranking, [ranking])
+  // Agar resource info mavjud bo'lsa, undan jadval qatorlarini yasaymiz
+  // Aks holda eski teachers/ranking dan foydalanamiz
+  const rows = useMemo(() => {
+    if (hasResourceInfo) {
+      return teacherResourceInfo.map((info, idx) => ({
+        key: info.teacherId || `resource-${idx}`,
+        teacherId: info.teacherId,
+        facultyName: info.facultyName || "-",
+        departmentName: info.departmentName || "-",
+        positionName: info.positionName || "-",
+        fullName: info.teacherName || "-",
+        scoredBall: info.scoredBall,
+        totalBall: info.totalBall,
+        resourceCount: info.resourceCount,
+        teacher: teacherById[info.teacherId] || null,
+      }))
+    }
+    // fallback: eski teachers ro'yxati
+    return ranking.map((teacher) => ({
+      key: teacher.id,
+      teacherId: teacher.id,
+      facultyName: getTeacherFaculty(teacher, departments),
+      departmentName: getTeacherDepartment(teacher, departments),
+      positionName: getTeacherPosition(teacher, positions),
+      fullName: teacher.fullName,
+      scoredBall: 0,
+      totalBall: 0,
+      resourceCount: submissions.filter((s) => s.teacherId === teacher.id).length,
+      teacher,
+      total: teacher.total,
+    }))
+  }, [hasResourceInfo, teacherResourceInfo, ranking, teachers, departments, positions, submissions])
+
+  // resource info mavjud bo'lsa, umumiy o'qituvchilar soni resource info uzunligi
+  const totalTeachers = hasResourceInfo ? teacherResourceInfo.length : teachers.length
+  const animatedTeacherCount = useCountUp(0, totalTeachers)
 
   const facultyOptions = useMemo(() => {
-    const names = new Set(merged.map(getTeacherFaculty).filter(Boolean))
+    if (hasResourceInfo) {
+      const names = new Set(teacherResourceInfo.map((info) => info.facultyName).filter(Boolean))
+      return [...names].sort((a, b) => a.localeCompare(b, "uz"))
+    }
+    const names = new Set(
+      ranking.map((teacher) => getTeacherFaculty(teacher, departments)).filter(Boolean),
+    )
     return [...names].sort((a, b) => a.localeCompare(b, "uz"))
-  }, [merged, departments])
+  }, [hasResourceInfo, teacherResourceInfo, ranking, departments])
 
   const departmentOptions = useMemo(() => {
+    if (hasResourceInfo) {
+      const names = new Set(
+        teacherResourceInfo
+          .filter((info) => facultyFilter === "all" || info.facultyName === facultyFilter)
+          .map((info) => info.departmentName)
+          .filter(Boolean),
+      )
+      return [...names].sort((a, b) => a.localeCompare(b, "uz"))
+    }
     const names = new Set(
-      merged
+      ranking
         .filter((teacher) => {
           if (facultyFilter === "all") return true
-          return getTeacherFaculty(teacher) === facultyFilter
+          return getTeacherFaculty(teacher, departments) === facultyFilter
         })
-        .map(getTeacherDepartment)
+        .map((teacher) => getTeacherDepartment(teacher, departments))
         .filter(Boolean),
     )
     return [...names].sort((a, b) => a.localeCompare(b, "uz"))
-  }, [merged, departments, facultyFilter])
+  }, [hasResourceInfo, teacherResourceInfo, ranking, departments, facultyFilter])
 
-  const filteredTeachers = merged.filter((teacher) => {
-    const facultyName = getTeacherFaculty(teacher)
-    const deptName = getTeacherDepartment(teacher)
+  const filteredRows = useMemo(() => {
+    return rows.filter((row) => {
+      if (facultyFilter !== "all" && row.facultyName !== facultyFilter) return false
+      if (departmentFilter !== "all" && row.departmentName !== departmentFilter) return false
 
-    if (facultyFilter !== "all" && facultyName !== facultyFilter) return false
-    if (departmentFilter !== "all" && deptName !== departmentFilter) return false
+      const q = searchQuery.trim().toLowerCase()
+      if (!q) return true
+      return [row.fullName, row.departmentName, row.positionName, row.facultyName].some((v) =>
+        String(v).toLowerCase().includes(q),
+      )
+    })
+  }, [rows, facultyFilter, departmentFilter, searchQuery])
 
-    const q = searchQuery.trim().toLowerCase()
-    if (!q) return true
-    const posName = positions.find((p) => p.id === teacher.positionId)?.name || ""
-    return [teacher.fullName, deptName, posName, facultyName].some((v) =>
-      String(v).toLowerCase().includes(q),
-    )
-  })
+  // Faqat teachers yuklanayotganda jadval ichida loader chiqsin,
+  // resourceInfoLoading bo'lsa App.jsx dagi to'liq ekranli loader ishlaydi
+  const isLoading = loading && !resourceInfoLoading
+
+  const handleSelectTeacher = (row) => {
+    setOpenActionsFor(null)
+    if (row.teacher) {
+      onSelectTeacher(row.teacher)
+    } else if (row.teacherId) {
+      // Agar teacher topilmasa, resource info'dan teacher obyekti yasaymiz
+      onSelectTeacher({
+        id: row.teacherId,
+        fullName: row.fullName,
+        role: "teacher",
+        login: "",
+        password: "",
+        departmentId: "",
+        department: row.departmentName,
+        facultyName: row.facultyName,
+        positionId: "",
+        positionName: row.positionName,
+      })
+    }
+  }
 
   return (
     <section className="min-h-screen w-full bg-white">
@@ -73,13 +176,22 @@ export default function OqituvchilarPage({
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                  O'qituvchilar
+                  O'qituvchilar{" "}
+                  <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 px-3 py-0.5 text-lg font-bold text-indigo-700 align-baseline">
+                    {animatedTeacherCount}
+                  </span>
                 </h2>
               </div>
 
               {loadError && (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                   O'qituvchilarni API dan yuklashda xatolik: {loadError}
+                </p>
+              )}
+
+              {resourceInfoError && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  Resurs ma'lumotlarini yuklashda xatolik: {resourceInfoError}
                 </p>
               )}
 
@@ -154,64 +266,61 @@ export default function OqituvchilarPage({
                       <th className="border border-slate-200 px-4 py-3 text-left text-sm font-bold text-slate-900">
                         Ball
                       </th>
+                      <th className="border border-slate-200 px-4 py-3 text-center text-sm font-bold text-slate-900">
+                        Resurs soni
+                      </th>
                       <th className="border border-slate-200 px-4 py-3 text-right text-sm font-bold text-slate-900">
                         Amallar
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {loading && (
+                    {isLoading && (
                       <tr>
                         <td
-                          colSpan={7}
-                          className="border border-slate-200 px-4 py-8 text-center text-sm text-slate-500"
+                          colSpan={8}
+                          className="border border-slate-200 px-4 py-12 text-center"
                         >
-                          O'qituvchilar yuklanmoqda...
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <Commet color="#4f46e5" size="medium" text="" textColor="" />
+                            <p className="text-sm text-slate-500">O'qituvchilar yuklanmoqda...</p>
+                          </div>
                         </td>
                       </tr>
                     )}
-                    {!loading &&
-                      filteredTeachers.map((teacher, index) => {
-                        const facultyName =
-                          teacher.facultyName ||
-                          (teacher.departmentId
-                            ? (() => {
-                                const dept = departments.find((d) => d.id === teacher.departmentId)
-                                return dept?.facultyName || ""
-                              })()
-                            : "") ||
-                          "-"
-                        const posName =
-                          (teacher.positionId
-                            ? positions.find((p) => p.id === teacher.positionId)?.name
-                            : null) || "-"
-                        const deptName =
-                          (teacher.departmentId
-                            ? departments.find((d) => d.id === teacher.departmentId)?.name
-                            : null) ||
-                          teacher.department ||
-                          "-"
+                    {!isLoading &&
+                      filteredRows.map((row, index) => {
+                        const ballDisplay =
+                          hasResourceInfo
+                            ? `${row.scoredBall} ball`
+                            : row.total != null
+                              ? `${row.total} ball`
+                              : "0 ball"
+
                         return (
-                          <tr key={teacher.id}>
+                          <tr key={row.key}>
                             <td className="border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-900">
                               {index + 1}
                             </td>
                             <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
-                              {facultyName}
+                              {row.facultyName}
                             </td>
                             <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
-                              {deptName}
+                              {row.departmentName}
                             </td>
                             <td className="border border-slate-200 px-4 py-3 text-sm text-slate-500">
-                              {posName}
+                              {row.positionName}
                             </td>
                             <td className="border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
-                              {teacher.fullName}
+                              {row.fullName}
                             </td>
                             <td className="border border-slate-200 px-4 py-3">
                               <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                                {teacher.total} ball
+                                {ballDisplay}
                               </span>
+                            </td>
+                            <td className="border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700">
+                              {row.resourceCount}
                             </td>
                             <td className="border border-slate-200 px-4 py-3 text-center">
                               <div className="relative inline-flex">
@@ -219,12 +328,12 @@ export default function OqituvchilarPage({
                                   type="button"
                                   onClick={() =>
                                     setOpenActionsFor((prev) =>
-                                      prev === teacher.id ? null : teacher.id,
+                                      prev === row.key ? null : row.key,
                                     )
                                   }
                                   className="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2.5 text-slate-700 transition-colors hover:bg-slate-100"
                                   aria-label="Amallar menyusi"
-                                  aria-expanded={openActionsFor === teacher.id}
+                                  aria-expanded={openActionsFor === row.key}
                                 >
                                   <SlidersHorizontal
                                     className="h-5 w-5"
@@ -233,14 +342,11 @@ export default function OqituvchilarPage({
                                   />
                                 </button>
 
-                                {openActionsFor === teacher.id && (
+                                {openActionsFor === row.key && (
                                   <div className="absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setOpenActionsFor(null)
-                                        onSelectTeacher(teacher)
-                                      }}
+                                      onClick={() => handleSelectTeacher(row)}
                                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50"
                                     >
                                       <Eye
@@ -252,10 +358,7 @@ export default function OqituvchilarPage({
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setOpenActionsFor(null)
-                                        onSelectTeacher(teacher)
-                                      }}
+                                      onClick={() => handleSelectTeacher(row)}
                                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
                                     >
                                       <TrendingUp
@@ -272,15 +375,15 @@ export default function OqituvchilarPage({
                           </tr>
                         )
                       })}
-                    {!loading && filteredTeachers.length === 0 && (
+                    {!isLoading && filteredRows.length === 0 && (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="border border-slate-200 px-4 py-8 text-center text-sm text-slate-500"
                         >
                           {searchQuery || facultyFilter !== "all" || departmentFilter !== "all"
                             ? "Qidiruv bo'yicha natija topilmadi."
-                            : teachers.length === 0
+                            : totalTeachers === 0
                               ? "API dan o'qituvchilar topilmadi. Tizimga API orqali kiring."
                               : "Hozircha o'qituvchilar ro'yxati bo'sh."}
                         </td>
@@ -291,8 +394,8 @@ export default function OqituvchilarPage({
               </div>
 
               {(searchQuery || facultyFilter !== "all" || departmentFilter !== "all") &&
-                !loading &&
-                filteredTeachers.length === 0 && (
+                !isLoading &&
+                filteredRows.length === 0 && (
                 <p className="text-center text-sm text-slate-500">
                   Qidiruv bo'yicha natija topilmadi.
                 </p>
@@ -302,5 +405,30 @@ export default function OqituvchilarPage({
         </div>
       </div>
     </section>
+  )
+}
+
+/** @param {{ facultyName?: string, departmentId?: string }} teacher */
+function getTeacherFaculty(teacher, departments) {
+  if (teacher.facultyName) return teacher.facultyName
+  const dept = departments.find((d) => d.id === teacher.departmentId)
+  return dept?.facultyName || ""
+}
+
+/** @param {{ department?: string, departmentId?: string }} teacher */
+function getTeacherDepartment(teacher, departments) {
+  return (
+    departments.find((d) => d.id === teacher.departmentId)?.name ||
+    teacher.department ||
+    ""
+  )
+}
+
+/** @param {{ positionId?: string }} teacher */
+function getTeacherPosition(teacher, positions) {
+  return (
+    (teacher.positionId
+      ? positions.find((p) => p.id === teacher.positionId)?.name
+      : null) || "-"
   )
 }

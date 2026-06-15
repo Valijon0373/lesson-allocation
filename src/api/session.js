@@ -20,7 +20,6 @@ export function isPublicAuthPath(path) {
 }
 
 export function notifySessionExpired() {
-  clearAuthStorage()
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT))
   }

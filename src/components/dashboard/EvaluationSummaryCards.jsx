@@ -1,27 +1,11 @@
-import { BarChart3, ClipboardList, Trophy } from "lucide-react"
-import { CRITERIA, DEMO_CRITERIA_EVAL, TOTAL_MAX_SCORE } from "../../data/criteria.js"
+import { BarChart3, ClipboardList, FileText, Trophy } from "lucide-react"
+import { CRITERIA, TOTAL_MAX_SCORE } from "../../data/criteria.js"
 
-function ScoreBar({ dark, value, max }) {
-  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
-  return (
-    <div className={`mt-1.5 h-2 overflow-hidden rounded-full ${dark ? "bg-slate-700" : "bg-slate-200"}`}>
-      <div
-        className="dashboard-scorebar-in h-full rounded-full bg-teal-500 transition-[width] duration-300"
-        style={{ width: `${pct}%`, animationDelay: "220ms" }}
-      />
-    </div>
-  )
-}
-
-/** Dashboard: umumiy natija — jami ball va mezonlar soni */
-export default function EvaluationSummaryCards({ dark }) {
+/** Dashboard: umumiy natija — jami ball, yuklangan fayllar va mezonlar soni */
+export default function EvaluationSummaryCards({ dark, totalFiles = 0 }) {
   const subtitle = dark ? "text-slate-400" : "text-slate-500"
   const titleClr = dark ? "text-slate-100" : "text-slate-900"
   const cardBase = dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white shadow-sm"
-
-  const totalCollected = CRITERIA.reduce((sum, c) => sum + (DEMO_CRITERIA_EVAL[c.id]?.collected ?? 0), 0)
-
-  const totalPercent = TOTAL_MAX_SCORE > 0 ? ((totalCollected / TOTAL_MAX_SCORE) * 100).toFixed(1) : "0"
 
   const statCards = [
     {
@@ -32,17 +16,11 @@ export default function EvaluationSummaryCards({ dark }) {
       label: "Jami maksimal ball",
     },
     {
-      key: "collected",
-      icon: BarChart3,
+      key: "files",
+      icon: FileText,
       iconWrap: dark ? "bg-teal-500/15 text-teal-300" : "bg-teal-50 text-teal-600",
-      value: `${totalCollected} / ${TOTAL_MAX_SCORE}`,
-      label: "Jami yig'ilgan ball",
-      extra: (
-        <div className="mt-3 space-y-1">
-          <ScoreBar dark={dark} value={totalCollected} max={TOTAL_MAX_SCORE} />
-          <p className={`text-xs font-semibold ${subtitle}`}>{totalPercent}%</p>
-        </div>
-      ),
+      value: String(totalFiles),
+      label: "Jami yuklangan fayllar",
     },
     {
       key: "criteria",

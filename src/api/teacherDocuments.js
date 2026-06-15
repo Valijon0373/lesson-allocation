@@ -290,3 +290,144 @@ export async function setDocumentBall(body) {
     }),
   })
 }
+
+/**
+ * GET /api/documents/all — barcha teacher-document resurslarini olish (admin dashboard uchun).
+ * @returns {Promise<number>} jami yuklangan fayllar soni
+ */
+export async function fetchTotalDocumentCount() {
+  try {
+    const json = await apiRequest("/api/documents/all")
+    const data = unwrapPayload(json)
+    const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
+    let count = 0
+    for (const item of list) {
+      if (!item || typeof item !== "object") continue
+      const resources = Array.isArray(item.resources) ? item.resources : []
+      count += resources.length
+    }
+    return count
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * @typedef {{ file: number, video: number, link: number, rasm: number }} FileDistribution
+ */
+
+/**
+ * GET /api/documents/all — fayl turlari bo'yicha taqsimot (File, Video, Link, Rasm).
+ * @returns {Promise<FileDistribution>}
+ */
+export async function fetchFileTypeDistribution() {
+  const dist = { file: 0, video: 0, link: 0, rasm: 0 }
+  try {
+    const json = await apiRequest("/api/documents/all")
+    const data = unwrapPayload(json)
+    const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
+    for (const item of list) {
+      if (!item || typeof item !== "object") continue
+      const resources = Array.isArray(item.resources) ? item.resources : []
+      for (const resource of resources) {
+        if (!resource || typeof resource !== "object") continue
+        const evidenceType = mapResourceEvidenceType(resource.type)
+        if (evidenceType === "video") {
+          dist.video++
+        } else if (evidenceType === "link") {
+          dist.link++
+        } else {
+          const fileName = String(resource.fileName ?? resource.fileNameOnServer ?? "").toLowerCase()
+          const fileType = String(resource.fileType ?? resource.mimeType ?? "").toLowerCase()
+          const isImage =
+            fileType.startsWith("image/") ||
+            /\.(jpg|jpeg|png|gif|bmp|svg|webp|ico|tiff|heic|heif)$/i.test(fileName)
+          if (isImage) {
+            dist.rasm++
+          } else {
+            dist.file++
+          }
+        }
+      }
+    }
+  } catch {
+    // API mavjud bo'lmasa, bo'sh taqsimot qaytadi
+  }
+  return dist
+}
+
+/**
+ * @typedef {{ facultyName: string, count: number, fileCount: number, videoCount: number, linkCount: number, rasmCount: number }} FacultyFileStats
+ */
+
+/**
+ * GET /api/documents/all + teachers — fakultet o'qituvchilari yuklagan fayllar soni.
+ * @returns {Promise<FacultyFileStats[]>}
+ */
+export async function fetchFileCountByFaculty() {
+  /** @type {Map<string, FacultyFileStats>} */
+  const map = new Map()
+  try {
+    // Build teacherId → facultyName lookup
+    const { fetchAllTeachers } = await import("./teachers")
+    const teachers = await fetchAllTeachers()
+    /** @type {Record<string, string>} */
+    const teacherFaculty = {}
+    for (const t of teachers) {
+      const fid = t.facultyId ?? ""
+      const name = t.fakultet ?? t.facultyName ?? fid
+      if (t.id && name) teacherFaculty[t.id] = String(name)
+    }
+
+    const json = await apiRequest("/api/documents/all")
+    const data = unwrapPayload(json)
+    const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
+
+    for (const item of list) {
+      if (!item || typeof item !== "object") continue
+      const doc = /** @type {Record<string, unknown>} */ (item)
+      const rawTeacherId = doc.teacherId ?? doc.teacher_id ?? doc.userId ?? ""
+      const teacherId = String(rawTeacherId)
+      const facultyName = teacherFaculty[teacherId] || "Noma'lum"
+
+      if (!map.has(facultyName)) {
+        map.set(facultyName, {
+          facultyName,
+          count: 0,
+          fileCount: 0,
+          videoCount: 0,
+          linkCount: 0,
+          rasmCount: 0,
+        })
+      }
+      const entry = map.get(facultyName)
+
+      const resources = Array.isArray(doc.resources) ? doc.resources : []
+      for (const resource of resources) {
+        if (!resource || typeof resource !== "object") continue
+        const evidenceType = mapResourceEvidenceType(resource.type)
+        entry.count++
+        if (evidenceType === "video") {
+          entry.videoCount++
+        } else if (evidenceType === "link") {
+          entry.linkCount++
+        } else {
+          const fileName = String(resource.fileName ?? resource.fileNameOnServer ?? "").toLowerCase()
+          const fileType = String(resource.fileType ?? resource.mimeType ?? "").toLowerCase()
+          const isImage =
+            fileType.startsWith("image/") ||
+            /\.(jpg|jpeg|png|gif|bmp|svg|webp|ico|tiff|heic|heif)$/i.test(fileName)
+          if (isImage) {
+            entry.rasmCount++
+          } else {
+            entry.fileCount++
+          }
+        }
+      }
+    }
+  } catch {
+    // API xatoligida bo'sh qaytadi
+  }
+
+  return [...map.values()].sort((a, b) => b.count - a.count)
+}
