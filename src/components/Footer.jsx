@@ -10,25 +10,25 @@ const iconProps = {
 const FOOTER_SOCIAL = [
   {
     name: "Telegram",
-    href: "https://t.me/",
+    href: "https://t.me/UrDPI_UZ",
     hoverClass: "hover:border-[#229ED9] hover:text-[#229ED9]",
     icon: <Send {...iconProps} />,
   },
   {
     name: "Instagram",
-    href: "https://www.instagram.com/",
+    href: "https://www.instagram.com/urspi.uz?igsh=b3Bwc2g0YWoxYnZh",
     hoverClass: "hover:border-[#E1306C] hover:text-[#E1306C]",
     icon: <Instagram {...iconProps} />,
   },
   {
     name: "YouTube",
-    href: "https://www.youtube.com/",
+    href: "https://www.youtube.com/@urspiurspi",
     hoverClass: "hover:border-[#FF0000] hover:text-[#FF0000]",
     icon: <Youtube {...iconProps} />,
   },
   {
     name: "Facebook",
-    href: "https://www.facebook.com/",
+    href: "https://www.facebook.com/urdpi/",
     hoverClass: "hover:border-[#1877F2] hover:text-[#1877F2]",
     icon: <Facebook {...iconProps} />,
   },

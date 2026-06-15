@@ -229,17 +229,10 @@ export async function fetchTeachersResourceInfo() {
   const data = unwrapPayload(json)
   const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
 
-  // DEBUG: API javob strukturasini konsolga chiqaramiz
-  console.log("[resource/info] raw json:", JSON.stringify(json, null, 2))
-  console.log("[resource/info] unwrapped data:", JSON.stringify(data, null, 2))
-  console.log("[resource/info] list length:", list.length)
-
   return list
     .map((item, idx) => {
       if (!item || typeof item !== "object") return null
       const raw = /** @type {Record<string, unknown>} */ (item)
-      console.log(`[resource/info] item[${idx}] keys:`, Object.keys(raw))
-
       const teacherId = String(raw.teacherId ?? raw.teacher_id ?? raw.id ?? "")
 
       // teacher maydoni string (F.I.O) yoki object bo'lishi mumkin

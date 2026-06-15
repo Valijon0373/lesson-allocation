@@ -8,7 +8,7 @@ const TEAM_MEMBERS = [
     role: "FRONTEND VA UI/UX DASTURCHI",
     bio: "Talabalar uchun qulay va zamonaviy interfeys yaratib, barcha sahifalarda yagona dizayn uslubini joriy qiladi.",
     socials: {
-      telegram: "#",
+      telegram: "https://t.me/Val1jon_0373",
       instagram: "#",
       github: "#",
     },
@@ -20,7 +20,7 @@ const TEAM_MEMBERS = [
     role: "JAVA BACKEND DASTURCHISI",
     bio: "Ushbu platformaning server qismi, ma'lumotlar bilan ishlash va API larni xavfsiz boshqarish vazifalarini bajaradi.",
     socials: {
-      telegram: "#",
+      telegram: "https://t.me/AkbarOtaboev",
       instagram: "#",
       github: "#",
     },
