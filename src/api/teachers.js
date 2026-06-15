@@ -306,3 +306,42 @@ export async function fetchTeachersResourceInfo() {
     })
     .filter(Boolean)
 }
+
+/**
+ * GET /api/teachers/teachers-resource-info/excel — Excel faylni yuklab olish.
+ * Brauzerda fayl sifatida saqlaydi.
+ */
+export async function downloadTeachersResourceInfoExcel() {
+  const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "")
+  const path = "/api/teachers/teachers-resource-info/excel"
+  const url = API_BASE ? `${API_BASE}${path}` : path
+
+  const token =
+    localStorage.getItem("accessToken") || localStorage.getItem("authToken") || ""
+  const headers = {}
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
+  const res = await fetch(url, { headers })
+
+  if (!res.ok) {
+    throw new Error(`Excel faylni yuklab bo'lmadi: HTTP ${res.status}`)
+  }
+
+  const blob = await res.blob()
+  const disposition = res.headers.get("content-disposition") ?? ""
+  const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+  const filename = filenameMatch
+    ? filenameMatch[1].replace(/['"]/g, "")
+    : "teachers-resource-info.xlsx"
+
+  const blobUrl = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = blobUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(blobUrl)
+}

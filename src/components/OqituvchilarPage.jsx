@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { Eye, Search, SlidersHorizontal, TrendingUp } from "lucide-react"
+import { Download, Eye, Search, SlidersHorizontal, TrendingUp } from "lucide-react"
 import { Commet } from "react-loading-indicators"
+import { downloadTeachersResourceInfoExcel } from "../api/teachers"
 
 function useCountUp(from, to, duration = 800) {
   const [value, setValue] = useState(from)
@@ -47,6 +48,7 @@ export default function OqituvchilarPage({
   const [facultyFilter, setFacultyFilter] = useState("all")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [openActionsFor, setOpenActionsFor] = useState(null)
+  const [excelLoading, setExcelLoading] = useState(false)
 
   // teacherId bo'yicha teacher obyektini topish (amallar uchun)
   const teacherById = useMemo(() => {
@@ -181,6 +183,31 @@ export default function OqituvchilarPage({
                     {animatedTeacherCount}
                   </span>
                 </h2>
+                {excelLoading && (
+                  <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-10 py-8 shadow-2xl">
+                      <Commet color="#4f46e5" size="medium" text="Kuting..." textColor="#0a4ff2" />
+                    </div>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  disabled={excelLoading}
+                  onClick={async () => {
+                    setExcelLoading(true)
+                    try {
+                      await downloadTeachersResourceInfoExcel()
+                    } catch (err) {
+                      console.error("Excel yuklashda xatolik:", err)
+                    } finally {
+                      setExcelLoading(false)
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Download className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                  {excelLoading ? "Yuklanmoqda..." : "Excelga Yuklash"}
+                </button>
               </div>
 
               {loadError && (
