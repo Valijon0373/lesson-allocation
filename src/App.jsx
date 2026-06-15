@@ -4,9 +4,10 @@ import { ArrowLeft, Download, Eye, EyeOff, MessageSquareText, Trash2, X } from "
 import bgVideo from "./assets/bg.mp4"
 import logoImg from "./assets/logo.jpg"
 import Footer from "./components/Footer.jsx"
+import Rating from "./components/Rating.jsx"
 import HomeHeroBrand from "./components/HomeHeroBrand.jsx"
 import Navbar from "./components/Navbar.jsx"
-import OqituvchilarPage from "./components/OqituvchilarPage.jsx"
+import TeacherPage from "./components/TeachersPage.jsx"
 import { fetchAllCriterionRows } from "./api/categories"
 import { fetchAllSections } from "./api/criteriaApi"
 import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens } from "./api/auth"
@@ -1029,19 +1030,23 @@ function App() {
             </article>
 
             {!isTeacherUser(currentUser) ? (
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
-                <div className="mt-3 max-h-96 space-y-2 overflow-y-auto">
-                  {ranking.map((item, index) => (
-                    <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                      <p className="text-sm text-slate-700">
-                        {index + 1}. {item.fullName}
-                      </p>
-                      <p className="text-sm font-bold text-indigo-700">{item.total} ball</p>
-                    </div>
-                  ))}
-                </div>
-              </article>
+              currentUser?.role === "expert" ? (
+                <Rating />
+              ) : (
+                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
+                  <div className="mt-3 max-h-96 space-y-2 overflow-y-auto">
+                    {ranking.map((item, index) => (
+                      <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                        <p className="text-sm text-slate-700">
+                          {index + 1}. {item.fullName}
+                        </p>
+                        <p className="text-sm font-bold text-indigo-700">{item.total} ball</p>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              )
             ) : (
               <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
@@ -1272,7 +1277,7 @@ function App() {
         ) : activePage === "dashboard" ? (
           renderDashboard()
         ) : activePage === "oqituvchilar" ? (
-          <OqituvchilarPage
+          <TeacherPage
             teachers={teachers}
             ranking={ranking}
             positions={positions}

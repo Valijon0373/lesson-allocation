@@ -29,7 +29,7 @@ function useCountUp(from, to, duration = 800) {
   return value
 }
 
-export default function OqituvchilarPage({
+export default function TeacherPage({
   teachers,
   ranking,
   positions,

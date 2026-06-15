@@ -301,6 +301,32 @@ export async function fetchTeachersResourceInfo() {
 }
 
 /**
+ * GET /api/teachers/rating/info — komissiya profildagi reyting.
+ * Balli yuqorisini tepadan saralab qaytaradi.
+ * @typedef {{ teacherName: string, rating: number }} TeacherRatingInfo
+ * @returns {Promise<TeacherRatingInfo[]>}
+ */
+export async function fetchTeachersRatingInfo() {
+  const json = await apiRequest("/api/teachers/rating/info")
+  const data = unwrapPayload(json)
+  const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
+
+  const mapped = list
+    .map((item) => {
+      if (!item || typeof item !== "object") return null
+      const raw = /** @type {Record<string, unknown>} */ (item)
+      const teacherName = String(raw.teacherName ?? raw.teacher_name ?? raw.teacher ?? "")
+      const rating = Number(raw.rating ?? raw.ball ?? raw.score ?? 0)
+      return { teacherName, rating }
+    })
+    .filter(Boolean)
+    // Balli yuqorisini tepadan saralash (kamayish tartibida)
+    .sort((a, b) => b.rating - a.rating)
+
+  return mapped
+}
+
+/**
  * GET /api/teachers/teachers-resource-info/excel — Excel faylni yuklab olish.
  * Brauzerda fayl sifatida saqlaydi.
  */
