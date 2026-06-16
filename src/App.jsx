@@ -205,6 +205,7 @@ function App() {
   const [loginError, setLoginError] = useState("")
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false)
+  const [newTeacherPasswordVisible, setNewTeacherPasswordVisible] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState("")
   const [viewingTeacher, setViewingTeacher] = useState(null)
@@ -1180,12 +1181,24 @@ function App() {
                 </label>
                 <label className="text-sm">
                   <span className="mb-1 block font-medium text-slate-700">Parol</span>
-                  <input
-                    value={newTeacherForm.password}
-                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, password: e.target.value }))}
-                    placeholder="Parol"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  />
+                  <div className="relative">
+                    <input
+                      type={newTeacherPasswordVisible ? "text" : "password"}
+                      value={newTeacherForm.password}
+                      onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, password: e.target.value }))}
+                      placeholder="Parol"
+                      className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-10 text-sm"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setNewTeacherPasswordVisible((v) => !v)}
+                      aria-label={newTeacherPasswordVisible ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      {newTeacherPasswordVisible ? <EyeOff className="h-4 w-4" strokeWidth={1.5} aria-hidden /> : <Eye className="h-4 w-4" strokeWidth={1.5} aria-hidden />}
+                    </button>
+                  </div>
                 </label>
                 <button
                   type="submit"

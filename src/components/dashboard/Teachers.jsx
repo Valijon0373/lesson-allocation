@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, Loader2, LockKeyhole, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react"
+import { CircleCheck, CircleX, Eye, EyeOff, Loader2, LockKeyhole, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react"
 import { fetchAllDepartments } from "../../api/departments"
 import { fetchAllFaculties } from "../../api/faculties"
 import { fetchAllPositions } from "../../api/positions"
 import {
+  changeTeacherPassword,
   deleteTeacher,
   fetchAllTeachers,
   saveTeacher,
@@ -60,8 +61,12 @@ export default function Teachers({ dark }) {
     password: "",
   })
   const [credentialsDraft, setCredentialsDraft] = useState({
+    oldPassword: "",
     password: "",
   })
+  const [showCredentialsOldPassword, setShowCredentialsOldPassword] = useState(false)
+  const [showCredentialsPassword, setShowCredentialsPassword] = useState(false)
+  const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [searchDraft, setSearchDraft] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [facultyFilter, setFacultyFilter] = useState("all")
@@ -140,7 +145,12 @@ export default function Teachers({ dark }) {
   const departmentsForFaculty = (facultyId) =>
     departments.filter((d) => d.facultyId === facultyId)
 
-  const closeModal = () => setModal({ open: false, type: null, row: null })
+  const closeModal = () => {
+    setShowCredentialsOldPassword(false)
+    setShowCredentialsPassword(false)
+    setShowCreatePassword(false)
+    setModal({ open: false, type: null, row: null })
+  }
   const closeNotice = () => setNotice({ open: false, message: "", variant: "success" })
 
   const showNotice = (message, variant = "success") => {
@@ -169,7 +179,8 @@ export default function Teachers({ dark }) {
 
   const openCredentials = (row) => {
     setCredentialsDraft({
-      password: row?.password ?? "",
+      oldPassword: "",
+      password: "",
     })
     setModal({ open: true, type: "credentials", row })
   }
@@ -244,25 +255,19 @@ export default function Teachers({ dark }) {
 
   const onSaveCredentials = async () => {
     const row = modal.row
-    if (!row?.id || busy) return
+    if (!row?.login || busy) return
 
+    const oldPassword = credentialsDraft.oldPassword
     const password = credentialsDraft.password.trim()
-    if (!password) return
+    if (!oldPassword || !password) return
 
     setBusy(true)
     try {
-      await updateTeacher(
-        row.id,
-        {
-          fio: row.fio,
-          login: row.login,
-          facultyId: row.facultyId,
-          departmentId: row.departmentId,
-          password,
-        },
-        facultyNames,
-        departmentNames,
-      )
+      await changeTeacherPassword({
+        username: row.login,
+        oldPassword,
+        newPassword: password,
+      })
       closeModal()
       showNotice("Muvaffaqiyatli o'zgartirildi")
     } catch (err) {
@@ -658,7 +663,50 @@ export default function Teachers({ dark }) {
                 <label className="text-base font-semibold">Login</label>
                 <input value={modal.row.login} readOnly className={`w-full rounded-lg border px-4 py-3 text-base ${input}`} />
               </div>
-              <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={credentialsDraft.password} onChange={(e) => setCredentialsDraft((p) => ({ ...p, password: e.target.value }))} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Yangi parol kiriting" /></div>
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Eski parol</label>
+                <div className="relative">
+                  <input
+                    type={showCredentialsOldPassword ? "text" : "password"}
+                    value={credentialsDraft.oldPassword}
+                    onChange={(e) => setCredentialsDraft((p) => ({ ...p, oldPassword: e.target.value }))}
+                    className={`w-full rounded-lg border py-3 pl-4 pr-12 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                    placeholder="Eski parolni kiriting"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowCredentialsOldPassword((v) => !v)}
+                    aria-label={showCredentialsOldPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    {showCredentialsOldPassword ? <EyeOff className="h-5 w-5" strokeWidth={2} aria-hidden /> : <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Yangi parol</label>
+                <div className="relative">
+                  <input
+                    type={showCredentialsPassword ? "text" : "password"}
+                    value={credentialsDraft.password}
+                    onChange={(e) => setCredentialsDraft((p) => ({ ...p, password: e.target.value }))}
+                    className={`w-full rounded-lg border py-3 pl-4 pr-12 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                    placeholder="Yangi parol kiriting"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowCredentialsPassword((v) => !v)}
+                    aria-label={showCredentialsPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    {showCredentialsPassword ? <EyeOff className="h-5 w-5" strokeWidth={2} aria-hidden /> : <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button type="button" onClick={onSaveCredentials} disabled={busy} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Saqlash</button>
@@ -681,7 +729,29 @@ export default function Teachers({ dark }) {
               <div className="space-y-2"><label className="text-base font-semibold">Lavozim</label>{renderPositionSelect(createDraft.positionId, (positionId) => setCreateDraft((p) => ({ ...p, positionId })))}</div>
               <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={createDraft.fio} onChange={(e) => setCreateDraft((p) => ({ ...p, fio: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Masalan: F.I.O" /></div>
               <div className="space-y-2"><label className="text-base font-semibold">Login</label><input value={createDraft.login} onChange={(e) => setCreateDraft((p) => ({ ...p, login: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Teacher.login" /></div>
-              <div className="space-y-2"><label className="text-base font-semibold">Parol</label><input type="password" value={createDraft.password} onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Parol kiriting" /></div>
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Parol</label>
+                <div className="relative">
+                  <input
+                    type={showCreatePassword ? "text" : "password"}
+                    value={createDraft.password}
+                    onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))}
+                    disabled={busy}
+                    className={`w-full rounded-lg border py-3 pl-4 pr-12 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                    placeholder="Parol kiriting"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowCreatePassword((v) => !v)}
+                    aria-label={showCreatePassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    {showCreatePassword ? <EyeOff className="h-5 w-5" strokeWidth={2} aria-hidden /> : <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button type="button" onClick={onSaveCreate} disabled={busy} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Qo'shish</button>

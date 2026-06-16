@@ -213,6 +213,27 @@ export async function updateTeacher(id, body, facultyNames, departmentNames) {
   }
 }
 
+/**
+ * POST /api/teachers/change/password — parolni o'zgartirish uchun maxsus endpoint.
+ * @param {{ username: string, oldPassword: string, newPassword: string }} body
+ * @returns {Promise<{ success: boolean, message?: string }>}
+ */
+export async function changeTeacherPassword(body) {
+  const json = await apiRequest("/api/teachers/change/password", {
+    method: "POST",
+    body: JSON.stringify({
+      username: body.username,
+      oldPassword: body.oldPassword,
+      newPassword: body.newPassword,
+    }),
+  })
+  const data = unwrapPayload(json) ?? json
+  if (data && typeof data === "object" && "success" in data && data.success === false) {
+    throw new Error(typeof data.message === "string" ? data.message : "Parol o'zgartirilmadi")
+  }
+  return data ?? { success: true }
+}
+
 /** @param {string | number} id @returns {Promise<void>} */
 export async function deleteTeacher(id) {
   await apiRequest(`/api/teachers/delete/${encodeURIComponent(String(id))}`, {
