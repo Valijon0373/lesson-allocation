@@ -1395,7 +1395,7 @@ function App() {
               )
               const uploadModel = uploadState[criterion.id] ?? { type: "file", link: "", comment: "" }
               return (
-                <article key={criterion.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <article key={criterion.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
                       {criterion.category}
@@ -1490,8 +1490,8 @@ function App() {
                     {criterionSubmissions.map((submission) => (
                       <div key={submission.id} className="rounded-lg bg-slate-50 p-3 text-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-medium text-slate-800">{submission.fileName}</p>
-                          <p className="text-xs text-slate-500">{formatFileSize(submission.fileSize)}</p>
+                          <p className="min-w-0 break-all font-medium text-slate-800">{submission.fileName}</p>
+                          <p className="shrink-0 text-xs text-slate-500">{formatFileSize(submission.fileSize)}</p>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           {(submission.fileDataUrl || (submission.evidenceType === "file" && submission.fileName)) ? (
@@ -1544,7 +1544,7 @@ function App() {
                           )}
                         </div>
                         {submission.comment && (
-                          <p className="mt-3 text-base text-slate-600">
+                          <p className="mt-3 break-words text-base text-slate-600">
                             <MessageSquareText className="mr-1.5 inline h-4 w-4 text-slate-500" />
                             <span className="font-semibold text-slate-700">Izoh:</span> {submission.comment}
                           </p>
