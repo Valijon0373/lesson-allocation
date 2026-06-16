@@ -1408,7 +1408,7 @@ function App() {
 
                   <div className="mt-3 rounded-xl bg-slate-50 p-3">
                     <p className="text-xs font-semibold uppercase text-slate-500">Kerakli hujjatlar</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       {criterion.requiredDocs.map((doc) => (
                         <span key={doc} className="rounded-full bg-white px-3 py-1 text-xs text-slate-700">
                           {doc}
@@ -1419,7 +1419,7 @@ function App() {
 
                   {isTeacherUser(currentUser) && (
                     <div className="mt-4 rounded-xl border border-slate-200 p-3">
-                      <div className="grid grid-cols-4 items-end gap-2">
+                      <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-4">
                         <div>
                           <p className="mb-1 text-center text-xs font-semibold text-slate-700">Hujjat turi</p>
                           <select

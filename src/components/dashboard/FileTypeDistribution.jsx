@@ -237,7 +237,7 @@ export default function FileTypeDistribution({ dark = false }) {
               }}
               slotProps={{ legend: { hidden: true } }}
             >
-              <PieCenterLabel>Media / Hujjat</PieCenterLabel>
+              <PieCenterLabel>H/M</PieCenterLabel>
             </PieChart>
           )}
         </Box>
