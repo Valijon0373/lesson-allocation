@@ -159,6 +159,21 @@ export default function Navbar({
             </button>
           </div>
 
+          {/* Teacher info */}
+          {currentUser && (
+            <div className="border-b border-white/10 px-5 py-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-indigo-300">
+                O'qituvchi
+              </p>
+              <p className="mt-1 text-base font-bold text-white">
+                {currentUser.fullName}
+              </p>
+              {userRoleLabel && (
+                <p className="mt-0.5 text-sm text-white/60">{userRoleLabel}</p>
+              )}
+            </div>
+          )}
+
           {/* Navigation links */}
           <nav className="flex-1 space-y-1 px-3 py-4">
             <button
