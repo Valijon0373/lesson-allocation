@@ -4,7 +4,6 @@ import { fetchAllDepartments } from "../../api/departments"
 import { fetchAllFaculties } from "../../api/faculties"
 import { fetchAllPositions } from "../../api/positions"
 import {
-  changeTeacherPassword,
   deleteTeacher,
   fetchAllTeachers,
   saveTeacher,
@@ -61,10 +60,8 @@ export default function Teachers({ dark }) {
     password: "",
   })
   const [credentialsDraft, setCredentialsDraft] = useState({
-    oldPassword: "",
     password: "",
   })
-  const [showCredentialsOldPassword, setShowCredentialsOldPassword] = useState(false)
   const [showCredentialsPassword, setShowCredentialsPassword] = useState(false)
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [searchDraft, setSearchDraft] = useState("")
@@ -146,7 +143,6 @@ export default function Teachers({ dark }) {
     departments.filter((d) => d.facultyId === facultyId)
 
   const closeModal = () => {
-    setShowCredentialsOldPassword(false)
     setShowCredentialsPassword(false)
     setShowCreatePassword(false)
     setModal({ open: false, type: null, row: null })
@@ -179,7 +175,6 @@ export default function Teachers({ dark }) {
 
   const openCredentials = (row) => {
     setCredentialsDraft({
-      oldPassword: "",
       password: "",
     })
     setModal({ open: true, type: "credentials", row })
@@ -255,21 +250,28 @@ export default function Teachers({ dark }) {
 
   const onSaveCredentials = async () => {
     const row = modal.row
-    if (!row?.login || busy) return
+    if (!row?.id || busy) return
 
-    const oldPassword = credentialsDraft.oldPassword
     const password = credentialsDraft.password.trim()
-    if (!oldPassword || !password) return
+    if (!password) return
 
     setBusy(true)
     try {
-      await changeTeacherPassword({
-        username: row.login,
-        oldPassword,
-        newPassword: password,
-      })
+      await updateTeacher(
+        row.id,
+        {
+          fio: row.fio,
+          login: row.login,
+          facultyId: row.facultyId,
+          departmentId: row.departmentId,
+          positionId: row.positionId,
+          password,
+        },
+        facultyNames,
+        departmentNames,
+      )
       closeModal()
-      showNotice("Muvaffaqiyatli o'zgartirildi")
+      showNotice("Parol muvaqqiyatli o'zgartirildi")
     } catch (err) {
       const message = err instanceof Error ? err.message : "Parolni yangilab bo'lmadi"
       showNotice(message, "danger")
@@ -662,28 +664,6 @@ export default function Teachers({ dark }) {
               <div className="space-y-2">
                 <label className="text-base font-semibold">Login</label>
                 <input value={modal.row.login} readOnly className={`w-full rounded-lg border px-4 py-3 text-base ${input}`} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-base font-semibold">Eski parol</label>
-                <div className="relative">
-                  <input
-                    type={showCredentialsOldPassword ? "text" : "password"}
-                    value={credentialsDraft.oldPassword}
-                    onChange={(e) => setCredentialsDraft((p) => ({ ...p, oldPassword: e.target.value }))}
-                    className={`w-full rounded-lg border py-3 pl-4 pr-12 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
-                    placeholder="Eski parolni kiriting"
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowCredentialsOldPassword((v) => !v)}
-                    aria-label={showCredentialsOldPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    {showCredentialsOldPassword ? <EyeOff className="h-5 w-5" strokeWidth={2} aria-hidden /> : <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />}
-                  </button>
-                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-base font-semibold">Yangi parol</label>

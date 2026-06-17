@@ -215,15 +215,14 @@ export async function updateTeacher(id, body, facultyNames, departmentNames) {
 
 /**
  * POST /api/teachers/change/password — parolni o'zgartirish uchun maxsus endpoint.
- * @param {{ username: string, oldPassword: string, newPassword: string }} body
+ * @param {{ username: string, newPassword: string }} body
  * @returns {Promise<{ success: boolean, message?: string }>}
  */
 export async function changeTeacherPassword(body) {
   const json = await apiRequest("/api/teachers/change/password", {
-    method: "POST",
+    method: "PUT",
     body: JSON.stringify({
       username: body.username,
-      oldPassword: body.oldPassword,
       newPassword: body.newPassword,
     }),
   })

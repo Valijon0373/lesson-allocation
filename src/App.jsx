@@ -910,11 +910,14 @@ function App() {
     const key = `${teacherId}_${criterionId}`
     const saved = getEvaluation(evaluations, teacherId, criterionId)
     const draft = evalDraft[key] ?? {
-      score: String(saved.score ?? ""),
+      score: saved.score > 0 ? String(saved.score) : "",
       comment: saved.comment || "",
     }
     const trimmed = String(draft.score).trim()
-    if (trimmed === "" || Number.isNaN(Number(trimmed))) return
+    if (trimmed === "" || Number.isNaN(Number(trimmed))) {
+      setEvalError("Ball qiymatini kiriting!")
+      return
+    }
 
     const score = Math.max(0, Math.min(criterion.maxScore, Number(trimmed)))
     const comment = String(draft.comment || "").trim()
@@ -1400,7 +1403,7 @@ function App() {
               const evalData = getEvaluation(evaluations, managedTeacherId, criterion.id)
               const evalDraftKey = `${managedTeacherId}_${criterion.id}`
               const evalForm = evalDraft[evalDraftKey] ?? {
-                score: String(evalData.score ?? ""),
+                score: evalData.score > 0 ? String(evalData.score) : "",
                 comment: evalData.comment || "",
               }
               const criterionSubmissions = submissions.filter(
@@ -1587,9 +1590,17 @@ function App() {
                               max={criterion.maxScore}
                               step="1"
                               value={evalForm.score}
-                              onChange={(e) =>
-                                updateEvalDraft(managedTeacherId, criterion.id, "score", e.target.value)
-                              }
+                              onChange={(e) => {
+                                const raw = e.target.value
+                                if (raw === "") {
+                                  updateEvalDraft(managedTeacherId, criterion.id, "score", "")
+                                  return
+                                }
+                                const num = Number(raw)
+                                if (!Number.isNaN(num)) {
+                                  updateEvalDraft(managedTeacherId, criterion.id, "score", String(Math.min(num, criterion.maxScore)))
+                                }
+                              }}
                               placeholder="0"
                               className="w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                             />
