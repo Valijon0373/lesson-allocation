@@ -42,6 +42,7 @@ export default function TeacherPage({
   teacherResourceInfo = [],
   resourceInfoLoading = false,
   resourceInfoError = "",
+  documentsScored = false,
 }) {
   const [searchDraft, setSearchDraft] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -190,24 +191,26 @@ export default function TeacherPage({
                     </div>
                   </div>
                 )}
-                <button
-                  type="button"
-                  disabled={excelLoading}
-                  onClick={async () => {
-                    setExcelLoading(true)
-                    try {
-                      await downloadTeachersResourceInfoExcel()
-                    } catch (err) {
-                      console.error("Excel yuklashda xatolik:", err)
-                    } finally {
-                      setExcelLoading(false)
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Download className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                  {excelLoading ? "Yuklanmoqda..." : "Excelga Yuklash"}
-                </button>
+                {!documentsScored && (
+                  <button
+                    type="button"
+                    disabled={excelLoading}
+                    onClick={async () => {
+                      setExcelLoading(true)
+                      try {
+                        await downloadTeachersResourceInfoExcel()
+                      } catch (err) {
+                        console.error("Excel yuklashda xatolik:", err)
+                      } finally {
+                        setExcelLoading(false)
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Download className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                    {excelLoading ? "Yuklanmoqda..." : "Excelga Yuklash"}
+                  </button>
+                )}
               </div>
 
               {loadError && (

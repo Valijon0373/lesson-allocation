@@ -15,7 +15,7 @@ import { fetchAllDepartments } from "./api/departments"
 import { fetchAllFaculties } from "./api/faculties"
 import { fetchAllPositions } from "./api/positions"
 import { fetchAllTeachers, fetchTeachersResourceInfo, saveTeacher } from "./api/teachers"
-import { deleteTeacherResource, fetchTeacherDocuments, saveTeacherDocument, setDocumentBall } from "./api/teacherDocuments"
+import { deleteTeacherResource, fetchIsDocumentsScored, fetchTeacherDocuments, saveTeacherDocument, setDocumentBall } from "./api/teacherDocuments"
 import { getFileDownloadUrl } from "./api/files"
 import {
   canAccessMainApp,
@@ -243,6 +243,7 @@ function App() {
   const [teacherResourceInfo, setTeacherResourceInfo] = useState(/** @type {import("./api/teachers").TeacherResourceInfo[]} */ ([]))
   const [resourceInfoLoading, setResourceInfoLoading] = useState(false)
   const [resourceInfoError, setResourceInfoError] = useState("")
+  const [documentsScored, setDocumentsScored] = useState(false)
   const [evalDraft, setEvalDraft] = useState({})
 
   const loadCriteriaFromApi = useCallback(async () => {
@@ -299,6 +300,16 @@ function App() {
       setTeacherLoadError(error instanceof Error ? error.message : "O'qituvchilarni yuklab bo'lmadi")
     } finally {
       setTeachersLoading(false)
+    }
+  }, [])
+
+  const loadDocumentsScoredStatus = useCallback(async () => {
+    if (!getAccessToken()) return
+    try {
+      const scored = await fetchIsDocumentsScored()
+      setDocumentsScored(scored)
+    } catch {
+      setDocumentsScored(false)
     }
   }, [])
 
@@ -363,12 +374,13 @@ function App() {
     loadReferenceDataFromApi()
   }, [loadTeachersFromApi, loadReferenceDataFromApi, authSessionKey])
 
-  // Komissiya o'qituvchilar sahifasiga o'tganda resource info yuklanadi
+  // Komissiya o'qituvchilar sahifasiga o'tganda resource info va scored status yuklanadi
   useEffect(() => {
     if (activePage === "oqituvchilar" && currentUser?.role === "expert") {
       loadTeacherResourceInfo()
+      loadDocumentsScoredStatus()
     }
-  }, [activePage, currentUser, loadTeacherResourceInfo])
+  }, [activePage, currentUser, loadTeacherResourceInfo, loadDocumentsScoredStatus])
 
   useEffect(() => {
     loadCriteriaFromApi()
@@ -1305,6 +1317,7 @@ function App() {
             teacherResourceInfo={teacherResourceInfo}
             resourceInfoLoading={resourceInfoLoading}
             resourceInfoError={resourceInfoError}
+            documentsScored={documentsScored}
             onSelectTeacher={(teacher) => {
               setViewingTeacher(teacher)
               setSelectedTeacherId(teacher.id)
@@ -1434,7 +1447,15 @@ function App() {
                     </div>
                   </div>
 
-                  {isTeacherUser(currentUser) && (
+                  {isTeacherUser(currentUser) && evalData.status === "approved" && evalData.scoredBy && (
+                    <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                      <p className="text-sm font-medium text-emerald-700">
+                        ✅ Bu mezon baxolangan — hujjat <span className="text-red-600 font-semibold">Yuklash</span> va <span className="text-red-600 font-semibold">O'chirish</span> mumkin emas! 
+                      </p>
+                    </div>
+                  )}
+
+                  {isTeacherUser(currentUser) && !(evalData.status === "approved" && evalData.scoredBy) && (
                     <div className="mt-4 rounded-xl border border-slate-200 p-3">
                       <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-4">
                         <div>

@@ -292,6 +292,31 @@ export async function setDocumentBall(body) {
 }
 
 /**
+ * Checks if /api/documents/all returns documents with status "SCORED".
+ * Agar barcha hujjatlar statusi "SCORED" bo'lsa true qaytaradi.
+ * @returns {Promise<boolean>}
+ */
+export async function fetchIsDocumentsScored() {
+  try {
+    const json = await apiRequest("/api/documents/all")
+    const data = unwrapPayload(json)
+    const list = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : []
+
+    if (list.length === 0) return false
+
+    const allScored = list.every((item) => {
+      if (!item || typeof item !== "object") return false
+      const status = String(item.status ?? "").toUpperCase()
+      return status === "SCORED"
+    })
+
+    return allScored
+  } catch {
+    return false
+  }
+}
+
+/**
  * GET /api/documents/all — barcha teacher-document resurslarini olish (admin dashboard uchun).
  * @returns {Promise<number>} jami yuklangan fayllar soni
  */
