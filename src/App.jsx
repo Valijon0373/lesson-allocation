@@ -382,16 +382,15 @@ function App() {
 
     let cancelled = false
     const restoreSession = async () => {
-      let matched = findTeacherByLogin(teachers, username)
-      if (!matched) {
-        try {
-          const list = await fetchAllTeachers()
-          const mapped = mapTeachersFromApi(list)
-          matched = findTeacherByLogin(mapped, username)
-          if (!cancelled && mapped.length) setTeachers(mapped)
-        } catch {
-          // fetchAllTeachers muvaffaqiyatsiz bo'lsa ham session tiklashda davom etamiz
-        }
+      // Har doim API'dan o'qituvchilarni olamiz, chunki teachers state hali bo'sh bo'lishi mumkin
+      let matched = null
+      try {
+        const list = await fetchAllTeachers()
+        const mapped = mapTeachersFromApi(list)
+        matched = findTeacherByLogin(mapped, username)
+        if (!cancelled && mapped.length) setTeachers(mapped)
+      } catch {
+        // fetchAllTeachers muvaffaqiyatsiz bo'lsa ham session tiklashda davom etamiz
       }
 
       let tokenRoles = parseRolesFromAccessToken(getAccessToken())
@@ -457,7 +456,9 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [currentUser, teachers])
+    // teachers dependency'siz — teachers o'zgarishi effectni qayta ishga tushirib,
+    // session tiklashni bekor qilmasligi uchun.
+  }, [currentUser])
 
   useEffect(() => {
     if (!loginOpen) setLoginPasswordVisible(false)
