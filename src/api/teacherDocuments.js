@@ -149,6 +149,7 @@ function extractTeacherDocuments(payload, teacherId) {
         score: hasScore ? scoredBall : 0,
         comment: expertComment,
         status: hasScore || scoredTime ? "approved" : "pending",
+        backendStatus: String(doc.status ?? "").toUpperCase(),
         scoredBy: String(scoredBy ?? ""),
       }
     }

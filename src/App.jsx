@@ -93,7 +93,7 @@ function formatFileSize(size) {
 }
 
 function getEvaluation(evaluations, teacherId, criterionId) {
-  return evaluations[`${teacherId}_${criterionId}`] ?? { score: 0, comment: "", status: "pending", scoredBy: "" }
+  return evaluations[`${teacherId}_${criterionId}`] ?? { score: 0, comment: "", status: "pending", backendStatus: "", scoredBy: "" }
 }
 
 function mergeTeacherEvaluations(teacherId, evaluationsByCriterion, prev) {
@@ -1447,7 +1447,7 @@ function App() {
                     </div>
                   </div>
 
-                  {isTeacherUser(currentUser) && evalData.status === "approved" && evalData.scoredBy && (
+                  {isTeacherUser(currentUser) && evalData.backendStatus === "SCORED" && (
                     <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
                       <p className="text-sm font-medium text-emerald-700">
                         ✅ Bu mezon baxolangan — hujjat <span className="text-red-600 font-semibold">Yuklash</span> va <span className="text-red-600 font-semibold">O'chirish</span> mumkin emas! 
@@ -1455,7 +1455,7 @@ function App() {
                     </div>
                   )}
 
-                  {isTeacherUser(currentUser) && !(evalData.status === "approved" && evalData.scoredBy) && (
+                  {isTeacherUser(currentUser) && evalData.backendStatus !== "SCORED" && (
                     <div className="mt-4 rounded-xl border border-slate-200 p-3">
                       <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-4">
                         <div>
