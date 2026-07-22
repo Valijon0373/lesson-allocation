@@ -28,17 +28,7 @@ export default function Navbar({
             {currentUser ? (
               <>
                 <div className="hidden sm:flex sm:items-center sm:gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onNavigate("dashboard")}
-                    className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
-                      activePage === "dashboard"
-                        ? "bg-white text-indigo-700 shadow-md shadow-slate-900/15"
-                        : "border border-white/25 bg-slate-700/50 text-white/90"
-                    }`}
-                  >
-                    Statistika
-                  </button>
+
                   {currentUser?.role === "expert" && (
                     <button
                       type="button"
@@ -52,19 +42,7 @@ export default function Navbar({
                       O'qituvchilar
                     </button>
                   )}
-                  {currentUser?.role !== "expert" && (
-                    <button
-                      type="button"
-                      onClick={() => onNavigate("mezonlar")}
-                      className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
-                        activePage === "mezonlar"
-                          ? "bg-white text-indigo-700 shadow-md shadow-slate-900/15"
-                          : "border border-white/25 bg-slate-700/50 text-white/90"
-                      }`}
-                    >
-                      Mezonlar
-                    </button>
-                  )}
+
                 </div>
 
                 {/* Burger button - visible only on mobile */}
@@ -176,20 +154,7 @@ export default function Navbar({
 
           {/* Navigation links */}
           <nav className="flex-1 space-y-1 px-3 py-4">
-            <button
-              type="button"
-              onClick={() => handleNavigate("dashboard")}
-              className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors ${
-                activePage === "dashboard"
-                  ? "bg-white/15 text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-base">
-                📊
-              </span>
-              Statistika
-            </button>
+
 
             {currentUser?.role === "expert" && (
               <button
@@ -208,22 +173,7 @@ export default function Navbar({
               </button>
             )}
 
-            {currentUser?.role !== "expert" && (
-              <button
-                type="button"
-                onClick={() => handleNavigate("mezonlar")}
-                className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors ${
-                  activePage === "mezonlar"
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-base">
-                  📋
-                </span>
-                Mezonlar
-              </button>
-            )}
+
           </nav>
 
           {/* Logout at bottom */}

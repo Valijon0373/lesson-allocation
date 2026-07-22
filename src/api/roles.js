@@ -100,7 +100,7 @@ export function resolveMainAppRole({ user, matchedTeacher, tokenRoles = [] }) {
   }
 
   const uiRole = String(user.role ?? "")
-  if (uiRole === "Admin") return "admin"
+  if (uiRole === "Admin" || uiRole === "System Admin") return "admin"
   if (uiRole === "Komissiya") return "expert"
 
   const roles = [
@@ -127,7 +127,7 @@ export function resolveMainAppRole({ user, matchedTeacher, tokenRoles = [] }) {
  */
 export function canAccessMainApp({ user, matchedTeacher, tokenRoles = [] }) {
   if (matchedTeacher) return true
-  if (user?.role === "Komissiya" || user?.role === "Admin") return true
+  if (user?.role === "Komissiya" || user?.role === "Admin" || user?.role === "System Admin") return true
   if (user && isStaffApiRoles([...extractApiRoles(user), ...(user.roles ?? [])])) return true
   if (isStaffApiRoles(tokenRoles) || isExpertApiRoles(tokenRoles)) return true
   return false

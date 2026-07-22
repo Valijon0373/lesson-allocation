@@ -283,12 +283,14 @@ export default function Teachers({ dark }) {
   const onSaveCreate = async () => {
     if (busy) return
     const fio = createDraft.fio.trim()
-    const login = createDraft.login.trim()
-    const password = createDraft.password.trim()
     const facultyId = createDraft.facultyId
     const departmentId = createDraft.departmentId
     const positionId = createDraft.positionId
-    if (!fio || !login || !password || !facultyId || !departmentId || !positionId) return
+    if (!fio || !facultyId || !departmentId || !positionId) return
+
+    // Tizim uchun avtomatik login va parol (fio orqali yoki vaqt orqali)
+    const login = "t_" + Date.now()
+    const password = "123"
 
     setBusy(true)
     try {
@@ -485,7 +487,7 @@ export default function Teachers({ dark }) {
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Kafedra</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Lavozim</th>
                 <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>F.I.O</th>
-                <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Login</th>
+                <th className={`border px-4 py-3 text-left text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Soati</th>
                 <th className={`border px-4 py-3 text-right text-sm font-bold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>Amallar</th>
               </tr>
             </thead>
@@ -502,7 +504,9 @@ export default function Teachers({ dark }) {
                   </td>
                   <td className={`border px-4 py-3 text-sm font-semibold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>{row.fio}</td>
                   <td className={`border px-4 py-3 text-sm ${dark ? "border-slate-700" : "border-slate-200"}`}>
-                    <span className={`font-bold ${title}`}>{row.login}</span>
+                    <span className="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                      100 soat
+                    </span>
                   </td>
                   <td className={`border px-4 py-3 text-center ${dark ? "border-slate-700" : "border-slate-200"}`}>
                     <div className="relative inline-flex">
@@ -524,19 +528,6 @@ export default function Teachers({ dark }) {
                             dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
                           }`}
                         >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenActionsFor(null)
-                              openCredentials(row)
-                            }}
-                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                              dark ? "text-amber-400 hover:bg-slate-700/80" : "text-amber-700 hover:bg-amber-50"
-                            }`}
-                          >
-                            <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                            Parolni o'zgartirish
-                          </button>
                           <button
                             type="button"
                             onClick={() => {
@@ -611,7 +602,6 @@ export default function Teachers({ dark }) {
               <div><p className={`text-xs font-semibold ${meta}`}>Kafedra:</p><p className="mt-1 font-semibold">{modal.row.kafedra}</p></div>
               <div><p className={`text-xs font-semibold ${meta}`}>Lavozim:</p><p className="mt-1 font-semibold">{positionNames[modal.row.positionId ?? ""] ?? "-"}</p></div>
               <div><p className={`text-xs font-semibold ${meta}`}>F.I.O:</p><p className="mt-1 font-semibold">{modal.row.fio}</p></div>
-              <div><p className={`text-xs font-semibold ${meta}`}>Login:</p><p className="mt-1 font-semibold">{modal.row.login}</p></div>
             </div>
           </div>
         )}
@@ -708,30 +698,6 @@ export default function Teachers({ dark }) {
               <div className="space-y-2"><label className="text-base font-semibold">Kafedra</label>{renderDepartmentSelect(createDraft.facultyId, createDraft.departmentId, (departmentId) => setCreateDraft((p) => ({ ...p, departmentId })))}</div>
               <div className="space-y-2"><label className="text-base font-semibold">Lavozim</label>{renderPositionSelect(createDraft.positionId, (positionId) => setCreateDraft((p) => ({ ...p, positionId })))}</div>
               <div className="space-y-2"><label className="text-base font-semibold">F.I.O</label><input value={createDraft.fio} onChange={(e) => setCreateDraft((p) => ({ ...p, fio: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Masalan: F.I.O" /></div>
-              <div className="space-y-2"><label className="text-base font-semibold">Login</label><input value={createDraft.login} onChange={(e) => setCreateDraft((p) => ({ ...p, login: e.target.value }))} disabled={busy} className={`w-full rounded-lg border px-4 py-3 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`} placeholder="Teacher.login" /></div>
-              <div className="space-y-2">
-                <label className="text-base font-semibold">Parol</label>
-                <div className="relative">
-                  <input
-                    type={showCreatePassword ? "text" : "password"}
-                    value={createDraft.password}
-                    onChange={(e) => setCreateDraft((p) => ({ ...p, password: e.target.value }))}
-                    disabled={busy}
-                    className={`w-full rounded-lg border py-3 pl-4 pr-12 text-base outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
-                    placeholder="Parol kiriting"
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowCreatePassword((v) => !v)}
-                    aria-label={showCreatePassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    {showCreatePassword ? <EyeOff className="h-5 w-5" strokeWidth={2} aria-hidden /> : <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />}
-                  </button>
-                </div>
-              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button type="button" onClick={onSaveCreate} disabled={busy} className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60">Qo'shish</button>

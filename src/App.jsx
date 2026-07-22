@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Commet } from "react-loading-indicators"
-import { ArrowLeft, Download, Eye, EyeOff, MessageSquareText, Trash2, X } from "lucide-react"
+import { ArrowLeft, Download, Eye, EyeOff, MessageSquareText, Trash2, X, User, Lock, Info } from "lucide-react"
 import bgVideo from "./assets/bg.mp4"
 import logoImg from "./assets/logo.jpg"
 import Footer from "./components/Footer.jsx"
@@ -8,6 +8,9 @@ import Rating from "./components/Rating.jsx"
 import HomeHeroBrand from "./components/HomeHeroBrand.jsx"
 import Navbar from "./components/Navbar.jsx"
 import TeacherPage from "./components/TeachersPage.jsx"
+import WorkloadDashboard from "./components/dashboard/WorkloadDashboard.jsx"
+import TeachersWorkload from "./components/dashboard/TeachersWorkload.jsx"
+import AdminLayout from "./components/dashboard/AdminLayout.jsx"
 import { fetchAllCriterionRows } from "./api/categories"
 import { fetchAllSections } from "./api/criteriaApi"
 import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens } from "./api/auth"
@@ -203,8 +206,10 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false)
   const [loginForm, setLoginForm] = useState({ login: "", password: "" })
   const [loginError, setLoginError] = useState("")
-  const [loginLoading, setLoginLoading] = useState(false)
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false)
+  const [loginLoading, setLoginLoading] = useState(false)
+  
+  const [adminActiveTab, setAdminActiveTab] = useState("dashboard")
   const [newTeacherPasswordVisible, setNewTeacherPasswordVisible] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState("")
@@ -969,293 +974,191 @@ function App() {
     }
   }
 
-  const renderDashboard = () => (
-    <section className="space-y-6">
-      <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-center text-white shadow-xl">
-        <p className="text-sm uppercase tracking-wider text-indigo-100">Statistika</p>
-        <h1 className="mt-2 text-3xl font-bold">Nizom monitoring platformasi</h1>
-        <p className="mx-auto mt-2 max-w-3xl text-indigo-50">
-          Jami 110 ball bo'yicha progress, hujjatlar holati{isTeacherUser(currentUser) ? "." : " va reyting."}
-        </p>
-      </header>
+  const renderDashboard = () => {
+    return (
+      <section className="space-y-6">
+        {/* Sahifa bo'shatildi, foydalanuvchi ko'rsatmasi kutilmoqda */}
+      </section>
+    )
+  }
 
-      {isTeacherUser(currentUser) && activePage === "dashboard" && (
-        <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-          Hujjat yuklash uchun yuqoridagi{" "}
-          <button
-            type="button"
-            onClick={() => setActivePage("mezonlar")}
-            className="font-semibold underline underline-offset-2"
-          >
-            Mezonlar
-          </button>{" "}
-          bo'limiga o'ting.
+  if (!currentUser) {
+    return (
+      <div className="flex min-h-screen bg-white text-slate-800 font-sans">
+        {/* Left Column */}
+        <div className="hidden lg:flex flex-col justify-between w-[55%] p-12 text-white relative overflow-hidden bg-transparent">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            src={bgVideo}
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
+            <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 p-10 lg:p-12 rounded-[2rem] w-full max-w-2xl shadow-2xl flex flex-col items-center justify-center">
+              <h1 className="text-5xl lg:text-6xl font-bold leading-[1.2] lg:leading-[1.1] mb-6 whitespace-nowrap text-center">
+                <span className="text-white drop-shadow-md">Dars Yuklamasini</span> <br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-indigo-300 drop-shadow-sm">Boshqarish Tizimi</span>
+              </h1>
+              <p className="text-gray-200 text-lg max-w-[480px] leading-relaxed font-light mx-auto drop-shadow-md whitespace-normal text-center">
+                O'qituvchilar, kafedra mudirlari va dekanat uchun mo'ljallangan zamonaviy, tezkor va qulay platforma. Ta'lim jarayonlarini oson boshqaring.
+              </p>
+            </div>
+          </div>
+          
+          <div className="relative z-10 text-center">
+            <span className="inline-block bg-slate-900/40 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/10 text-[13px] text-gray-300 font-medium shadow-xl">
+              &copy; {new Date().getFullYear()} Urganch Davlat Pedagogika Instituti
+            </span>
+          </div>
         </div>
-      )}
 
-      {currentUser && (
-        <>
-          {!isTeacherUser(currentUser) && currentUser?.role !== "expert" && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <label className="text-sm font-medium text-slate-700">O'qituvchini tanlang</label>
-              <select
-                value={selectedTeacherId}
-                onChange={(e) => setSelectedTeacherId(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                {teachers.map((teacher) => (
-                  <option key={teacher.id} value={teacher.id}>
-                    {teacher.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-
-          {currentUser?.role !== "expert" && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="mb-2 text-sm font-medium text-slate-600">
-              Ko'rsatkich ({activeTeacher?.fullName})
-            </p>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full bg-indigo-600" style={{ width: `${myPercent}%` }} />
-            </div>
-          </div>
-          )}
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">Bo'limlar bo'yicha grafik</h3>
-              <div className="mt-3 space-y-3">
-                {Object.entries(categoryMaxScore).map(([category, max]) => {
-                  const score = myCategoryScores[category] ?? 0
-                  const percent = Math.round((score / max) * 100)
-                  return (
-                    <div key={category}>
-                      <div className="mb-1 flex justify-between text-xs text-slate-600">
-                        <span>{category}</span>
-                        <span>{score}/{max}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                        <div className="h-full bg-violet-600" style={{ width: `${percent}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
+        {/* Right Column */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 relative bg-slate-50/50">
+          <div className="w-full max-w-[420px] rounded-3xl bg-white pb-10 pt-10 shadow-2xl shadow-indigo-900/5 ring-1 ring-slate-200/50 relative overflow-hidden">
+            {/* Top gradient border */}
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-500 to-purple-500" />
+            
+            <div className="flex flex-col items-center text-center px-8">
+              <div className="rounded-full bg-white p-2 shadow-[0_0_20px_rgba(59,130,246,0.15)] mb-2">
+                <img
+                  src={logoImg}
+                  alt=""
+                  className="h-[72px] w-[72px] rounded-full object-cover"
+                />
               </div>
-            </article>
+              <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
+                Xush kelibsiz
+              </h2>
+              <p className="mt-2 text-[15px] font-medium text-slate-500">Davom etish uchun tizimga kiring</p>
+            </div>
 
-            {!isTeacherUser(currentUser) ? (
-              currentUser?.role === "expert" ? (
-                <Rating />
-              ) : (
-                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <h3 className="text-lg font-semibold text-slate-900">Reyting</h3>
-                  <div className="mt-3 max-h-96 space-y-2 overflow-y-auto">
-                    {ranking.map((item, index) => (
-                      <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                        <p className="text-sm text-slate-700">
-                          {index + 1}. {item.fullName}
-                        </p>
-                        <p className="text-sm font-bold text-indigo-700">{item.total} ball</p>
-                      </div>
-                    ))}
+            <form className="mt-8 space-y-6 px-8" onSubmit={handleLogin}>
+              <div className="space-y-2 text-left group">
+                <label htmlFor="login-field" className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                  LOGIN
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                    <User className="h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                   </div>
-                </article>
-              )
-            ) : (
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
-                <div className="mt-3 max-h-60 space-y-2 overflow-y-auto">
-                  {recentUploads.map((upload) => {
-                    const criterion = criteriaList.find((c) => c.id === upload.criterionId)
-                    return (
-                      <div key={upload.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                        <p className="font-medium text-slate-800">{upload.fileName}</p>
-                        <p className="text-slate-500">{criterion?.title}</p>
-                      </div>
-                    )
-                  })}
-                  {recentUploads.length === 0 && (
-                    <p className="text-sm text-slate-500">Hozircha yuklangan fayl yo'q.</p>
-                  )}
+                  <input
+                    id="login-field"
+                    autoComplete="username"
+                    value={loginForm.login}
+                    onChange={(e) => setLoginForm((prev) => ({ ...prev, login: e.target.value }))}
+                    placeholder="Loginni kiriting"
+                    className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 focus:bg-white hover:border-slate-300"
+                  />
                 </div>
-              </article>
-            )}
-          </div>
-
-          {isTeacherUser(currentUser) && (
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">Qo'shilgan bo'lim va mezonlar</h3>
-              <div className="mt-3 space-y-4">
-                {Object.entries(
-                  visibleCriteria.reduce((acc, item) => {
-                    if (!acc[item.category]) acc[item.category] = []
-                    acc[item.category].push(item)
-                    return acc
-                  }, {}),
-                ).map(([category, items]) => (
-                  <div key={category} className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-sm font-semibold text-slate-800">{category}</p>
-                    <div className="mt-2 space-y-1">
-                      {items.map((item, idx) => (
-                        <p key={item.id} className="text-sm text-slate-600">
-                          {idx + 1}. {item.title} ({item.maxScore} ball)
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {visibleCriteria.length === 0 && (
-                  <p className="text-sm text-slate-500">Hozircha qo'shilgan bo'lim/mezon topilmadi.</p>
-                )}
               </div>
-            </article>
-          )}
-
-          {currentUser?.role !== "teacher" && currentUser?.role !== "expert" && (
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">Oxirgi yuklangan fayllar</h3>
-              <div className="mt-3 max-h-60 space-y-2 overflow-y-auto">
-                {recentUploads.map((upload) => {
-                  const criterion = criteriaList.find((c) => c.id === upload.criterionId)
-                  return (
-                    <div key={upload.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                      <p className="font-medium text-slate-800">{upload.fileName}</p>
-                      <p className="text-slate-500">{criterion?.title}</p>
-                    </div>
-                  )
-                })}
-                {recentUploads.length === 0 && (
-                  <p className="text-sm text-slate-500">Hozircha yuklangan fayl yo'q.</p>
-                )}
-              </div>
-            </article>
-          )}
-
-          {currentUser?.role === "admin" && (
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">O'qituvchi login/parolini berish</h3>
-              <form onSubmit={createTeacherAccount} className="mt-3 grid gap-3 md:grid-cols-2">
-                <label className="text-sm">
-                  <span className="mb-1 block font-medium text-slate-700">Kafedra</span>
-                  <select
-                    value={newTeacherForm.departmentId}
-                    onChange={(e) =>
-                      setNewTeacherForm((prev) => ({ ...prev, departmentId: e.target.value, positionId: "" }))
-                    }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                    disabled={departmentsLoading || departments.length === 0}
-                  >
-                    {departmentsLoading && <option value="">Kafedralar yuklanmoqda...</option>}
-                    {!departmentsLoading && departments.length === 0 && <option value="">Kafedra topilmadi</option>}
-                    {departments.map((department) => (
-                      <option key={department.id} value={department.id}>
-                        {department.name}
-                      </option>
-                    ))}
-                  </select>
+              <div className="space-y-2 text-left group">
+                <label htmlFor="password-field" className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                  PAROL
                 </label>
-                <label className="text-sm">
-                  <span className="mb-1 block font-medium text-slate-700">Lavozim</span>
-                  <select
-                    value={newTeacherForm.positionId}
-                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, positionId: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                    disabled={!newTeacherForm.departmentId || positionsLoading || positions.length === 0}
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                    <Lock className="h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                  </div>
+                  <input
+                    id="password-field"
+                    autoComplete="current-password"
+                    type={loginPasswordVisible ? "text" : "password"}
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))}
+                    placeholder="Parolni kiriting"
+                    className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-11 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 focus:bg-white hover:border-slate-300"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setLoginPasswordVisible((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label={loginPasswordVisible ? "Parolni yashirish" : "Parolni ko'rsatish"}
                   >
-                    {!newTeacherForm.departmentId && <option value="">Avval kafedrani tanlang</option>}
-                    {newTeacherForm.departmentId && positionsLoading && <option value="">Lavozimlar yuklanmoqda...</option>}
-                    {newTeacherForm.departmentId && !positionsLoading && positions.length === 0 && (
-                      <option value="">Lavozim topilmadi</option>
+                    {loginPasswordVisible ? (
+                      <EyeOff className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    ) : (
+                      <Eye className="h-4 w-4" strokeWidth={2} aria-hidden />
                     )}
-                    {positions.map((position) => (
-                      <option key={position.id} value={position.id}>
-                        {position.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-sm md:col-span-2">
-                  <span className="mb-1 block font-medium text-slate-700">F.I.O</span>
-                  <input
-                    value={newTeacherForm.fullName}
-                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                    placeholder="O'qituvchi F.I.O"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className="mb-1 block font-medium text-slate-700">Login</span>
-                  <input
-                    value={newTeacherForm.login}
-                    onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, login: e.target.value }))}
-                    placeholder="Login"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className="mb-1 block font-medium text-slate-700">Parol</span>
-                  <div className="relative">
-                    <input
-                      type={newTeacherPasswordVisible ? "text" : "password"}
-                      value={newTeacherForm.password}
-                      onChange={(e) => setNewTeacherForm((prev) => ({ ...prev, password: e.target.value }))}
-                      placeholder="Parol"
-                      className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-10 text-sm"
-                    />
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => setNewTeacherPasswordVisible((v) => !v)}
-                      aria-label={newTeacherPasswordVisible ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                    >
-                      {newTeacherPasswordVisible ? <EyeOff className="h-4 w-4" strokeWidth={1.5} aria-hidden /> : <Eye className="h-4 w-4" strokeWidth={1.5} aria-hidden />}
-                    </button>
+                  </button>
+                </div>
+              </div>
+              {loginError && (
+                <p className="rounded-xl bg-rose-50 px-4 py-3 text-[13px] text-rose-700 ring-1 ring-rose-100">{loginError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full rounded-xl bg-blue-600 py-3.5 text-[15px] font-bold text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-700 hover:shadow-blue-600/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loginLoading ? "Tekshirilmoqda..." : "Tizimga kirish"}
+              </button>
+            </form>
+
+            <div className="mt-8 px-8">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-indigo-800">
+                  <Info className="h-4 w-4" />
+                  <span className="text-[13px] font-medium">Demo hisoblar</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between rounded-xl border border-white bg-white px-4 py-2.5 shadow-sm">
+                    <span className="text-[13px] text-slate-500">Admin</span>
+                    <span className="font-mono text-[11px] font-bold text-blue-600 tracking-tight">admin / admin123</span>
                   </div>
-                </label>
-                <button
-                  type="submit"
-                  disabled={
-                    departmentsLoading ||
-                    departments.length === 0 ||
-                    !newTeacherForm.departmentId ||
-                    positionsLoading ||
-                    positions.length === 0
-                  }
-                  className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white md:col-span-2"
-                >
-                  O'qituvchini qo'shish
-                </button>
-              </form>
-              {departmentsError && (
-                <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 ring-1 ring-amber-100">
-                  Kafedralarni API dan olishda xatolik: {departmentsError}
-                </p>
-              )}
-              {positionsError && (
-                <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 ring-1 ring-amber-100">
-                  Lavozimlarni API dan olishda xatolik: {positionsError}
-                </p>
-              )}
-              {newTeacherError && (
-                <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-100">
-                  {newTeacherError}
-                </p>
-              )}
-              {teacherLoadError && (
-                <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 ring-1 ring-amber-100">
-                  O'qituvchilarni API dan olishda xatolik: {teacherLoadError}
-                </p>
-              )}
-            </article>
-          )}
-        </>
-      )}
-    </section>
-  )
+                  <div className="flex items-center justify-between rounded-xl border border-white bg-white px-4 py-2.5 shadow-sm">
+                    <span className="text-[13px] text-slate-500">Dekanat</span>
+                    <span className="font-mono text-[11px] font-bold text-blue-600 tracking-tight">dekan / dekan123</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Loading Overlay */}
+        {(pageLoading || resourceInfoLoading) && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-10 py-8 shadow-2xl">
+              <Commet color="#4f46e5" size="medium" text="Kuting..." textColor="#0a4ff2" />
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (currentUser?.role === "admin") {
+    return (
+      <AdminLayout activeTab={adminActiveTab} onTabChange={setAdminActiveTab}>
+        {adminActiveTab === "dashboard" && (
+          <WorkloadDashboard
+            currentUser={currentUser}
+            onLogout={() => {
+              clearAuthTokens()
+              setCurrentUser(null)
+              setCriteriaLoadError("")
+              setCriteriaList(DEFAULT_CRITERIA)
+              setAuthSessionKey((key) => key + 1)
+            }}
+          />
+        )}
+        {adminActiveTab === "oqituvchilar" && (
+          <TeachersWorkload />
+        )}
+        {adminActiveTab === "fanlar" && (
+          <div className="flex items-center justify-center min-h-screen text-slate-500 font-medium">Fanlar ro'yxati (Tez kunda...)</div>
+        )}
+        {adminActiveTab === "soatlar" && (
+          <div className="flex items-center justify-center min-h-screen text-slate-500 font-medium">Soatlar va taqsimot (Tez kunda...)</div>
+        )}
+      </AdminLayout>
+    )
+  }
 
   return (
     <main className="relative flex min-h-screen flex-col text-slate-800">
@@ -1297,13 +1200,7 @@ function App() {
             activePage === "oqituvchilar" ? "px-0" : "max-w-7xl px-4 sm:px-6 lg:px-8"
           }`}
         >
-        {!currentUser ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-4 sm:py-6">
-            <section className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-6 overflow-hidden rounded-3xl border border-white/15 bg-white/10 px-6 py-8 shadow-2xl shadow-slate-950/40 backdrop-blur-md sm:px-8 sm:py-10 md:gap-8 md:py-11">
-              <HomeHeroBrand />
-            </section>
-          </div>
-        ) : activePage === "dashboard" ? (
+        {activePage === "dashboard" ? (
           renderDashboard()
         ) : activePage === "oqituvchilar" ? (
           <TeacherPage
@@ -1326,13 +1223,7 @@ function App() {
           />
         ) : (
           <section className="space-y-6">
-            <header className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-center text-white shadow-xl">
-              <h1 className="text-3xl font-bold">Mezonlar bo'limi</h1>
-              <p className="mx-auto mt-2 max-w-3xl text-indigo-100">
-                Har bir mezon uchun tavsif, maksimal ball, kerakli hujjatlar, yuklash va ekspert izohi.
-              </p>
-            </header>
-            {criteriaLoadError && (
+            {/* Header removed */}            {criteriaLoadError && (
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                 Mezonlarni API dan olishda xatolik: {criteriaLoadError}
               </p>

@@ -179,14 +179,21 @@ export function mapUserFromLoginBody(raw, username) {
 
 /** @returns {Promise<UserRow[]>} */
 export async function fetchAllUsers() {
-  const json = await apiRequest("/api/users/all")
-  const list = mapUserList(json)
-  // O'chirilgan foydalanuvchilar UI'da umuman ko'rinmasin.
-  return list.filter((u) => {
-    const s = String(u.status ?? "").toUpperCase()
-    if (!s) return true
-    return !(s.includes("DELETED") || s.includes("DELETE"))
-  })
+  return [
+    { id: "0", fio: "Tizim Administratori", login: "admin", izoh: "Asosiy tizim admini", role: "System Admin", roles: ["System Admin"], permissions: [], status: "ACTIVE" },
+    { id: "01", fio: "O'quv ishlari bo'yicha prorektor", login: "prorektor_oquv", izoh: "O'quv ishlari bo'yicha prorektor", role: "O‘quv ishlari bo‘yicha prorektor", roles: ["O‘quv ishlari bo‘yicha prorektor"], permissions: [], status: "ACTIVE" },
+    { id: "02", fio: "Ta'lim sifatini ta'minlash bo'limi", login: "talim_sifati", izoh: "Ta'lim sifati", role: "Ta'lim sifati", roles: ["Ta'lim sifati"], permissions: [], status: "ACTIVE" },
+    { id: "1", fio: "Fizika-matematika fakulteti dekani", login: "dekan_fizmat", izoh: "Fizika-matematika fakulteti", role: "Fakultet dekani", roles: ["Fakultet dekani"], permissions: [], status: "ACTIVE" },
+    { id: "2", fio: "Fizika-matematika fakulteti dekan o'rinbosari", login: "zam_fizmat", izoh: "Fizika-matematika fakulteti", role: "Dekan o'rinbosari", roles: ["Dekan o'rinbosari"], permissions: [], status: "ACTIVE" },
+    { id: "3", fio: "Tarix fakulteti dekani", login: "dekan_tarix", izoh: "Tarix fakulteti", role: "Fakultet dekani", roles: ["Fakultet dekani"], permissions: [], status: "ACTIVE" },
+    { id: "4", fio: "Tarix fakulteti dekan o'rinbosari", login: "zam_tarix", izoh: "Tarix fakulteti", role: "Dekan o'rinbosari", roles: ["Dekan o'rinbosari"], permissions: [], status: "ACTIVE" },
+    { id: "5", fio: "Filologiya fakulteti dekani", login: "dekan_filol", izoh: "Filologiya fakulteti", role: "Fakultet dekani", roles: ["Fakultet dekani"], permissions: [], status: "ACTIVE" },
+    { id: "6", fio: "Filologiya fakulteti dekan o'rinbosari", login: "zam_filol", izoh: "Filologiya fakulteti", role: "Dekan o'rinbosari", roles: ["Dekan o'rinbosari"], permissions: [], status: "ACTIVE" },
+    { id: "7", fio: "Pedagogika fakulteti dekani", login: "dekan_ped", izoh: "Pedagogika fakulteti", role: "Fakultet dekani", roles: ["Fakultet dekani"], permissions: [], status: "ACTIVE" },
+    { id: "8", fio: "Pedagogika fakulteti dekan o'rinbosari", login: "zam_ped", izoh: "Pedagogika fakulteti", role: "Dekan o'rinbosari", roles: ["Dekan o'rinbosari"], permissions: [], status: "ACTIVE" },
+    { id: "9", fio: "Tabiiy fanlar fakulteti dekani", login: "dekan_tabiiy", izoh: "Tabiiy fanlar fakulteti", role: "Fakultet dekani", roles: ["Fakultet dekani"], permissions: [], status: "ACTIVE" },
+    { id: "10", fio: "Tabiiy fanlar fakulteti dekan o'rinbosari", login: "zam_tabiiy", izoh: "Tabiiy fanlar fakulteti", role: "Dekan o'rinbosari", roles: ["Dekan o'rinbosari"], permissions: [], status: "ACTIVE" },
+  ]
 }
 
 /**

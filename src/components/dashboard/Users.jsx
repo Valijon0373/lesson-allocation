@@ -25,8 +25,23 @@ import {
 } from "../../data/permissionLabels"
 
 const TEAL_BG = "bg-teal-500"
-const ROLES = ["Admin", "Foydalanuvchi", "Komissiya"]
-const EDITABLE_PERMISSION_ROLES = new Set(["Foydalanuvchi", "Komissiya"])
+const ROLES = [
+  "System Admin",
+  "Fakultet dekani",
+  "Dekan o'rinbosari",
+  "Ta'lim sifati",
+  "O‘quv ishlari bo‘yicha prorektor",
+  "Foydalanuvchi",
+  "Komissiya"
+]
+const EDITABLE_PERMISSION_ROLES = new Set([
+  "Fakultet dekani",
+  "Dekan o'rinbosari",
+  "Ta'lim sifati",
+  "O‘quv ishlari bo‘yicha prorektor",
+  "Foydalanuvchi",
+  "Komissiya"
+])
 
 /** @param {{ role?: string, login?: string } | null | undefined} row */
 function isEditablePermissionTarget(row) {
@@ -363,7 +378,7 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
     }
 
     const draft =
-      row?.role === "Admin"
+      row?.role === "Admin" || row?.role === "System Admin"
         ? allPermissionsDraft(permissionOptions)
         : permissionsToDraft(permissions, permissionOptions)
     setPermissionsDraft(draft)
@@ -765,7 +780,7 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
               <p className="font-semibold">{modal.row.fio}</p>
               <p className={`text-sm ${subtitle}`}>{modal.row.login}</p>
             </div>
-            {modal.row.role === "Admin" && (
+            {(modal.row.role === "Admin" || modal.row.role === "System Admin") && (
               <p className={`text-sm ${subtitle}`}>
                 Admin foydalanuvchida barcha ruxsatlar yoqilgan. Faqat Komissiya va Foydalanuvchi rollarida ruxsatlarni o'zgartirish mumkin.
               </p>
@@ -773,7 +788,7 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
             {isCurrentUserRow(modal.row) && (
               <p className={`text-sm ${subtitle}`}>O&apos;z ruxsatlaringizni o&apos;zgartira olmaysiz.</p>
             )}
-            {!canTogglePermissionsFor(modal.row) && !isCurrentUserRow(modal.row) && modal.row.role !== "Admin" && (
+            {!canTogglePermissionsFor(modal.row) && !isCurrentUserRow(modal.row) && modal.row.role !== "Admin" && modal.row.role !== "System Admin" && (
               <p className={`text-sm ${subtitle}`}>Ushbu foydalanuvchi uchun ruxsatlarni o&apos;zgartirish mumkin emas.</p>
             )}
             <div
