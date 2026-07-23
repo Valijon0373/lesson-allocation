@@ -10,26 +10,27 @@ import Navbar from "./components/Navbar.jsx"
 import TeacherPage from "./components/TeachersPage.jsx"
 import WorkloadDashboard from "./components/dashboard/WorkloadDashboard.jsx"
 import TeachersWorkload from "./components/dashboard/TeachersWorkload.jsx"
+import Subjects from "./components/dashboard/Subjects.jsx"
 import AdminLayout from "./components/dashboard/AdminLayout.jsx"
-import { fetchAllCriterionRows } from "./api/categories"
-import { fetchAllSections } from "./api/criteriaApi"
-import { clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens } from "./api/auth"
-import { fetchAllDepartments } from "./api/departments"
-import { fetchAllFaculties } from "./api/faculties"
-import { fetchAllPositions } from "./api/positions"
-import { fetchAllTeachers, fetchTeachersResourceInfo, saveTeacher } from "./api/teachers"
-import { deleteTeacherResource, fetchIsDocumentsScored, fetchTeacherDocuments, saveTeacherDocument, setDocumentBall } from "./api/teacherDocuments"
-import { getFileDownloadUrl } from "./api/files"
 import {
+  fetchAllCriterionRows,
+  fetchAllSections,
+  clearAuthTokens, getAccessToken, getAuthUsername, login, setAuthTokens,
+  fetchAllDepartments,
+  fetchAllFaculties,
+  fetchAllPositions,
+  fetchAllTeachers, fetchTeachersResourceInfo, saveTeacher,
+  deleteTeacherResource, fetchIsDocumentsScored, fetchTeacherDocuments, saveTeacherDocument, setDocumentBall,
+  getFileDownloadUrl,
   canAccessMainApp,
   isExpertApiRoles,
   parseRolesFromAccessToken,
   resolveMainAppRole,
-} from "./api/roles"
-import { getAuthRoles } from "./api/auth"
-import { mapApiRoleToUi, mapUserFromLoginBody, fetchUserByUsername } from "./api/users"
+  getAuthRoles,
+  mapApiRoleToUi, mapUserFromLoginBody, fetchUserByUsername,
+  SESSION_EXPIRED_EVENT
+} from "./data/mockApi"
 import { CRITERIA as DEFAULT_CRITERIA } from "./data/criteria.js"
-import { SESSION_EXPIRED_EVENT } from "./api/session"
 
 const ROLE_LABELS = {
   admin: "Administrator",
@@ -542,11 +543,7 @@ function App() {
       setDepartmentsLoading(true)
       setDepartmentsError("")
       try {
-        const response = await fetch(DEPARTMENTS_API_URL)
-        if (!response.ok) {
-          throw new Error(`API xatosi: ${response.status}`)
-        }
-        const payload = await response.json()
+        const payload = await fetchAllDepartments()
         const normalized = normalizeDepartments(payload)
         if (normalized.length === 0) {
           throw new Error("Kafedralar topilmadi.")
@@ -589,11 +586,7 @@ function App() {
       setPositionsLoading(true)
       setPositionsError("")
       try {
-        const response = await fetch(`${POSITIONS_API_URL}?departmentId=${encodeURIComponent(selectedDepartmentId)}`)
-        if (!response.ok) {
-          throw new Error(`API xatosi: ${response.status}`)
-        }
-        const payload = await response.json()
+        const payload = await fetchAllPositions()
         const normalized = normalizePositions(payload)
         const filtered = normalized.some((item) => item.departmentId)
           ? normalized.filter((item) => item.departmentId === selectedDepartmentId)
@@ -1151,7 +1144,9 @@ function App() {
           <TeachersWorkload />
         )}
         {adminActiveTab === "fanlar" && (
-          <div className="flex items-center justify-center min-h-screen text-slate-500 font-medium">Fanlar ro'yxati (Tez kunda...)</div>
+          <div className="p-6">
+            <Subjects isAdmin />
+          </div>
         )}
         {adminActiveTab === "soatlar" && (
           <div className="flex items-center justify-center min-h-screen text-slate-500 font-medium">Soatlar va taqsimot (Tez kunda...)</div>

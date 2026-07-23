@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { CircleCheck, CircleX, Eye, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
-import { fetchAllFaculties } from "../../api/faculties"
 import {
+  fetchAllFaculties,
   deleteDepartment,
   fetchAllDepartments,
   fetchDepartmentById,
   saveDepartment,
-  updateDepartment,
-} from "../../api/departments"
+  updateDepartment
+} from "../../data/mockApi"
 import { getCrudPermissions } from "../../data/permissionLabels"
 
 const TEAL_BG = "bg-teal-500"

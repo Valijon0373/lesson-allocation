@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Download, Eye, Search, SlidersHorizontal, TrendingUp } from "lucide-react"
 import { Commet } from "react-loading-indicators"
-import { downloadTeachersResourceInfoExcel } from "../api/teachers"
+import { downloadTeachersResourceInfoExcel } from "../data/mockApi"
 
 function useCountUp(from, to, duration = 800) {
   const [value, setValue] = useState(from)

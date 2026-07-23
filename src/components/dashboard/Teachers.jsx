@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { CircleCheck, CircleX, Eye, EyeOff, Loader2, LockKeyhole, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react"
-import { fetchAllDepartments } from "../../api/departments"
-import { fetchAllFaculties } from "../../api/faculties"
-import { fetchAllPositions } from "../../api/positions"
 import {
+  fetchAllDepartments,
+  fetchAllFaculties,
+  fetchAllPositions,
   deleteTeacher,
   fetchAllTeachers,
   saveTeacher,
-  updateTeacher,
-} from "../../api/teachers"
+  updateTeacher
+} from "../../data/mockApi"
 
 const TEAL_BG = "bg-teal-500"
 

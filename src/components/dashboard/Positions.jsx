@@ -6,7 +6,7 @@ import {
   fetchPositionById,
   savePosition,
   updatePosition,
-} from "../../api/positions"
+} from "../../data/mockApi"
 import { getCrudPermissions } from "../../data/permissionLabels"
 
 const TEAL_BG = "bg-teal-500"

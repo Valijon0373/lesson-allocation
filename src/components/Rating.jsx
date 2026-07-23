@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Commet } from "react-loading-indicators"
-import { fetchTeachersRatingInfo } from "../api/teachers"
+import { fetchTeachersRatingInfo } from "../data/mockApi"
 
 export default function Rating() {
   const [ratingList, setRatingList] = useState([])

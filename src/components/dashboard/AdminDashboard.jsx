@@ -18,13 +18,16 @@ import Positions from "./Positions"
 import Users from "./Users"
 import Teachers from "./Teachers"
 import Criteria from "./Criteria"
+import Subjects from "./Subjects"
 import AboutUs from "./AboutUs"
 import AdminLogin from "../../components/admin/AdminLogin"
-import { getAuthUsername, logout as apiLogout, verifyAdminSession } from "../../api/auth"
-import { fetchUserByUsername } from "../../api/users"
-import { SESSION_EXPIRED_EVENT } from "../../api/session"
-import { fetchAllTeachers } from "../../api/teachers"
-import { fetchTotalDocumentCount } from "../../api/teacherDocuments"
+import {
+  getAuthUsername, logout as apiLogout, verifyAdminSession,
+  fetchUserByUsername,
+  SESSION_EXPIRED_EVENT,
+  fetchAllTeachers,
+  fetchTotalDocumentCount
+} from "../../data/mockApi"
 import FileTypeDistribution from "./FileTypeDistribution"
 import FacultyFileBarChart from "./FacultyFileBarChart"
 
@@ -235,6 +238,7 @@ export default function AdminDashboard() {
     if (hasAnyPermission(["position_view", "position_create", "position_edit", "position_delete"])) ids.push("lavozim")
     if (hasAnyPermission(["user_view", "user_create", "user_edit", "user_delete"])) ids.push("foydalanuvchilar")
     if (hasAnyPermission(["teacher_view", "teacher_create", "teacher_edit", "teacher_delete"])) ids.push("oqituvchilar")
+    ids.push("fanlar")
     if (
       hasAnyPermission(["criteria_view", "criteria_create", "criteria_edit", "criteria_delete"]) ||
       hasAnyPermission(["category_view", "category_create", "category_edit", "category_delete"])
@@ -534,6 +538,7 @@ export default function AdminDashboard() {
               <Users dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />
             )}
             {activeNav === "oqituvchilar" && <Teachers dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />}
+            {activeNav === "fanlar" && <Subjects dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />}
             {activeNav === "mezonlar" && (
               <Criteria dark={dark} permissions={currentPermissions} isAdmin={isAdmin} />
             )}

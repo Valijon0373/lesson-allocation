@@ -3,7 +3,7 @@ import { Eye, EyeOff, Loader2, X } from "lucide-react"
 import { Link } from "react-router-dom"
 import bgVideo from "../../assets/bg.mp4"
 import logoImg from "../../assets/logo.jpg"
-import { loginAdmin } from "../../api/auth"
+import { loginAdmin } from "../../data/mockApi"
 
 export default function AdminLogin({ onSuccess }) {
   const [form, setForm] = useState({ username: "", password: "" })

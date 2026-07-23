@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   User,
   Users,
+  BookOpen
 } from "lucide-react"
 
 export const DASHBOARD_NAV = [
@@ -22,6 +23,7 @@ export const DASHBOARD_NAV = [
   { id: "lavozim", label: "Lavozim", Icon: FileText },
   { id: "foydalanuvchilar", label: "Foydalanuvchilar", Icon: User },
   { id: "oqituvchilar", label: "O'qituvchilar", Icon: Users },
+  { id: "fanlar", label: "Fanlar", Icon: BookOpen },
 
   { id: "biz-haqimizda", label: "Biz haqimizda", Icon: Info },
 ]

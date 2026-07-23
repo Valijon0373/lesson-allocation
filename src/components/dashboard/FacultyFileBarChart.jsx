@@ -7,7 +7,7 @@ import { PiecewiseColorLegend } from "@mui/x-charts/ChartsLegend"
 import { interpolateObject } from "@mui/x-charts-vendor/d3-interpolate"
 import Box from "@mui/material/Box"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
-import { fetchFileCountByFaculty } from "../../api/teacherDocuments"
+import { fetchFileCountByFaculty } from "../../data/mockApi"
 
 const lightTheme = createTheme({ palette: { mode: "light" } })
 const darkTheme = createTheme({

@@ -5,7 +5,7 @@ import ToggleButton from "@mui/material/ToggleButton"
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
 import { useDrawingArea } from "@mui/x-charts/hooks"
 import { styled, ThemeProvider, createTheme } from "@mui/material/styles"
-import { fetchFileTypeDistribution } from "../../api/teacherDocuments"
+import { fetchFileTypeDistribution } from "../../data/mockApi"
 
 const COLORS = {
   file: "#3b82f6",

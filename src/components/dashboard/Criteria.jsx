@@ -18,13 +18,11 @@ import {
   fetchAllCriterionRows,
   saveCriterionRow,
   updateCriterionRow,
-} from "../../api/categories"
-import {
   deleteSection,
   fetchAllSections,
   saveSection,
-  updateSection,
-} from "../../api/criteriaApi"
+  updateSection
+} from "../../data/mockApi"
 import { getCrudPermissions } from "../../data/permissionLabels"
 
 const PREVIEW_ROWS = 3

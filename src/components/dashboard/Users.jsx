@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { CircleCheck, CircleX, Eye, EyeOff, LockKeyhole, Loader2, Pencil, Plus, ShieldCheck, SlidersHorizontal, Trash2 } from "lucide-react"
-import { getAuthUsername } from "../../api/auth"
 import {
+  getAuthUsername,
   checkUsernameAvailable,
   deleteUser,
   fetchAllUsers,
@@ -11,8 +11,8 @@ import {
   removeUserPermissions,
   saveUser,
   setUserPermissions,
-  updateUser,
-} from "../../api/users"
+  updateUser
+} from "../../data/mockApi"
 import {
   getCrudPermissions,
   getImpliedPermissionsWhenGranting,

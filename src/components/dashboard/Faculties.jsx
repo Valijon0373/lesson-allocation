@@ -6,7 +6,7 @@ import {
   fetchFacultyById,
   saveFaculty,
   updateFaculty,
-} from "../../api/faculties"
+} from "../../data/mockApi"
 import { getCrudPermissions } from "../../data/permissionLabels"
 
 const TEAL_BG = "bg-teal-500"
