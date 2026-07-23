@@ -478,7 +478,7 @@ export default function Teachers({ dark }) {
             <span className={`text-sm font-medium ${subtitle}`}>Yuklanmoqda...</span>
           </div>
         ) : (
-        <div className={`overflow-x-auto rounded-xl border ${cardBase}`}>
+        <div className={`overflow-x-auto rounded-xl border ${cardBase} min-h-[280px]`}>
           <table className={`min-w-full border-collapse text-sm ${dark ? "border-slate-700" : "border-slate-200"}`}>
             <thead className={dark ? "bg-slate-900/40" : "bg-slate-50"}>
               <tr>
@@ -492,7 +492,9 @@ export default function Teachers({ dark }) {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row, index) => (
+              {filteredRows.map((row, index) => {
+                const isBottom = index > 0 && index >= Math.floor(filteredRows.length / 2);
+                return (
                 <tr key={row.id}>
                   <td className={`border px-4 py-3 text-center text-sm font-semibold ${dark ? "border-slate-700" : "border-slate-200"} ${title}`}>
                     {index + 1}
@@ -524,7 +526,7 @@ export default function Teachers({ dark }) {
 
                       {openActionsFor === row.id && (
                         <div
-                          className={`absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border p-1 shadow-lg ${
+                          className={`absolute right-0 ${isBottom ? "bottom-full mb-2" : "top-full mt-2"} z-50 min-w-52 rounded-xl border p-1 shadow-lg ${
                             dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
                           }`}
                         >
@@ -572,7 +574,7 @@ export default function Teachers({ dark }) {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

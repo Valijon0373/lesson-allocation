@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CircleCheck, CircleX, Eye, Loader2, Pencil, Plus, Search, Trash2, ArrowUpDown } from "lucide-react"
+import { CircleCheck, CircleX, Eye, Loader2, Pencil, Plus, Search, Trash2, ArrowUpDown, SlidersHorizontal } from "lucide-react"
 import { fetchAllDepartments, fetchAllSubjects, saveSubject, updateSubject, deleteSubject, fetchSubjectById } from "../../data/mockApi"
 import { getCrudPermissions } from "../../data/permissionLabels"
 
@@ -36,6 +36,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
   const [loadError, setLoadError] = useState("")
   const [searchDraft, setSearchDraft] = useState("")
   const [searchApplied, setSearchApplied] = useState("")
+  const [openActionsFor, setOpenActionsFor] = useState(null)
   const [modal, setModal] = useState({
     open: false,
     type: null,
@@ -369,10 +370,11 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
         )}
 
         {!loading && !loadError && (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm mt-4">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm mt-4 min-h-[280px]">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
                 <tr>
+                  <th className="py-3 px-4 font-semibold w-12 text-center">№</th>
                   <th className="py-3 px-4 font-semibold">Fan Nomi</th>
                   <th className="py-3 px-4 font-semibold">Kafedra</th>
                   <th className="py-3 px-4 font-semibold text-right">Ma'ruza</th>
@@ -386,8 +388,11 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((row) => (
+                {filtered.map((row, index) => {
+                  const isBottom = index > 0 && index >= Math.floor(filtered.length / 2);
+                  return (
                   <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="py-3 px-4 text-center text-slate-500 font-medium">{index + 1}</td>
                     <td className="py-3 px-4 font-medium text-slate-800">{row.nameUz}</td>
                     <td className="py-3 px-4 text-slate-600">{row.departmentName || departmentLabel(row.departmentId)}</td>
                     <td className="py-3 px-4 text-right text-slate-600">{row.lecture}</td>
@@ -397,40 +402,75 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
                     <td className="py-3 px-4 text-right text-slate-600">{row.independent}</td>
                     <td className="py-3 px-4 text-right font-bold text-slate-800 bg-slate-50/50">{row.total}</td>
                     <td className="py-3 px-4 text-right text-slate-600">{row.credits}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="py-3 px-4 text-center">
+                      <div className="relative inline-flex">
                         <button
                           type="button"
-                          onClick={() => openView(row)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Ko'rish"
+                          onClick={() => setOpenActionsFor((prev) => (prev === row.id ? null : row.id))}
+                          className={`inline-flex items-center justify-center rounded-lg border p-2.5 transition-colors ${
+                            dark ? "border-slate-600 text-slate-200 hover:bg-slate-700/70" : "border-slate-300 text-slate-700 hover:bg-slate-100"
+                          }`}
+                          aria-label="Amallar menyusi"
+                          aria-expanded={openActionsFor === row.id}
                         >
-                          <Eye className="w-4 h-4" />
+                          <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
                         </button>
-                        {canEdit && (
-                          <button
-                            type="button"
-                            onClick={() => openEdit(row)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
-                            title="Tahrirlash"
+
+                        {openActionsFor === row.id && (
+                          <div
+                            className={`absolute right-0 ${isBottom ? "bottom-full mb-2" : "top-full mt-2"} z-50 min-w-52 rounded-xl border p-1 shadow-lg ${
+                              dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white"
+                            }`}
                           >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => openDelete(row)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="O'chirish"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionsFor(null)
+                                openView(row)
+                              }}
+                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                                dark ? "text-blue-400 hover:bg-slate-700/80" : "text-blue-700 hover:bg-blue-50"
+                              }`}
+                            >
+                              <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                              Ko'rish
+                            </button>
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionsFor(null)
+                                  openEdit(row)
+                                }}
+                                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                                  dark ? "text-emerald-400 hover:bg-slate-700/80" : "text-emerald-700 hover:bg-emerald-50"
+                                }`}
+                              >
+                                <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                                Tahrirlash
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionsFor(null)
+                                  openDelete(row)
+                                }}
+                                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                                  dark ? "text-red-400 hover:bg-slate-700/80" : "text-red-700 hover:bg-red-50"
+                                }`}
+                              >
+                                <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                                O'chirish
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={10} className="py-8 text-center text-slate-500">

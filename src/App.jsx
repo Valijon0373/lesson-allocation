@@ -1091,25 +1091,6 @@ function App() {
                 {loginLoading ? "Tekshirilmoqda..." : "Tizimga kirish"}
               </button>
             </form>
-
-            <div className="mt-8 px-8">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
-                <div className="mb-3 flex items-center gap-2 text-indigo-800">
-                  <Info className="h-4 w-4" />
-                  <span className="text-[13px] font-medium">Demo hisoblar</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between rounded-xl border border-white bg-white px-4 py-2.5 shadow-sm">
-                    <span className="text-[13px] text-slate-500">Admin</span>
-                    <span className="font-mono text-[11px] font-bold text-blue-600 tracking-tight">admin / admin123</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-white bg-white px-4 py-2.5 shadow-sm">
-                    <span className="text-[13px] text-slate-500">Dekanat</span>
-                    <span className="font-mono text-[11px] font-bold text-blue-600 tracking-tight">dekan / dekan123</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         

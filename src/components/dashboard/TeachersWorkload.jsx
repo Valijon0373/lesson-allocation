@@ -159,7 +159,7 @@ export default function TeachersWorkload() {
       </div>
 
       {/* Separate Table Block */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden min-h-[280px]">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap relative">
             <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-100 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
@@ -190,7 +190,9 @@ export default function TeachersWorkload() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {teachersWorkloadData.map((row, idx) => (
+            {teachersWorkloadData.map((row, idx) => {
+              const isBottom = idx > 0 && idx >= Math.floor(teachersWorkloadData.length / 2);
+              return (
               <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group relative">
                 <td className="py-3 px-4 text-slate-500">{idx + 1}</td>
                 <td className="py-3 px-4 font-medium text-slate-800">
@@ -214,48 +216,51 @@ export default function TeachersWorkload() {
                     {row.status}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-center relative">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setOpenActionId(openActionId === row.id ? null : row.id)
-                    }}
-                    className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors shadow-sm bg-white"
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                  </button>
-                  
-                  {openActionId === row.id && (
-                    <div 
-                      className="absolute right-14 top-2 w-44 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2"
-                      onClick={(e) => e.stopPropagation()}
+                <td className="py-3 px-4 text-center">
+                  <div className="relative inline-flex">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setOpenActionId(openActionId === row.id ? null : row.id)
+                      }}
+                      className="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2.5 text-slate-700 hover:text-slate-800 hover:bg-slate-100 transition-colors shadow-sm bg-white"
+                      aria-label="Amallar menyusi"
                     >
-                      <button 
-                        onClick={() => {
-                          setSelectedTeacher(row)
-                          setOpenActionId(null)
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                      <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
+                    </button>
+                    
+                    {openActionId === row.id && (
+                      <div 
+                        className={`absolute right-0 ${isBottom ? "bottom-full mb-2" : "top-full mt-2"} z-50 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg`}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Eye className="w-4 h-4" /> Ko'rish
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors">
-                        <Pencil className="w-4 h-4" /> Tahrirlash
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors">
-                        <Copy className="w-4 h-4" /> Nusxalash
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 transition-colors">
-                        <History className="w-4 h-4" /> Tarix
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100 mt-1 pt-3">
-                        <Trash2 className="w-4 h-4" /> O'chirish
-                      </button>
-                    </div>
-                  )}
+                        <button 
+                          onClick={() => {
+                            setSelectedTeacher(row)
+                            setOpenActionId(null)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50 transition-colors"
+                        >
+                          <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Ko'rish
+                        </button>
+                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors">
+                          <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Tahrirlash
+                        </button>
+                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-teal-700 hover:bg-teal-50 transition-colors">
+                          <Copy className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Nusxalash
+                        </button>
+                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors">
+                          <History className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Tarix
+                        </button>
+                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50 transition-colors">
+                          <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> O'chirish
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
         </div>

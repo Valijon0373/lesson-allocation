@@ -273,8 +273,7 @@ export default function TeacherPage({
                 </button>
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm min-h-[280px]">
                 <table className="min-w-full border-collapse text-sm">
                   <thead className="bg-slate-50">
                     <tr>
@@ -320,6 +319,7 @@ export default function TeacherPage({
                     )}
                     {!isLoading &&
                       filteredRows.map((row, index) => {
+                        const isBottom = index > 0 && index >= Math.floor(filteredRows.length / 2);
                         const ballDisplay =
                           hasResourceInfo
                             ? `${row.scoredBall} ball`
@@ -373,7 +373,7 @@ export default function TeacherPage({
                                 </button>
 
                                 {openActionsFor === row.key && (
-                                  <div className="absolute right-0 top-full z-20 mt-2 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                                  <div className={`absolute right-0 ${isBottom ? "bottom-full mb-2" : "top-full mt-2"} z-50 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg`}>
                                     <button
                                       type="button"
                                       onClick={() => handleSelectTeacher(row)}
