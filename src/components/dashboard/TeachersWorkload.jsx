@@ -2,6 +2,15 @@ import React, { useState, useEffect } from "react"
 import { Columns, ArrowUpDown, SlidersHorizontal, Eye, Pencil, Copy, History, Trash2 } from "lucide-react"
 import TeacherDetailsModal from "./TeacherDetailsModal"
 
+const TbColumns3 = (props) => (
+  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+    <path d="M3 3m0 1a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v16a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1z"></path>
+    <path d="M9 3v18"></path>
+    <path d="M15 3v18"></path>
+  </svg>
+)
+
 const baseTeachers = [
   {
     id: 1,
@@ -107,55 +116,130 @@ const teachersWorkloadData = Array.from({ length: 40 }, (_, i) => {
     ...base,
     id: i + 1,
     name: i < 6 ? base.name : `${base.name.split(" ")[0]} O'qituvchi ${i + 1}`,
+    total: base.lecture + base.practice + base.lab + base.seminar,
   }
 })
 
 export default function TeachersWorkload() {
   const [openActionId, setOpenActionId] = useState(null)
   const [selectedTeacher, setSelectedTeacher] = useState(null)
+  const [isColumnsDropdownOpen, setIsColumnsDropdownOpen] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState({
+    oqituvchi: true,
+    kafedra: true,
+    fanlar: true,
+    maruza: true,
+    amaliy: true,
+    lab: true,
+    seminar: true,
+    mustaqil: true,
+    jami: true,
+    reyting: true,
+    guruhlar: true,
+    talabalar: true,
+    holat: true,
+  })
+
+  const columnsList = [
+    { id: "oqituvchi", label: "O'qituvchi" },
+    { id: "kafedra", label: "Kafedra" },
+    { id: "fanlar", label: "Fanlar" },
+    { id: "maruza", label: "Ma'ruza" },
+    { id: "amaliy", label: "Amaliy" },
+    { id: "lab", label: "Lab" },
+    { id: "seminar", label: "Seminar" },
+    { id: "jami", label: "Jami" },
+    { id: "mustaqil", label: "Mustaqil" },
+    { id: "reyting", label: "Reyting" },
+    { id: "guruhlar", label: "Guruhlar" },
+    { id: "talabalar", label: "Talabalar" },
+    { id: "holat", label: "Holat" },
+  ]
 
   useEffect(() => {
-    const handleClickOutside = () => setOpenActionId(null)
+    const handleClickOutside = () => {
+      setOpenActionId(null)
+      setIsColumnsDropdownOpen(false)
+    }
     document.addEventListener("click", handleClickOutside)
     return () => document.removeEventListener("click", handleClickOutside)
   }, [])
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 m-6">
-      {/* Navbar-like Header */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center justify-between mb-6">
-        <h3 className="font-semibold text-slate-800 text-lg">O'qituvchilar yuklamasi</h3>
-        <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700 shadow-sm">
-          <Columns className="w-4 h-4" /> Ustunlar
-        </button>
-      </div>
+      {/* Combined Header and Filter Bar */}
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 mb-6 transition-colors duration-300">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-800 text-lg">O'qituvchilar yuklamasi</h3>
+          <div className="relative">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsColumnsDropdownOpen(!isColumnsDropdownOpen)
+              }}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700 shadow-sm"
+            >
+              <TbColumns3 className="w-4 h-4" /> Ustunlar
+            </button>
+            
+            {isColumnsDropdownOpen && (
+              <div 
+                className="absolute right-0 mt-2 w-[420px] rounded-xl border border-slate-150 bg-white shadow-lg p-4.5 z-50 transition-all duration-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-[10px] font-bold text-slate-400 mb-3 px-1 uppercase tracking-wider">Ustunlarni sozlash</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                  {columnsList.map((col) => (
+                    <label 
+                      key={col.id}
+                      className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer text-sm text-slate-700 transition-colors"
+                    >
+                      <input 
+                        type="checkbox"
+                        checked={visibleColumns[col.id]}
+                        onChange={() => setVisibleColumns(prev => ({
+                          ...prev,
+                          [col.id]: !prev[col.id]
+                        }))}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
+                      />
+                      <span className="truncate">{col.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center">
-        <select className="w-full sm:w-auto flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white">
-          <option>Barcha fakultetlar</option>
-          <option>Filologiya</option>
-          <option>Pedagogika</option>
-          <option>Aniq va tabiiy fanlar</option>
-          <option>Ijtimoiy va amaliy</option>
-          <option>Boshlang'ich ta'lim</option>
-        </select>
-        <select className="w-full sm:w-auto flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white">
-          <option>Barcha kafedralar</option>
-          <option>Rus tili</option>
-          <option>O'zbek tili</option>
-          <option>Xorijiy tillar</option>
-          <option>Matematika</option>
-          <option>Informatika</option>
-        </select>
-        <input 
-          type="text" 
-          placeholder="O'qituvchini izlash" 
-          className="w-full sm:w-auto flex-[2] border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors"
-        />
-        <button className="w-full sm:w-auto px-6 py-2 border border-teal-500 text-teal-600 rounded-lg font-medium hover:bg-teal-50 transition-colors text-sm">
-          Qidirish
-        </button>
+        <div className="border-t border-slate-100 my-4 dark:border-slate-700"></div>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <select className="w-full sm:w-auto flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white">
+            <option>Barcha fakultetlar</option>
+            <option>Filologiya</option>
+            <option>Pedagogika</option>
+            <option>Aniq va tabiiy fanlar</option>
+            <option>Ijtimoiy va amaliy</option>
+            <option>Boshlang'ich ta'lim</option>
+          </select>
+          <select className="w-full sm:w-auto flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white">
+            <option>Barcha kafedralar</option>
+            <option>Rus tili</option>
+            <option>O'zbek tili</option>
+            <option>Xorijiy tillar</option>
+            <option>Matematika</option>
+            <option>Informatika</option>
+          </select>
+          <input 
+            type="text" 
+            placeholder="O'qituvchini izlash" 
+            className="w-full sm:w-auto flex-[2] border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors"
+          />
+          <button className="w-full sm:w-auto px-6 py-2 border border-teal-500 text-teal-600 rounded-lg font-medium hover:bg-teal-50 transition-colors text-sm">
+            Qidirish
+          </button>
+        </div>
       </div>
 
       {/* Separate Table Block */}
@@ -164,58 +248,72 @@ export default function TeachersWorkload() {
           <table className="w-full text-left text-sm whitespace-nowrap relative">
             <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-100 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
               <tr>
-              <th className="py-3 px-4 font-medium w-12">#</th>
-              <th className="py-3 px-4 font-medium">
-                <div className="flex items-center gap-1 cursor-pointer hover:text-slate-700">
-                  O'qituvchi <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th className="py-3 px-4 font-medium">Kafedra</th>
-              <th className="py-3 px-4 font-medium">Fanlar</th>
-              <th className="py-3 px-4 font-medium text-right">Ma'ruza</th>
-              <th className="py-3 px-4 font-medium text-right">Amaliy</th>
-              <th className="py-3 px-4 font-medium text-right">Lab</th>
-              <th className="py-3 px-4 font-medium text-right">Seminar</th>
-              <th className="py-3 px-4 font-medium text-right">Mustaqil</th>
-              <th className="py-3 px-4 font-medium text-right">
-                <div className="flex items-center justify-end gap-1 cursor-pointer hover:text-slate-700">
-                  Jami <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th className="py-3 px-4 font-medium text-right">Kredit</th>
-              <th className="py-3 px-4 font-medium text-right">Guruhlar</th>
-              <th className="py-3 px-4 font-medium text-right">Talabalar</th>
-              <th className="py-3 px-4 font-medium">Holat</th>
-              <th className="py-3 px-4 font-medium text-center">Amallar</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {teachersWorkloadData.map((row, idx) => {
-              const isBottom = idx > 0 && idx >= Math.floor(teachersWorkloadData.length / 2);
-              return (
-              <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group relative">
-                <td className="py-3 px-4 text-slate-500">{idx + 1}</td>
-                <td className="py-3 px-4 font-medium text-slate-800">
-                  <div className="max-w-[200px] truncate" title={row.name}>
-                    {row.name}
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-slate-600">{row.department}</td>
-                <td className="py-3 px-4 text-slate-600">{row.subjects}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.lecture}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.practice}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.lab}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.seminar}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.independent}</td>
-                <td className="py-3 px-4 text-right font-medium text-slate-800">{row.total}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.credits}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.groups}</td>
-                <td className="py-3 px-4 text-right text-slate-600">{row.students}</td>
-                <td className="py-3 px-4">
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
-                    {row.status}
-                  </span>
-                </td>
+                <th className="py-3 px-4 font-medium w-12">#</th>
+                {visibleColumns.oqituvchi && (
+                  <th className="py-3 px-4 font-medium">
+                    <div className="flex items-center gap-1 cursor-pointer hover:text-slate-700">
+                      O'qituvchi <ArrowUpDown className="w-3 h-3" />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.kafedra && <th className="py-3 px-4 font-medium">Kafedra</th>}
+                {visibleColumns.fanlar && <th className="py-3 px-4 font-medium">Fanlar</th>}
+                {visibleColumns.maruza && <th className="py-3 px-4 font-medium text-right">Ma'ruza</th>}
+                {visibleColumns.amaliy && <th className="py-3 px-4 font-medium text-right">Amaliy</th>}
+                {visibleColumns.lab && <th className="py-3 px-4 font-medium text-right">Lab</th>}
+                {visibleColumns.seminar && <th className="py-3 px-4 font-medium text-right">Seminar</th>}
+                {visibleColumns.jami && (
+                  <th className="py-3 px-4 font-medium text-right">
+                    <div className="flex items-center justify-end gap-1 cursor-pointer hover:text-slate-700">
+                      Jami <ArrowUpDown className="w-3 h-3" />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.mustaqil && <th className="py-3 px-4 font-medium text-right">Mustaqil</th>}
+                {visibleColumns.reyting && <th className="py-3 px-4 font-medium text-right">Reyting</th>}
+                {visibleColumns.guruhlar && <th className="py-3 px-4 font-medium text-right">Guruhlar</th>}
+                {visibleColumns.talabalar && <th className="py-3 px-4 font-medium text-right">Talabalar</th>}
+                {visibleColumns.holat && <th className="py-3 px-4 font-medium">Holat</th>}
+                <th className="py-3 px-4 font-medium text-center">Amallar</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {teachersWorkloadData.map((row, idx) => {
+                const isBottom = idx > 0 && idx >= Math.floor(teachersWorkloadData.length / 2);
+                return (
+                <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group relative">
+                  <td className="py-3 px-4 text-slate-500">{idx + 1}</td>
+                  {visibleColumns.oqituvchi && (
+                    <td className="py-3 px-4 font-medium text-slate-800">
+                      <div className="max-w-[200px] truncate" title={row.name}>
+                        {row.name}
+                      </div>
+                    </td>
+                  )}
+                  {visibleColumns.kafedra && <td className="py-3 px-4 text-slate-600">{row.department}</td>}
+                  {visibleColumns.fanlar && <td className="py-3 px-4 text-slate-600">{row.subjects}</td>}
+                  {visibleColumns.maruza && <td className="py-3 px-4 text-right text-slate-600">{row.lecture}</td>}
+                  {visibleColumns.amaliy && <td className="py-3 px-4 text-right text-slate-600">{row.practice}</td>}
+                  {visibleColumns.lab && <td className="py-3 px-4 text-right text-slate-600">{row.lab}</td>}
+                  {visibleColumns.seminar && <td className="py-3 px-4 text-right text-slate-600">{row.seminar}</td>}
+                  {visibleColumns.jami && <td className="py-3 px-4 text-right font-medium text-slate-800">{row.total}</td>}
+                  {visibleColumns.mustaqil && <td className="py-3 px-4 text-right text-slate-600">{row.independent}</td>}
+                  {visibleColumns.reyting && (
+                    <td className="py-3 px-4 text-right">
+                      <span className="inline-flex items-center gap-1 text-amber-600 font-semibold dark:text-amber-400">
+                        {Math.min(5.0, (3.5 + (row.students / 250) * 1.0 + (row.total / 300) * 0.5)).toFixed(1)} ★
+                      </span>
+                    </td>
+                  )}
+                  {visibleColumns.guruhlar && <td className="py-3 px-4 text-right text-slate-600">{row.groups}</td>}
+                  {visibleColumns.talabalar && <td className="py-3 px-4 text-right text-slate-600">{row.students}</td>}
+                  {visibleColumns.holat && (
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                        {row.status}
+                      </span>
+                    </td>
+                  )}
                 <td className="py-3 px-4 text-center">
                   <div className="relative inline-flex">
                     <button 

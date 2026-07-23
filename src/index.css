@@ -106,3 +106,98 @@ body {
   font-family: var(--font-sans);
   background-color: #0f172a;
 }
+
+body.dark {
+  background-color: #0f172a !important;
+}
+
+body.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+body.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+body.dark .text-slate-850 {
+  color: #f1f5f9 !important;
+}
+
+body.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+body.dark .text-slate-900 {
+  color: #ffffff !important;
+}
+
+body.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+body.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+body.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+body.dark .border-slate-100,
+body.dark .border-slate-50,
+body.dark .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+body.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  color: #818cf8 !important;
+}
+
+body.dark .text-indigo-700 {
+  color: #818cf8 !important;
+}
+
+body.dark .text-indigo-600 {
+  color: #a5b4fc !important;
+}
+
+body.dark .hover\:bg-slate-50:hover {
+  background-color: #334155 !important;
+}
+
+body.dark .hover\:text-slate-700:hover {
+  color: #f1f5f9 !important;
+}
+
+/* Input, select, textarea and placeholders in dark mode */
+body.dark input,
+body.dark select,
+body.dark textarea {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+body.dark input::placeholder {
+  color: #64748b !important;
+}
+
+body.dark .bg-slate-50\/80 {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+}
+
+body.dark .bg-slate-50\/50 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+/* Teal colors for search buttons */
+body.dark .text-teal-600 {
+  color: #2dd4bf !important;
+}
+body.dark .border-teal-500 {
+  border-color: #0d9488 !important;
+}
+body.dark .hover\:bg-teal-50:hover {
+  background-color: rgba(13, 148, 136, 0.15) !important;
+}

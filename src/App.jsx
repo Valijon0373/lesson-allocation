@@ -12,6 +12,7 @@ import WorkloadDashboard from "./components/dashboard/WorkloadDashboard.jsx"
 import TeachersWorkload from "./components/dashboard/TeachersWorkload.jsx"
 import Subjects from "./components/dashboard/Subjects.jsx"
 import AdminLayout from "./components/dashboard/AdminLayout.jsx"
+import KafedraWorkload from "./components/dashboard/KafedraWorkload.jsx"
 import {
   fetchAllCriterionRows,
   fetchAllSections,
@@ -211,6 +212,20 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false)
   
   const [adminActiveTab, setAdminActiveTab] = useState("dashboard")
+  const [isDark, setIsDark] = useState(() => localStorage.getItem("theme") === "dark")
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    setTimeout(() => {
+      setIsRefreshing(false)
+    }, 1000)
+  }
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", isDark)
+    localStorage.setItem("theme", isDark ? "dark" : "light")
+  }, [isDark])
   const [newTeacherPasswordVisible, setNewTeacherPasswordVisible] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [selectedTeacherId, setSelectedTeacherId] = useState("")
@@ -1108,25 +1123,36 @@ function App() {
 
   if (currentUser?.role === "admin") {
     return (
-      <AdminLayout activeTab={adminActiveTab} onTabChange={setAdminActiveTab}>
+      <AdminLayout
+        activeTab={adminActiveTab}
+        onTabChange={setAdminActiveTab}
+        isDark={isDark}
+        setIsDark={setIsDark}
+        isRefreshing={isRefreshing}
+        handleRefresh={handleRefresh}
+        onLogout={() => {
+          clearAuthTokens()
+          setCurrentUser(null)
+          setCriteriaLoadError("")
+          setCriteriaList(DEFAULT_CRITERIA)
+          setAuthSessionKey((key) => key + 1)
+        }}
+      >
         {adminActiveTab === "dashboard" && (
           <WorkloadDashboard
             currentUser={currentUser}
-            onLogout={() => {
-              clearAuthTokens()
-              setCurrentUser(null)
-              setCriteriaLoadError("")
-              setCriteriaList(DEFAULT_CRITERIA)
-              setAuthSessionKey((key) => key + 1)
-            }}
+            isDark={isDark}
           />
+        )}
+        {adminActiveTab === "kafedra-yuklamasi" && (
+          <KafedraWorkload isDark={isDark} />
         )}
         {adminActiveTab === "oqituvchilar" && (
           <TeachersWorkload />
         )}
         {adminActiveTab === "fanlar" && (
           <div className="p-6">
-            <Subjects isAdmin />
+            <Subjects isAdmin dark={isDark} />
           </div>
         )}
         {adminActiveTab === "soatlar" && (

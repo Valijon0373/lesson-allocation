@@ -14,8 +14,8 @@ export default function TeacherDetailsModal({ teacher, onClose }) {
 
   // Mock data for Grafik tab
   const semesterData = [
-    { name: "1-semestr", value: 130 },
-    { name: "2-semestr", value: 98 },
+    { name: "Kuzki semestr", value: 130 },
+    { name: "Bahorki semestr", value: 98 },
   ]
 
   const yearData = [
@@ -104,6 +104,7 @@ export default function TeacherDetailsModal({ teacher, onClose }) {
                       <th className="py-3 px-4 font-medium">Ma'ruza</th>
                       <th className="py-3 px-4 font-medium">Amaliy</th>
                       <th className="py-3 px-4 font-medium">Lab</th>
+                      <th className="py-3 px-4 font-medium">Jami</th>
                       <th className="py-3 px-4 font-medium">Kredit</th>
                       <th className="py-3 px-4 font-medium">Guruhlar</th>
                     </tr>
@@ -115,11 +116,23 @@ export default function TeacherDetailsModal({ teacher, onClose }) {
                         <td className="py-3 px-4 text-slate-600">{sub.lecture}</td>
                         <td className="py-3 px-4 text-slate-600">{sub.practice}</td>
                         <td className="py-3 px-4 text-slate-600">{sub.lab}</td>
+                        <td className="py-3 px-4 font-semibold text-slate-700">{sub.lecture + sub.practice + sub.lab}</td>
                         <td className="py-3 px-4 text-slate-600">{sub.credits}</td>
                         <td className="py-3 px-4 text-slate-600">{sub.groups}</td>
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="border-t-2 border-slate-200 bg-slate-50/50 font-bold text-slate-800">
+                    <tr>
+                      <td className="py-3 px-4">Jami:</td>
+                      <td className="py-3 px-4">{subjectsData.reduce((sum, s) => sum + s.lecture, 0)}</td>
+                      <td className="py-3 px-4">{subjectsData.reduce((sum, s) => sum + s.practice, 0)}</td>
+                      <td className="py-3 px-4">{subjectsData.reduce((sum, s) => sum + s.lab, 0)}</td>
+                      <td className="py-3 px-4 text-blue-600">{subjectsData.reduce((sum, s) => sum + s.lecture + s.practice + s.lab, 0)}</td>
+                      <td className="py-3 px-4">{subjectsData.reduce((sum, s) => sum + s.credits, 0)}</td>
+                      <td className="py-3 px-4"></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}

@@ -1,9 +1,8 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
   Moon,
+  Sun,
   RefreshCcw,
-  FileText,
-  Printer,
   Plus,
   LogOut,
   Users,
@@ -12,7 +11,6 @@ import {
   Activity,
   AlertTriangle,
   TrendingDown,
-  Search,
   Columns,
   MoreHorizontal,
   ArrowUpDown,
@@ -20,8 +18,8 @@ import {
 import { BarChart } from "@mui/x-charts/BarChart"
 import { PieChart } from "@mui/x-charts/PieChart"
 import { LineChart } from "@mui/x-charts/LineChart"
-export default function WorkloadDashboard({ onLogout, currentUser }) {
-  const [semester, setSemester] = useState("1-semestr")
+export default function WorkloadDashboard({ currentUser, isDark }) {
+  const [semester, setSemester] = useState("Kuzki semestr")
   const [activeTab, setActiveTab] = useState("Fakultet")
 
   const fakultetData = [
@@ -274,64 +272,37 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
   const getStatusColor = (status) => {
     switch (status) {
       case "Tasdiqlangan":
-        return "bg-green-100 text-green-700"
+        return isDark ? "bg-green-950/40 text-green-400" : "bg-green-100 text-green-700"
       case "Tayinlangan":
-        return "bg-blue-100 text-blue-700"
+        return isDark ? "bg-blue-950/40 text-blue-400" : "bg-blue-100 text-blue-700"
       case "Kutilmoqda":
-        return "bg-amber-100 text-amber-700"
+        return isDark ? "bg-amber-950/40 text-amber-400" : "bg-amber-100 text-amber-700"
       default:
-        return "bg-slate-100 text-slate-700"
+        return isDark ? "bg-slate-900/60 text-slate-400" : "bg-slate-100 text-slate-700"
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans p-6 pb-20">
+    <div className={`font-sans p-6 pb-20 transition-colors duration-300 ${isDark ? "bg-slate-900 text-slate-100" : "bg-slate-50 text-slate-800"}`}>
       <div className="mx-auto w-full space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Dars yuklamasi boshqaruvi</h1>
-            <p className="text-sm text-slate-500 mt-1">O'qituvchilar soatlari, fan taqsimoti va semestr statistikasi</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-
-            <button className="p-2 border border-slate-200 rounded-md bg-white hover:bg-slate-50 transition-colors">
-              <Moon className="w-4 h-4 text-slate-600" />
-            </button>
-            <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-md bg-white hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700">
-              <RefreshCcw className="w-4 h-4" /> Yangilash
-            </button>
-            <button className="p-2 border border-slate-200 rounded-md bg-white hover:bg-slate-50 transition-colors">
-              <FileText className="w-4 h-4 text-slate-600" />
-            </button>
-            <button className="p-2 border border-slate-200 rounded-md bg-white hover:bg-slate-50 transition-colors">
-              <Printer className="w-4 h-4 text-slate-600" />
-            </button>
-            <button className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm shadow-blue-600/20">
-              <Plus className="w-4 h-4" /> Taqsimot yaratish
-            </button>
-            <button
-              onClick={onLogout}
-              className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-md bg-white hover:bg-rose-50 text-rose-600 transition-colors text-sm font-medium"
-            >
-              <LogOut className="w-4 h-4" /> Chiqish
-            </button>
-          </div>
-        </div>
 
         {/* Tab Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <select className="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700">
+            <select className={`border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDark ? "border-slate-700 bg-slate-800 text-slate-200" : "border-slate-200 bg-white text-slate-700"}`}>
               <option>2025-2026</option>
             </select>
-            <div className="flex p-1 bg-white rounded-lg shadow-sm border border-slate-100">
-              {["1-semestr", "2-semestr", "Yozgi semestr"].map((s) => (
+            <div className={`flex p-1 rounded-lg shadow-sm border transition-colors duration-300 ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"}`}>
+              {["Kuzki semestr", "Bahorki semestr"].map((s) => (
                 <button
                   key={s}
                   onClick={() => setSemester(s)}
                   className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    semester === s ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                    semester === s
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : isDark
+                      ? "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                      : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   {s}
@@ -353,13 +324,33 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
             { label: "Yuklangan", value: "0", icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-50" },
             { label: "Kam yuklangan", value: "6", icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-50" },
           ].map((stat, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-xl border border-slate-100 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden group hover:shadow-md transition-shadow">
+            <div key={idx} className={`p-4 rounded-xl border shadow-[0_2px_8px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden group hover:shadow-md transition-all duration-300 ${
+              isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+            }`}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-medium text-slate-500 mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                  <p className={`text-xs font-medium mb-1 transition-colors duration-300 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{stat.label}</p>
+                  <p className={`text-2xl font-bold transition-colors duration-300 ${isDark ? "text-white" : "text-slate-800"}`}>{stat.value}</p>
                 </div>
-                <div className={`p-2 rounded-lg ${stat.bg} ${stat.color}`}>
+                <div className={`p-2 rounded-lg transition-colors duration-300 ${
+                  isDark
+                    ? `bg-slate-700 text-amber-400`
+                    : `${stat.bg} ${stat.color}`
+                } ${
+                  isDark && stat.color.includes("blue") ? "bg-blue-500/10 text-blue-400" : ""
+                } ${
+                  isDark && stat.color.includes("indigo") ? "bg-indigo-500/10 text-indigo-400" : ""
+                } ${
+                  isDark && stat.color.includes("violet") ? "bg-violet-500/10 text-violet-400" : ""
+                } ${
+                  isDark && stat.color.includes("emerald") ? "bg-emerald-500/10 text-emerald-400" : ""
+                } ${
+                  isDark && stat.color.includes("cyan") ? "bg-cyan-500/10 text-cyan-400" : ""
+                } ${
+                  isDark && stat.color.includes("amber") ? "bg-amber-500/10 text-amber-400" : ""
+                } ${
+                  isDark && stat.color.includes("rose") ? "bg-rose-500/10 text-rose-400" : ""
+                }`}>
                   <stat.icon className="w-4 h-4" />
                 </div>
               </div>
@@ -367,51 +358,36 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4">
-          <h3 className="font-semibold text-slate-800 mb-2">Filtrlar</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {["Fakultet", "Kafedra", "Ta'lim turi", "Ta'lim shakli", "Kurs", "Guruh", "O'qituvchi", "Fan", "Til"].map((filter) => (
-              <div key={filter}>
-                <label className="block text-xs font-medium text-slate-500 mb-1">{filter}</label>
-                <select className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50/50 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 transition-all">
-                  <option>Barchasi</option>
-                </select>
-              </div>
-            ))}
-          </div>
-          <div className="relative mt-2">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="O'qituvchi yoki kafedra bo'yicha qidirish..."
-              className="w-full border border-slate-200 rounded-lg pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
-          </div>
-        </div>
-
 
 
         {/* Charts & Summary */}
         <div className="flex flex-col gap-6">
-          <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col">
-            <h3 className="font-semibold text-slate-800 mb-4">Taqqoslash va taqsimot</h3>
-            <div className="flex bg-slate-100 p-1 rounded-lg mb-4 self-start flex-wrap gap-1">
+          <div className={`p-5 rounded-xl border shadow-sm flex flex-col transition-colors duration-300 ${
+            isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+          }`}>
+            <h3 className={`font-semibold mb-4 transition-colors duration-300 ${isDark ? "text-white" : "text-slate-800"}`}>Taqqoslash va taqsimot</h3>
+            <div className={`flex p-1 rounded-lg mb-4 self-start flex-wrap gap-1 transition-colors duration-300 ${
+              isDark ? "bg-slate-900" : "bg-slate-100"
+            }`}>
               {["Fakultet", "Kafedra", "O'qituvchi", "Soat turlari", "Dinamika"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    activeTab === tab ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                    activeTab === tab
+                      ? isDark
+                        ? "bg-slate-800 text-white shadow-sm"
+                        : "bg-white text-slate-800 shadow-sm"
+                      : isDark
+                      ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                   }`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
-            <div className="flex-1 w-full h-[250px] min-h-[250px] flex items-center justify-center relative overflow-hidden">
+            <div className={`flex-1 w-full h-[250px] min-h-[250px] flex items-center justify-center relative overflow-hidden ${isDark ? "dark-chart" : ""}`}>
               <style>
                 {`
                   .vertical-wipe {
@@ -448,6 +424,23 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
                   .MuiChartsGrid-line {
                     stroke-dasharray: 4 4;
                     stroke: #e2e8f0;
+                  }
+
+                  /* Dark mode support for MUI Charts */
+                  .dark-chart .MuiChartsAxis-line {
+                    stroke: #475569 !important;
+                  }
+                  .dark-chart .MuiChartsAxis-tick {
+                    stroke: #475569 !important;
+                  }
+                  .dark-chart .MuiChartsAxis-tickLabel {
+                    fill: #94a3b8 !important;
+                  }
+                  .dark-chart .MuiChartsLegend-label {
+                    fill: #e2e8f0 !important;
+                  }
+                  .dark-chart .MuiChartsGrid-line {
+                    stroke: #334155 !important;
                   }
                 `}
               </style>
@@ -532,12 +525,14 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
               )}
             </div>
           </div>
-          <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
-            <h3 className="font-semibold text-slate-800 mb-4">Yuklama xulosasi</h3>
+          <div className={`p-5 rounded-xl border shadow-sm transition-colors duration-300 ${
+            isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+          }`}>
+            <h3 className={`font-semibold mb-4 transition-colors duration-300 ${isDark ? "text-white" : "text-slate-800"}`}>Yuklama xulosasi</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 font-medium">
+                  <tr className={`border-b font-medium transition-colors duration-300 ${isDark ? "border-slate-700 text-slate-400" : "border-slate-200 text-slate-500"}`}>
                     <th className="pb-3 pr-4 font-medium">Daraja</th>
                     <th className="pb-3 pr-4 font-medium">Nomi</th>
                     <th className="pb-3 px-2 font-medium text-right">Jami</th>
@@ -547,16 +542,16 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
                     <th className="pb-3 pl-2 font-medium text-right">Farq</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className={`divide-y transition-colors duration-300 ${isDark ? "divide-slate-700" : "divide-slate-100"}`}>
                   {summaryData.map((row, i) => (
-                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 pr-4 text-slate-600">{row.level}</td>
-                      <td className="py-3 pr-4 font-medium text-slate-800">{row.name}</td>
-                      <td className="py-3 px-2 text-right font-medium text-slate-700">{row.total}</td>
-                      <td className="py-3 px-2 text-right text-slate-600">{row.average}</td>
-                      <td className="py-3 px-2 text-right text-slate-600">{row.min}</td>
-                      <td className="py-3 px-2 text-right text-slate-600">{row.max}</td>
-                      <td className="py-3 pl-2 text-right font-medium text-slate-700">{row.diff}</td>
+                    <tr key={i} className={`transition-colors ${isDark ? "hover:bg-slate-700/50" : "hover:bg-slate-50/50"}`}>
+                      <td className={`py-3 pr-4 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.level}</td>
+                      <td className={`py-3 pr-4 font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.name}</td>
+                      <td className={`py-3 px-2 text-right font-medium transition-colors ${isDark ? "text-slate-200" : "text-slate-700"}`}>{row.total}</td>
+                      <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.average}</td>
+                      <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.min}</td>
+                      <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.max}</td>
+                      <td className={`py-3 pl-2 text-right font-medium transition-colors ${isDark ? "text-slate-200" : "text-slate-700"}`}>{row.diff}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -566,12 +561,14 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
         </div>
 
         {/* Fan taqsimoti */}
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
-          <h3 className="font-semibold text-slate-800 mb-4">Fan taqsimoti</h3>
+        <div className={`p-5 rounded-xl border shadow-sm transition-colors duration-300 ${
+          isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+        }`}>
+          <h3 className={`font-semibold mb-4 transition-colors duration-300 ${isDark ? "text-white" : "text-slate-800"}`}>Fan taqsimoti</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
+                <tr className={`border-b transition-colors duration-300 ${isDark ? "border-slate-700 text-slate-400" : "border-slate-200 text-slate-500"}`}>
                   <th className="pb-3 pr-4 font-medium">Fan</th>
                   <th className="pb-3 pr-4 font-medium">Fakultet</th>
                   <th className="pb-3 px-2 font-medium">Kurs</th>
@@ -585,19 +582,19 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
                   <th className="pb-3 pl-2 font-medium">Holat</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className={`divide-y transition-colors duration-300 ${isDark ? "divide-slate-700" : "divide-slate-100"}`}>
                 {allocationData.map((row, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 pr-4 font-medium text-slate-800">{row.subject}</td>
-                    <td className="py-3 pr-4 text-slate-600">{row.faculty}</td>
-                    <td className="py-3 px-2 text-slate-600">{row.course}</td>
-                    <td className="py-3 px-2 text-slate-600">{row.group}</td>
-                    <td className="py-3 px-2 text-right text-slate-600">{row.lecture}</td>
-                    <td className="py-3 px-2 text-right text-slate-600">{row.practice}</td>
-                    <td className="py-3 px-2 text-right text-slate-600">{row.lab}</td>
-                    <td className="py-3 px-2 text-right text-slate-600">{row.seminar}</td>
-                    <td className="py-3 px-2 text-right font-medium text-slate-800">{row.total}</td>
-                    <td className="py-3 px-4 text-slate-700">{row.teacher}</td>
+                  <tr key={i} className={`transition-colors ${isDark ? "hover:bg-slate-700/50" : "hover:bg-slate-50/50"}`}>
+                    <td className={`py-3 pr-4 font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.subject}</td>
+                    <td className={`py-3 pr-4 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.faculty}</td>
+                    <td className={`py-3 px-2 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.course}</td>
+                    <td className={`py-3 px-2 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.group}</td>
+                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.lecture}</td>
+                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.practice}</td>
+                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.lab}</td>
+                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.seminar}</td>
+                    <td className={`py-3 px-2 text-right font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.total}</td>
+                    <td className={`py-3 px-4 transition-colors ${isDark ? "text-slate-200" : "text-slate-700"}`}>{row.teacher}</td>
                     <td className="py-3 pl-2">
                       <span className={`px-2.5 py-1 text-[11px] font-semibold rounded-md ${getStatusColor(row.status)}`}>
                         {row.status}
@@ -611,12 +608,14 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
         </div>
 
         {/* Taqsimot tarixi */}
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
-          <h3 className="font-semibold text-slate-800 mb-4">Taqsimot tarixi</h3>
+        <div className={`p-5 rounded-xl border shadow-sm transition-colors duration-300 ${
+          isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+        }`}>
+          <h3 className={`font-semibold mb-4 transition-colors duration-300 ${isDark ? "text-white" : "text-slate-800"}`}>Taqqoslash tarixi</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
+                <tr className={`border-b transition-colors duration-300 ${isDark ? "border-slate-700 text-slate-400" : "border-slate-200 text-slate-500"}`}>
                   <th className="pb-3 pr-4 font-medium">O'qituvchi</th>
                   <th className="pb-3 pr-4 font-medium">Maydon</th>
                   <th className="pb-3 px-4 font-medium">Eski qiymat</th>
@@ -625,15 +624,15 @@ export default function WorkloadDashboard({ onLogout, currentUser }) {
                   <th className="pb-3 pl-4 font-medium text-right">Sana</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className={`divide-y transition-colors duration-300 ${isDark ? "divide-slate-700" : "divide-slate-100"}`}>
                 {historyData.map((row, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 pr-4 font-medium text-slate-800">{row.teacher}</td>
-                    <td className="py-3 pr-4 text-slate-600">{row.field}</td>
-                    <td className="py-3 px-4 text-slate-500">{row.oldValue}</td>
-                    <td className="py-3 px-4 font-medium text-slate-800">{row.newValue}</td>
-                    <td className="py-3 px-4 text-slate-600">{row.by}</td>
-                    <td className="py-3 pl-4 text-slate-500 text-right text-xs">{row.date}</td>
+                  <tr key={i} className={`transition-colors ${isDark ? "hover:bg-slate-700/50" : "hover:bg-slate-50/50"}`}>
+                    <td className={`py-3 pr-4 font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.teacher}</td>
+                    <td className={`py-3 pr-4 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.field}</td>
+                    <td className={`py-3 px-4 transition-colors ${isDark ? "text-slate-400" : "text-slate-500"}`}>{row.oldValue}</td>
+                    <td className={`py-3 px-4 font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.newValue}</td>
+                    <td className={`py-3 px-4 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.by}</td>
+                    <td className={`py-3 pl-4 text-right text-xs transition-colors ${isDark ? "text-slate-400" : "text-slate-500"}`}>{row.date}</td>
                   </tr>
                 ))}
               </tbody>
