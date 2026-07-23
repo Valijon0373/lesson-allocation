@@ -112,11 +112,13 @@ const baseTeachers = [
 
 const teachersWorkloadData = Array.from({ length: 40 }, (_, i) => {
   const base = baseTeachers[i % baseTeachers.length]
+  const rates = [1.0, 0.75, 0.5, 1.5, 1.25, 0.25]
   return {
     ...base,
     id: i + 1,
     name: i < 6 ? base.name : `${base.name.split(" ")[0]} O'qituvchi ${i + 1}`,
     total: base.lecture + base.practice + base.lab + base.seminar,
+    rate: rates[i % rates.length],
   }
 })
 
@@ -127,6 +129,7 @@ export default function TeachersWorkload() {
   const [visibleColumns, setVisibleColumns] = useState({
     oqituvchi: true,
     kafedra: true,
+    rate: true,
     fanlar: true,
     maruza: true,
     amaliy: true,
@@ -143,6 +146,7 @@ export default function TeachersWorkload() {
   const columnsList = [
     { id: "oqituvchi", label: "O'qituvchi" },
     { id: "kafedra", label: "Kafedra" },
+    { id: "rate", label: "Ish stavkasi" },
     { id: "fanlar", label: "Fanlar" },
     { id: "maruza", label: "Ma'ruza" },
     { id: "amaliy", label: "Amaliy" },
@@ -257,6 +261,7 @@ export default function TeachersWorkload() {
                   </th>
                 )}
                 {visibleColumns.kafedra && <th className="py-3 px-4 font-medium">Kafedra</th>}
+                {visibleColumns.rate && <th className="py-3 px-4 font-medium text-center">Ish stavkasi</th>}
                 {visibleColumns.fanlar && <th className="py-3 px-4 font-medium">Fanlar</th>}
                 {visibleColumns.maruza && <th className="py-3 px-4 font-medium text-right">Ma'ruza</th>}
                 {visibleColumns.amaliy && <th className="py-3 px-4 font-medium text-right">Amaliy</th>}
@@ -291,6 +296,11 @@ export default function TeachersWorkload() {
                     </td>
                   )}
                   {visibleColumns.kafedra && <td className="py-3 px-4 text-slate-600">{row.department}</td>}
+                  {visibleColumns.rate && (
+                    <td className="py-3 px-4 text-center text-sm font-semibold text-slate-600">
+                      {row.rate.toFixed(2)}
+                    </td>
+                  )}
                   {visibleColumns.fanlar && <td className="py-3 px-4 text-slate-600">{row.subjects}</td>}
                   {visibleColumns.maruza && <td className="py-3 px-4 text-right text-slate-600">{row.lecture}</td>}
                   {visibleColumns.amaliy && <td className="py-3 px-4 text-right text-slate-600">{row.practice}</td>}

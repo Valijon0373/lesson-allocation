@@ -4,6 +4,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Toolti
 
 export default function TeacherDetailsModal({ teacher, onClose }) {
   const [activeTab, setActiveTab] = useState("Fanlar")
+  const [scheduleYear, setScheduleYear] = useState("2025-2026")
+  const [scheduleMonth, setScheduleMonth] = useState("Sentyabr")
+  const [scheduleWeek, setScheduleWeek] = useState("1")
 
   // Mock data for Fanlar tab
   const subjectsData = [
@@ -60,6 +63,7 @@ export default function TeacherDetailsModal({ teacher, onClose }) {
               <div className="flex flex-wrap gap-2 mt-3">
                 <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-md border border-slate-200">Axborot texnologiyalari</span>
                 <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-md border border-slate-200">Fan doktori</span>
+                <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-md border border-slate-200">{teacher?.rate ? `${teacher.rate.toFixed(2)} stavka` : "1.00 stavka"}</span>
                 <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-md border border-slate-200">{teacher?.total || 228} soat</span>
               </div>
 
@@ -136,44 +140,138 @@ export default function TeacherDetailsModal({ teacher, onClose }) {
                 </table>
               </div>
             )}
-
-            {/* Jadval Tab */}
+            {/* Jadval Tab */}
             {activeTab === "Jadval" && (
-              <div className="grid grid-cols-6 gap-4 min-w-[700px]">
-                {["Du", "Se", "Ch", "Pa", "Ju", "Sh"].map((day, i) => (
-                  <div key={day} className="flex flex-col gap-3">
-                    <div className="text-center text-sm font-medium text-slate-500 mb-2">{day}</div>
-                    
-                    {/* Render mock classes specifically to match screenshot */}
-                    {day === "Se" && (
-                      <>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <div className="text-xs font-semibold text-blue-700 mb-1">09:00</div>
-                          <div className="text-sm text-blue-900 leading-tight">Web dasturlash</div>
-                          <div className="text-xs text-blue-600 mt-1">SE-401</div>
-                        </div>
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                          <div className="text-xs font-semibold text-emerald-700 mb-1">11:00</div>
-                          <div className="text-sm text-emerald-900 leading-tight">Web dasturlash</div>
-                          <div className="text-xs text-emerald-600 mt-1">SE-401</div>
-                        </div>
-                      </>
-                    )}
-                    
-                    {day === "Pa" && (
-                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                        <div className="text-xs font-semibold text-purple-700 mb-1">14:00</div>
-                        <div className="text-sm text-purple-900 leading-tight">Ma'lumotlar bazasi</div>
-                        <div className="text-xs text-purple-600 mt-1">CS-301</div>
-                      </div>
-                    )}
-                    
-                    {/* Empty placeholder for other days/slots to keep grid aligned */}
-                    {day !== "Se" && day !== "Pa" && (
-                      <div className="border border-dashed border-slate-200 rounded-lg h-24 bg-slate-50/50"></div>
-                    )}
+              <div className="space-y-6">
+                {/* Date Filters: Year, Month, Week - simple, clean inline style */}
+                <div className="flex flex-wrap gap-x-6 gap-y-3 items-center py-2 transition-colors duration-300">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-black font-bold">O'quv yili:</label>
+                    <select 
+                      value={scheduleYear} 
+                      onChange={(e) => setScheduleYear(e.target.value)}
+                      className="light-select border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 outline-none bg-white focus:border-blue-500 transition-colors font-medium shadow-sm"
+                    >
+                      <option>2025-2026</option>
+                      <option>2024-2025</option>
+                    </select>
                   </div>
-                ))}
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-black font-bold">Oy:</label>
+                    <select 
+                      value={scheduleMonth} 
+                      onChange={(e) => setScheduleMonth(e.target.value)}
+                      className="light-select border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 outline-none bg-white focus:border-blue-500 transition-colors font-medium shadow-sm"
+                    >
+                      {["Sentyabr", "Oktabr", "Noyabr", "Dekabr", "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun"].map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-black font-bold">Hafta:</label>
+                    <select 
+                      value={scheduleWeek} 
+                      onChange={(e) => setScheduleWeek(e.target.value)}
+                      className="light-select border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-600 outline-none bg-white focus:border-blue-500 transition-colors font-medium shadow-sm"
+                    >
+                      <option value="1">1-hafta</option>
+                      <option value="2">2-hafta</option>
+                      <option value="3">3-hafta</option>
+                      <option value="4">4-hafta</option>
+                    </select>
+                  </div>
+                  <div className="ml-auto text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Haftalik yuklama: <span className="text-blue-600 dark:text-blue-400">{scheduleWeek === "1" ? "12 soat" : scheduleWeek === "2" ? "8 soat" : "10 soat"}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-6 gap-4 min-w-[700px]">
+                  {["Du", "Se", "Ch", "Pa", "Ju", "Sh"].map((day, i) => (
+                    <div key={day} className="flex flex-col gap-3">
+                      <div className="text-center text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">{day}</div>
+                      
+                      {/* Week 1 */}
+                      {scheduleWeek === "1" && day === "Se" && (
+                        <>
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 shadow-sm">
+                            <div className="text-xs font-bold text-blue-700 mb-1">09:00</div>
+                            <div className="text-sm font-semibold text-blue-900 leading-tight">Web dasturlash</div>
+                            <div className="text-xs text-blue-600 mt-1.5 font-medium">SE-401</div>
+                          </div>
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 shadow-sm">
+                            <div className="text-xs font-bold text-emerald-700 mb-1">11:00</div>
+                            <div className="text-sm font-semibold text-emerald-900 leading-tight">Web dasturlash</div>
+                            <div className="text-xs text-emerald-600 mt-1.5 font-medium">SE-401</div>
+                          </div>
+                        </>
+                      )}
+                      {scheduleWeek === "1" && day === "Pa" && (
+                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 shadow-sm">
+                          <div className="text-xs font-bold text-purple-700 mb-1">14:00</div>
+                          <div className="text-sm font-semibold text-purple-900 leading-tight">Ma'lumotlar bazasi</div>
+                          <div className="text-xs text-purple-600 mt-1.5 font-medium">CS-301</div>
+                        </div>
+                      )}
+
+                      {/* Week 2 */}
+                      {scheduleWeek === "2" && day === "Se" && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 shadow-sm">
+                          <div className="text-xs font-bold text-blue-700 mb-1">09:00</div>
+                          <div className="text-sm font-semibold text-blue-900 leading-tight">Web dasturlash</div>
+                          <div className="text-xs text-blue-600 mt-1.5 font-medium">SE-401</div>
+                        </div>
+                      )}
+                      {scheduleWeek === "2" && day === "Pa" && (
+                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 shadow-sm">
+                          <div className="text-xs font-bold text-purple-700 mb-1">14:00</div>
+                          <div className="text-sm font-semibold text-purple-900 leading-tight">Ma'lumotlar bazasi</div>
+                          <div className="text-xs text-purple-600 mt-1.5 font-medium">CS-301</div>
+                        </div>
+                      )}
+
+                      {/* Week 3 */}
+                      {scheduleWeek === "3" && day === "Ch" && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
+                          <div className="text-xs font-bold text-amber-700 mb-1">10:00</div>
+                          <div className="text-sm font-semibold text-amber-900 leading-tight">Sun'iy intellekt</div>
+                          <div className="text-xs text-amber-600 mt-1.5 font-medium">AI-201</div>
+                        </div>
+                      )}
+                      {scheduleWeek === "3" && day === "Ju" && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 shadow-sm">
+                          <div className="text-xs font-bold text-emerald-700 mb-1">13:00</div>
+                          <div className="text-sm font-semibold text-emerald-900 leading-tight">Web dasturlash</div>
+                          <div className="text-xs text-emerald-600 mt-1.5 font-medium">SE-401</div>
+                        </div>
+                      )}
+
+                      {/* Week 4 */}
+                      {scheduleWeek === "4" && day === "Du" && (
+                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 shadow-sm">
+                          <div className="text-xs font-bold text-purple-700 mb-1">09:00</div>
+                          <div className="text-sm font-semibold text-purple-900 leading-tight">Ma'lumotlar bazasi</div>
+                          <div className="text-xs text-purple-600 mt-1.5 font-medium">CS-301</div>
+                        </div>
+                      )}
+                      {scheduleWeek === "4" && day === "Sh" && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
+                          <div className="text-xs font-bold text-amber-700 mb-1">11:00</div>
+                          <div className="text-sm font-semibold text-amber-900 leading-tight">Sun'iy intellekt</div>
+                          <div className="text-xs text-amber-600 mt-1.5 font-medium">AI-201</div>
+                        </div>
+                      )}
+
+                      {/* Empty slots placeholders */}
+                      {((scheduleWeek === "1" && day !== "Se" && day !== "Pa") ||
+                        (scheduleWeek === "2" && day !== "Se" && day !== "Pa") ||
+                        (scheduleWeek === "3" && day !== "Ch" && day !== "Ju") ||
+                        (scheduleWeek === "4" && day !== "Du" && day !== "Sh")) && (
+                        <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-xl h-24 bg-transparent"></div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -188,7 +286,7 @@ export default function TeacherDetailsModal({ teacher, onClose }) {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                         <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                        <Tooltip cursor={{fill: '#f8fafc'}} />
+                        <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value) => [`${value} soat`, "yuklama"]} />
                         <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={200} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -203,7 +301,7 @@ export default function TeacherDetailsModal({ teacher, onClose }) {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                         <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                        <Tooltip cursor={{fill: '#f8fafc'}} />
+                        <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value) => [`${value} soat`, "yuklama"]} />
                         <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} barSize={150} />
                       </BarChart>
                     </ResponsiveContainer>

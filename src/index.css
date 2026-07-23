@@ -104,7 +104,7 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background-color: #0f172a;
+  background-color: #f8fafc;
 }
 
 body.dark {
@@ -200,4 +200,10 @@ body.dark .border-teal-500 {
 }
 body.dark .hover\:bg-teal-50:hover {
   background-color: rgba(13, 148, 136, 0.15) !important;
+}
+
+body.dark select.light-select {
+  background-color: #ffffff !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
 }
