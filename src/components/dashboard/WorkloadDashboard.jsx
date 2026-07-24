@@ -30,21 +30,21 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
     { name: "Boshlang'ich ta'lim", value: 720 },
   ]
   const kafedraData = [
-    { name: "Rus tili", value: 340 },
-    { name: "O'zbek tili", value: 410 },
-    { name: "Xorijiy tillar", value: 380 },
-    { name: "Ped. nazariyasi", value: 290 },
-    { name: "Psixologiya", value: 310 },
-    { name: "Maxsus ped.", value: 180 },
-    { name: "Mat. va inf.", value: 450 },
-    { name: "Fizika", value: 280 },
-    { name: "Kimyo va bio.", value: 320 },
-    { name: "Tarix", value: 390 },
-    { name: "Geografiya", value: 250 },
-    { name: "Jis. tarbiya", value: 270 },
-    { name: "Boshlang'ich", value: 420 },
-    { name: "Maktabgacha", value: 300 },
-    { name: "Bolalar rivoj.", value: 160 },
+    { name: "Rus tili va\nadabiyoti", value: 340 },
+    { name: "O'zbek tili va\nadabiyoti", value: 410 },
+    { name: "Xorijiy\nfilologiya", value: 380 },
+    { name: "Pedagogika va\npsixologiya", value: 290 },
+    { name: "Maktabgacha\nta'lim", value: 310 },
+    { name: "Matematika va\nkomp. texn.", value: 180 },
+    { name: "Tabiiy fanlar", value: 450 },
+    { name: "Fizika va\nastronomiya", value: 280 },
+    { name: "Texnologik\nta'lim", value: 320 },
+    { name: "Boshlang'ich ta'lim\nmetodikasi", value: 390 },
+    { name: "Boshlang'ich ta'lim\nnazariyasi", value: 250 },
+    { name: "Tarix", value: 270 },
+    { name: "Milliy g'oya\nva falsafa", value: 420 },
+    { name: "San'atshunoslik", value: 300 },
+    { name: "Jismoniy\nmadaniyat", value: 160 },
   ]
   const oqituvchiData = [
     { name: "Aliyev A.", value: 180 },
@@ -71,7 +71,7 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
   const summaryData = [
     {
       level: "Kafedra",
-      name: "Mat. va inf. o'qitish metodikasi",
+      name: "Matematika va kompyuter texnologiyalari",
       total: 456,
       average: 228,
       min: 162,
@@ -468,6 +468,7 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
                     xAxis={[{ 
                       scaleType: "band", 
                       data: kafedraData.map((d) => d.name),
+                      tickLabelStyle: { fontSize: 10 },
                       colorMap: {
                         type: 'ordinal',
                         colors: ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#84cc16']
@@ -475,7 +476,7 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
                     }]}
                     series={[{ data: kafedraData.map((d) => d.value) }]}
                     height={250}
-                    margin={{ top: 10, bottom: 30, left: 40, right: 10 }}
+                    margin={{ top: 10, bottom: 45, left: 40, right: 10 }}
                   />
                 </div>
               )}

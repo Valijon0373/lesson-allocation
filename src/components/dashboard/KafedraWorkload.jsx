@@ -3,14 +3,19 @@ import React, { useState, useMemo } from "react"
 const initialKafedralar = [
   { name: "Rus tili va adabiyoti", faculty: "Filologiya", semester: "Kuzki semestr", year: "2025-2026", teachers: 8, lecture: 120, practice: 140, lab: 40, total: 300, status: "Me'yorida" },
   { name: "O'zbek tili va adabiyoti", faculty: "Filologiya", semester: "Bahorki semestr", year: "2025-2026", teachers: 10, lecture: 150, practice: 180, lab: 60, total: 390, status: "Me'yorida" },
-  { name: "Xorijiy tillar", faculty: "Filologiya", semester: "Kuzki semestr", year: "2024-2025", teachers: 9, lecture: 130, practice: 160, lab: 50, total: 340, status: "Me'yorida" },
-  { name: "Pedagogika nazariyasi va tarixi", faculty: "Pedagogika", semester: "Kuzki semestr", year: "2025-2026", teachers: 6, lecture: 110, practice: 120, lab: 30, total: 260, status: "Kam yuklangan" },
-  { name: "Psixologiya", faculty: "Pedagogika", semester: "Bahorki semestr", year: "2025-2026", teachers: 7, lecture: 120, practice: 130, lab: 30, total: 280, status: "Kam yuklangan" },
-  { name: "Maxsus pedagogika", faculty: "Pedagogika", semester: "Bahorki semestr", year: "2024-2025", teachers: 5, lecture: 80, practice: 90, lab: 10, total: 180, status: "Kam yuklangan" },
-  { name: "Matematika va informatika", faculty: "Aniq va tabiiy fanlar", semester: "Kuzki semestr", year: "2025-2026", teachers: 12, lecture: 180, practice: 210, lab: 60, total: 450, status: "Yuklangan" },
-  { name: "Fizika", faculty: "Aniq va tabiiy fanlar", semester: "Bahorki semestr", year: "2025-2026", teachers: 8, lecture: 100, practice: 120, lab: 60, total: 280, status: "Me'yorida" },
-  { name: "Kimyo va biologiya", faculty: "Aniq va tabiiy fanlar", semester: "Kuzki semestr", year: "2023-2024", teachers: 9, lecture: 110, practice: 130, lab: 80, total: 320, status: "Me'yorida" },
-  { name: "Tarix", faculty: "Ijtimoiy va amaliy", semester: "Bahorki semestr", year: "2025-2026", teachers: 10, lecture: 160, practice: 180, lab: 10, total: 350, status: "Me'yorida" },
+  { name: "Xorijiy filologiya", faculty: "Filologiya", semester: "Kuzki semestr", year: "2024-2025", teachers: 9, lecture: 130, practice: 160, lab: 50, total: 340, status: "Me'yorida" },
+  { name: "Pedagogika va psixologiya", faculty: "Pedagogika", semester: "Kuzki semestr", year: "2025-2026", teachers: 6, lecture: 110, practice: 120, lab: 30, total: 260, status: "Kam yuklangan" },
+  { name: "Maktabgacha ta'lim", faculty: "Pedagogika", semester: "Bahorki semestr", year: "2025-2026", teachers: 7, lecture: 120, practice: 130, lab: 30, total: 280, status: "Kam yuklangan" },
+  { name: "Matematika va kompyuter texnologiyalari", faculty: "Aniq va tabiiy fanlar", semester: "Kuzki semestr", year: "2025-2026", teachers: 12, lecture: 180, practice: 210, lab: 60, total: 450, status: "Yuklangan" },
+  { name: "Tabiiy fanlar", faculty: "Aniq va tabiiy fanlar", semester: "Bahorki semestr", year: "2025-2026", teachers: 8, lecture: 100, practice: 120, lab: 60, total: 280, status: "Me'yorida" },
+  { name: "Fizika va astronomiya", faculty: "Aniq va tabiiy fanlar", semester: "Kuzki semestr", year: "2023-2024", teachers: 9, lecture: 110, practice: 130, lab: 80, total: 320, status: "Me'yorida" },
+  { name: "Texnologik ta'lim", faculty: "Aniq va tabiiy fanlar", semester: "Bahorki semestr", year: "2024-2025", teachers: 5, lecture: 80, practice: 90, lab: 10, total: 180, status: "Kam yuklangan" },
+  { name: "Boshlang'ich ta'lim metodikasi", faculty: "Boshlang'ich ta'lim", semester: "Kuzki semestr", year: "2025-2026", teachers: 10, lecture: 140, practice: 160, lab: 40, total: 340, status: "Me'yorida" },
+  { name: "Boshlang'ich ta'lim nazariyasi", faculty: "Boshlang'ich ta'lim", semester: "Bahorki semestr", year: "2025-2026", teachers: 8, lecture: 110, practice: 130, lab: 30, total: 270, status: "Kam yuklangan" },
+  { name: "Tarix", faculty: "Ijtimoiy va amaliy fanlar", semester: "Kuzki semestr", year: "2025-2026", teachers: 10, lecture: 160, practice: 180, lab: 10, total: 350, status: "Me'yorida" },
+  { name: "Milliy g'oya va falsafa", faculty: "Ijtimoiy va amaliy fanlar", semester: "Bahorki semestr", year: "2024-2025", teachers: 7, lecture: 90, practice: 110, lab: 20, total: 220, status: "Kam yuklangan" },
+  { name: "San'atshunoslik", faculty: "Ijtimoiy va amaliy fanlar", semester: "Kuzki semestr", year: "2025-2026", teachers: 6, lecture: 100, practice: 100, lab: 40, total: 240, status: "Kam yuklangan" },
+  { name: "Jismoniy madaniyat", faculty: "Ijtimoiy va amaliy fanlar", semester: "Bahorki semestr", year: "2025-2026", teachers: 11, lecture: 150, practice: 190, lab: 80, total: 420, status: "Yuklangan" },
 ]
 
 export default function KafedraWorkload({ isDark }) {
@@ -114,7 +119,8 @@ export default function KafedraWorkload({ isDark }) {
               <option value="Filologiya">Filologiya</option>
               <option value="Pedagogika">Pedagogika</option>
               <option value="Aniq va tabiiy fanlar">Aniq va tabiiy fanlar</option>
-              <option value="Ijtimoiy va amaliy">Ijtimoiy va amaliy</option>
+              <option value="Boshlang'ich ta'lim">Boshlang'ich ta'lim</option>
+              <option value="Ijtimoiy va amaliy fanlar">Ijtimoiy va amaliy fanlar</option>
             </select>
           </div>
           <div>

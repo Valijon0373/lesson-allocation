@@ -34,13 +34,29 @@ const DEMO_PASSWORDS = {
 
 // --- MOCK DATA ---
 export let mockFaculties = [
-  { id: "f1", nameUz: "Filologiya Fakulteti", nameRu: "Факультет филологии" },
-  { id: "f2", nameUz: "Pedagogika Fakulteti", nameRu: "Факультет Педагогики" },
+  { id: "f1", nameUz: "Filologiya" },
+  { id: "f2", nameUz: "Pedagogika" },
+  { id: "f3", nameUz: "Aniq va tabiiy fanlar" },
+  { id: "f4", nameUz: "Boshlang'ich ta'lim" },
+  { id: "f5", nameUz: "Ijtimoiy va amaliy fanlar" },
 ]
 
 export let mockDepartments = [
-  { id: "d1", facultyId: "f1", nameUz: "O'zbek tili va adabiyoti kafedrasi" },
-  { id: "d2", facultyId: "f2", nameUz: "Psixologiya kafedrasi" },
+  { id: "d1", facultyId: "f1", nameUz: "Rus tili va adabiyoti" },
+  { id: "d2", facultyId: "f1", nameUz: "O'zbek tili va adabiyoti" },
+  { id: "d3", facultyId: "f1", nameUz: "Xorijiy filologiya" },
+  { id: "d4", facultyId: "f2", nameUz: "Pedagogika va psixologiya" },
+  { id: "d5", facultyId: "f2", nameUz: "Maktabgacha ta'lim" },
+  { id: "d6", facultyId: "f3", nameUz: "Matematika va kompyuter texnologiyalari" },
+  { id: "d7", facultyId: "f3", nameUz: "Tabiiy fanlar" },
+  { id: "d8", facultyId: "f3", nameUz: "Fizika va astronomiya" },
+  { id: "d9", facultyId: "f3", nameUz: "Texnologik ta'lim" },
+  { id: "d10", facultyId: "f4", nameUz: "Boshlang'ich ta'lim metodikasi" },
+  { id: "d11", facultyId: "f4", nameUz: "Boshlang'ich ta'lim nazariyasi" },
+  { id: "d12", facultyId: "f5", nameUz: "Tarix" },
+  { id: "d13", facultyId: "f5", nameUz: "Milliy g'oya va falsafa" },
+  { id: "d14", facultyId: "f5", nameUz: "San'atshunoslik" },
+  { id: "d15", facultyId: "f5", nameUz: "Jismoniy madaniyat" },
 ]
 
 export let mockPositions = [
@@ -49,16 +65,16 @@ export let mockPositions = [
 ]
 
 export let mockSubjects = [
-  { id: "s1", departmentId: "d1", nameUz: "Hozirgi o'zbek adabiyoti", lecture: 30, practice: 30, lab: 0, seminar: 10, independent: 20, credits: 4, groups: 2, students: 50 },
-  { id: "s2", departmentId: "d2", nameUz: "Umumiy psixologiya", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 30, credits: 5, groups: 3, students: 80 },
-  { id: "s3", departmentId: "d1", nameUz: "O'zbek tili tarixi", lecture: 20, practice: 40, lab: 0, seminar: 10, independent: 20, credits: 4, groups: 2, students: 55 },
-  { id: "s4", departmentId: "d1", nameUz: "Adabiyotshunoslik asoslari", lecture: 30, practice: 20, lab: 0, seminar: 10, independent: 30, credits: 4, groups: 2, students: 45 },
-  { id: "s5", departmentId: "d2", nameUz: "Klinik psixologiya", lecture: 30, practice: 30, lab: 10, seminar: 10, independent: 20, credits: 5, groups: 2, students: 40 },
-  { id: "s6", departmentId: "d2", nameUz: "Pedagogik psixologiya", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 4, groups: 3, students: 70 },
-  { id: "s7", departmentId: "d1", nameUz: "Nutq madaniyati", lecture: 20, practice: 20, lab: 0, seminar: 10, independent: 10, credits: 3, groups: 4, students: 100 },
-  { id: "s8", departmentId: "d1", nameUz: "Jahon adabiyoti", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 5, groups: 2, students: 60 },
-  { id: "s9", departmentId: "d2", nameUz: "Ijtimoiy psixologiya", lecture: 30, practice: 20, lab: 0, seminar: 10, independent: 30, credits: 4, groups: 3, students: 75 },
-  { id: "s10", departmentId: "d1", nameUz: "Tilshunoslik asoslari", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 5, groups: 2, students: 50 },
+  { id: "s1", departmentId: "d2", nameUz: "Hozirgi o'zbek adabiyoti", lecture: 30, practice: 30, lab: 0, seminar: 10, independent: 20, credits: 4, groups: 2, students: 50 },
+  { id: "s2", departmentId: "d4", nameUz: "Umumiy psixologiya", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 30, credits: 5, groups: 3, students: 80 },
+  { id: "s3", departmentId: "d2", nameUz: "O'zbek tili tarixi", lecture: 20, practice: 40, lab: 0, seminar: 10, independent: 20, credits: 4, groups: 2, students: 55 },
+  { id: "s4", departmentId: "d2", nameUz: "Adabiyotshunoslik asoslari", lecture: 30, practice: 20, lab: 0, seminar: 10, independent: 30, credits: 4, groups: 2, students: 45 },
+  { id: "s5", departmentId: "d4", nameUz: "Klinik psixologiya", lecture: 30, practice: 30, lab: 10, seminar: 10, independent: 20, credits: 5, groups: 2, students: 40 },
+  { id: "s6", departmentId: "d4", nameUz: "Pedagogik psixologiya", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 4, groups: 3, students: 70 },
+  { id: "s7", departmentId: "d2", nameUz: "Nutq madaniyati", lecture: 20, practice: 20, lab: 0, seminar: 10, independent: 10, credits: 3, groups: 4, students: 100 },
+  { id: "s8", departmentId: "d2", nameUz: "Jahon adabiyoti", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 5, groups: 2, students: 60 },
+  { id: "s9", departmentId: "d4", nameUz: "Ijtimoiy psixologiya", lecture: 30, practice: 20, lab: 0, seminar: 10, independent: 30, credits: 4, groups: 3, students: 75 },
+  { id: "s10", departmentId: "d2", nameUz: "Tilshunoslik asoslari", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 5, groups: 2, students: 50 },
 ]
 
 export let mockUsers = [
@@ -67,8 +83,8 @@ export let mockUsers = [
 ]
 
 export let mockTeachers = [
-  { id: "t1", fio: "Eshmatov Toshmat", facultyId: "f1", departmentId: "d1", positionId: "p1", login: "teacher1" },
-  { id: "t2", fio: "Aliyeva Guli", facultyId: "f2", departmentId: "d2", positionId: "p2", login: "teacher2" },
+  { id: "t1", fio: "Eshmatov Toshmat", facultyId: "f1", departmentId: "d2", positionId: "p1", login: "teacher1" },
+  { id: "t2", fio: "Aliyeva Guli", facultyId: "f2", departmentId: "d4", positionId: "p2", login: "teacher2" },
 ]
 
 /** @type {Array<Record<string, unknown>>} */
