@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { LayoutDashboard, Users, BookOpen, Clock, Moon, Sun, RefreshCcw, LogOut, Columns } from "lucide-react"
+import { LayoutDashboard, Users, BookOpen, Clock, Moon, Sun, RefreshCcw, LogOut, Columns, Settings } from "lucide-react"
 import logoImg from "../../assets/logo.jpg"
 
 const RxHamburgerMenu = (props) => (
@@ -21,10 +21,10 @@ export default function AdminLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "fanlar", label: "Fanlar", icon: BookOpen },
     { id: "kafedra-yuklamasi", label: "Kafedra yuklamasi", icon: Columns },
     { id: "oqituvchilar", label: "O'qituvchilar", icon: Users },
-    { id: "fanlar", label: "Fanlar", icon: BookOpen },
-    { id: "soatlar", label: "Soatlar", icon: Clock },
+    { id: "sozlamalar", label: "Sozlamalar", icon: Settings },
   ]
 
   return (
@@ -90,7 +90,7 @@ export default function AdminLayout({
             </div>
           </div>
 
-          {/* Top navigation links: Dashboard, Kafedra yuklamasi, O'qituvchilar, Fanlar */}
+          {/* Top navigation links: Dashboard, Fanlar, Kafedra yuklamasi, O'qituvchilar */}
           <div className={`flex items-center gap-1.5 p-1 rounded-lg transition-colors duration-300 ${
             isDark ? "bg-slate-900" : "bg-slate-100"
           }`}>
@@ -107,6 +107,20 @@ export default function AdminLayout({
               }`}
             >
               Dashboard
+            </button>
+            <button
+              onClick={() => onTabChange("fanlar")}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "fanlar"
+                  ? isDark
+                    ? "bg-slate-800 text-white shadow-sm"
+                    : "bg-white text-slate-800 shadow-sm"
+                  : isDark
+                  ? "text-slate-400 hover:text-slate-200"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Fanlar
             </button>
             <button
               onClick={() => onTabChange("kafedra-yuklamasi")}
@@ -135,20 +149,6 @@ export default function AdminLayout({
               }`}
             >
               O'qituvchilar
-            </button>
-            <button
-              onClick={() => onTabChange("fanlar")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                activeTab === "fanlar"
-                  ? isDark
-                    ? "bg-slate-800 text-white shadow-sm"
-                    : "bg-white text-slate-800 shadow-sm"
-                  : isDark
-                  ? "text-slate-400 hover:text-slate-200"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Fanlar
             </button>
           </div>
 

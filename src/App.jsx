@@ -1155,8 +1155,8 @@ function App() {
             <Subjects isAdmin dark={isDark} />
           </div>
         )}
-        {adminActiveTab === "soatlar" && (
-          <div className="flex items-center justify-center min-h-screen text-slate-500 font-medium">Soatlar va taqsimot (Tez kunda...)</div>
+         {adminActiveTab === "sozlamalar" && (
+          <div className="flex items-center justify-center min-h-screen text-slate-500 font-medium">Sozlamalar sahifasi (Tez kunda...)</div>
         )}
       </AdminLayout>
     )

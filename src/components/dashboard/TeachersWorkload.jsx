@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { Columns, ArrowUpDown, SlidersHorizontal, Eye, Pencil, Copy, History, Trash2 } from "lucide-react"
+import { Columns, ArrowUpDown, SlidersHorizontal, Eye, Pencil, FileSpreadsheet, History, Trash2 } from "lucide-react"
 import TeacherDetailsModal from "./TeacherDetailsModal"
 
 const TbColumns3 = (props) => (
@@ -113,12 +113,15 @@ const baseTeachers = [
 const teachersWorkloadData = Array.from({ length: 40 }, (_, i) => {
   const base = baseTeachers[i % baseTeachers.length]
   const rates = [1.0, 0.75, 0.5, 1.5, 1.25, 0.25]
+  const rate = rates[i % rates.length]
+  const ratingHours = Math.round(36 * rate)
   return {
     ...base,
     id: i + 1,
     name: i < 6 ? base.name : `${base.name.split(" ")[0]} O'qituvchi ${i + 1}`,
-    total: base.lecture + base.practice + base.lab + base.seminar,
-    rate: rates[i % rates.length],
+    total: base.lecture + base.practice + base.lab + base.seminar + ratingHours,
+    rate,
+    ratingHours,
   }
 })
 
@@ -126,6 +129,127 @@ export default function TeachersWorkload() {
   const [openActionId, setOpenActionId] = useState(null)
   const [selectedTeacher, setSelectedTeacher] = useState(null)
   const [isColumnsDropdownOpen, setIsColumnsDropdownOpen] = useState(false)
+
+  const exportToExcel = (teacher) => {
+    const headers = [
+      "O'qituvchi F.I.O.",
+      "Kafedra",
+      "Ish stavkasi",
+      "Fanlar soni",
+      "Ma'ruza",
+      "Amaliy",
+      "Lab",
+      "Seminar",
+      "Reyting (soat)",
+      "Jami soat",
+      "Mustaqil",
+      "Guruhlar soni",
+      "Talabalar soni",
+      "Holati"
+    ];
+
+    const dataRow = [
+      teacher.name,
+      teacher.department,
+      teacher.rate.toFixed(2),
+      teacher.subjects,
+      teacher.lecture,
+      teacher.practice,
+      teacher.lab,
+      teacher.seminar,
+      teacher.ratingHours,
+      teacher.total,
+      teacher.independent,
+      teacher.groups,
+      teacher.students,
+      teacher.status
+    ];
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return "";
+      const str = String(val);
+      if (str.includes(",") || str.includes("\"") || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvContent = 
+      "\uFEFF" + 
+      headers.map(escapeCsv).join(",") + "\n" +
+      dataRow.map(escapeCsv).join(",");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${teacher.name.replace(/\s+/g, "_")}_yuklama.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportAllToExcel = () => {
+    const headers = [
+      "№",
+      "O'qituvchi F.I.O.",
+      "Kafedra",
+      "Ish stavkasi",
+      "Fanlar soni",
+      "Ma'ruza",
+      "Amaliy",
+      "Lab",
+      "Seminar",
+      "Reyting (soat)",
+      "Jami soat",
+      "Mustaqil",
+      "Guruhlar soni",
+      "Talabalar soni",
+      "Holati"
+    ];
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return "";
+      const str = String(val);
+      if (str.includes(",") || str.includes("\"") || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = teachersWorkloadData.map((teacher, index) => [
+      index + 1,
+      teacher.name,
+      teacher.department,
+      teacher.rate.toFixed(2),
+      teacher.subjects,
+      teacher.lecture,
+      teacher.practice,
+      teacher.lab,
+      teacher.seminar,
+      teacher.ratingHours,
+      teacher.total,
+      teacher.independent,
+      teacher.groups,
+      teacher.students,
+      teacher.status
+    ]);
+
+    const csvContent = 
+      "\uFEFF" + 
+      headers.map(escapeCsv).join(",") + "\n" +
+      rows.map(row => row.map(escapeCsv).join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Oqituvchilar_dars_yuklamasi_jami.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const [visibleColumns, setVisibleColumns] = useState({
     oqituvchi: true,
     kafedra: true,
@@ -152,9 +276,9 @@ export default function TeachersWorkload() {
     { id: "amaliy", label: "Amaliy" },
     { id: "lab", label: "Lab" },
     { id: "seminar", label: "Seminar" },
+    { id: "reyting", label: "Reyting (soat)" },
     { id: "jami", label: "Jami" },
     { id: "mustaqil", label: "Mustaqil" },
-    { id: "reyting", label: "Reyting" },
     { id: "guruhlar", label: "Guruhlar" },
     { id: "talabalar", label: "Talabalar" },
     { id: "holat", label: "Holat" },
@@ -173,32 +297,41 @@ export default function TeachersWorkload() {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 m-6">
       {/* Combined Header and Filter Bar */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 mb-6 transition-colors duration-300">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h3 className="font-semibold text-slate-800 text-lg">O'qituvchilar yuklamasi</h3>
-          <div className="relative">
-            <button 
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsColumnsDropdownOpen(!isColumnsDropdownOpen)
-              }}
-              className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700 shadow-sm"
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={exportAllToExcel}
+              className="flex items-center gap-2 px-4 py-2 border border-emerald-600 rounded-lg bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-200 text-sm font-semibold shadow-sm"
+              title="Barcha o'qituvchilar yuklamasini yuklab olish"
             >
-              <TbColumns3 className="w-4 h-4" /> Ustunlar
+              <FileSpreadsheet className="w-4 h-4" /> Excelga yuklash
             </button>
-            
+
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsColumnsDropdownOpen(!isColumnsDropdownOpen)
+                }}
+                className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700 shadow-sm"
+              >
+                <TbColumns3 className="w-4 h-4" /> Ustunlar
+              </button>
+
             {isColumnsDropdownOpen && (
-              <div 
+              <div
                 className="absolute right-0 mt-2 w-[420px] rounded-xl border border-slate-150 bg-white shadow-lg p-4.5 z-50 transition-all duration-200"
                 onClick={(e) => e.stopPropagation()}
               >
                 <p className="text-[10px] font-bold text-slate-400 mb-3 px-1 uppercase tracking-wider">Ustunlarni sozlash</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
                   {columnsList.map((col) => (
-                    <label 
+                    <label
                       key={col.id}
                       className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer text-sm text-slate-700 transition-colors"
                     >
-                      <input 
+                      <input
                         type="checkbox"
                         checked={visibleColumns[col.id]}
                         onChange={() => setVisibleColumns(prev => ({
@@ -215,8 +348,9 @@ export default function TeachersWorkload() {
             )}
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-slate-100 my-4 dark:border-slate-700"></div>
+      <div className="border-t border-slate-100 my-4 dark:border-slate-700"></div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <select className="w-full sm:w-auto flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white">
@@ -235,9 +369,9 @@ export default function TeachersWorkload() {
             <option>Matematika</option>
             <option>Informatika</option>
           </select>
-          <input 
-            type="text" 
-            placeholder="O'qituvchini izlash" 
+          <input
+            type="text"
+            placeholder="O'qituvchini izlash"
             className="w-full sm:w-auto flex-[2] border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors"
           />
           <button className="w-full sm:w-auto px-6 py-2 border border-teal-500 text-teal-600 rounded-lg font-medium hover:bg-teal-50 transition-colors text-sm">
@@ -267,6 +401,12 @@ export default function TeachersWorkload() {
                 {visibleColumns.amaliy && <th className="py-3 px-4 font-medium text-right">Amaliy</th>}
                 {visibleColumns.lab && <th className="py-3 px-4 font-medium text-right">Lab</th>}
                 {visibleColumns.seminar && <th className="py-3 px-4 font-medium text-right">Seminar</th>}
+                {visibleColumns.reyting && (
+                  <th className="py-3 px-4 font-medium text-right leading-tight">
+                    <div>Reyting</div>
+                    <div>(soat)</div>
+                  </th>
+                )}
                 {visibleColumns.jami && (
                   <th className="py-3 px-4 font-medium text-right">
                     <div className="flex items-center justify-end gap-1 cursor-pointer hover:text-slate-700">
@@ -275,7 +415,6 @@ export default function TeachersWorkload() {
                   </th>
                 )}
                 {visibleColumns.mustaqil && <th className="py-3 px-4 font-medium text-right">Mustaqil</th>}
-                {visibleColumns.reyting && <th className="py-3 px-4 font-medium text-right">Reyting</th>}
                 {visibleColumns.guruhlar && <th className="py-3 px-4 font-medium text-right">Guruhlar</th>}
                 {visibleColumns.talabalar && <th className="py-3 px-4 font-medium text-right">Talabalar</th>}
                 {visibleColumns.holat && <th className="py-3 px-4 font-medium">Holat</th>}
@@ -286,99 +425,104 @@ export default function TeachersWorkload() {
               {teachersWorkloadData.map((row, idx) => {
                 const isBottom = idx > 0 && idx >= Math.floor(teachersWorkloadData.length / 2);
                 return (
-                <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group relative">
-                  <td className="py-3 px-4 text-slate-500">{idx + 1}</td>
-                  {visibleColumns.oqituvchi && (
-                    <td className="py-3 px-4 font-medium text-slate-800">
-                      <div className="max-w-[200px] truncate" title={row.name}>
-                        {row.name}
-                      </div>
-                    </td>
-                  )}
-                  {visibleColumns.kafedra && <td className="py-3 px-4 text-slate-600">{row.department}</td>}
-                  {visibleColumns.rate && (
-                    <td className="py-3 px-4 text-center text-sm font-semibold text-slate-600">
-                      {row.rate.toFixed(2)}
-                    </td>
-                  )}
-                  {visibleColumns.fanlar && <td className="py-3 px-4 text-slate-600">{row.subjects}</td>}
-                  {visibleColumns.maruza && <td className="py-3 px-4 text-right text-slate-600">{row.lecture}</td>}
-                  {visibleColumns.amaliy && <td className="py-3 px-4 text-right text-slate-600">{row.practice}</td>}
-                  {visibleColumns.lab && <td className="py-3 px-4 text-right text-slate-600">{row.lab}</td>}
-                  {visibleColumns.seminar && <td className="py-3 px-4 text-right text-slate-600">{row.seminar}</td>}
-                  {visibleColumns.jami && <td className="py-3 px-4 text-right font-medium text-slate-800">{row.total}</td>}
-                  {visibleColumns.mustaqil && <td className="py-3 px-4 text-right text-slate-600">{row.independent}</td>}
-                  {visibleColumns.reyting && (
-                    <td className="py-3 px-4 text-right">
-                      <span className="inline-flex items-center gap-1 text-amber-600 font-semibold dark:text-amber-400">
-                        {Math.min(5.0, (3.5 + (row.students / 250) * 1.0 + (row.total / 300) * 0.5)).toFixed(1)} ★
-                      </span>
-                    </td>
-                  )}
-                  {visibleColumns.guruhlar && <td className="py-3 px-4 text-right text-slate-600">{row.groups}</td>}
-                  {visibleColumns.talabalar && <td className="py-3 px-4 text-right text-slate-600">{row.students}</td>}
-                  {visibleColumns.holat && (
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
-                        {row.status}
-                      </span>
-                    </td>
-                  )}
-                <td className="py-3 px-4 text-center">
-                  <div className="relative inline-flex">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setOpenActionId(openActionId === row.id ? null : row.id)
-                      }}
-                      className="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2.5 text-slate-700 hover:text-slate-800 hover:bg-slate-100 transition-colors shadow-sm bg-white"
-                      aria-label="Amallar menyusi"
-                    >
-                      <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
-                    </button>
-                    
-                    {openActionId === row.id && (
-                      <div 
-                        className={`absolute right-0 ${isBottom ? "bottom-full mb-2" : "top-full mt-2"} z-50 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button 
-                          onClick={() => {
-                            setSelectedTeacher(row)
-                            setOpenActionId(null)
-                          }}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50 transition-colors"
-                        >
-                          <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Ko'rish
-                        </button>
-                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors">
-                          <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Tahrirlash
-                        </button>
-                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-teal-700 hover:bg-teal-50 transition-colors">
-                          <Copy className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Nusxalash
-                        </button>
-                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors">
-                          <History className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Tarix
-                        </button>
-                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50 transition-colors">
-                          <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> O'chirish
-                        </button>
-                      </div>
+                  <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group relative">
+                    <td className="py-3 px-4 text-slate-500">{idx + 1}</td>
+                    {visibleColumns.oqituvchi && (
+                      <td className="py-3 px-4 font-medium text-slate-800">
+                        <div className="max-w-[200px] truncate" title={row.name}>
+                          {row.name}
+                        </div>
+                      </td>
                     )}
-                  </div>
-                </td>
-              </tr>
-            )})}
-          </tbody>
-        </table>
+                    {visibleColumns.kafedra && <td className="py-3 px-4 text-slate-600">{row.department}</td>}
+                    {visibleColumns.rate && (
+                      <td className="py-3 px-4 text-center text-sm font-semibold text-slate-600">
+                        {row.rate.toFixed(2)}
+                      </td>
+                    )}
+                    {visibleColumns.fanlar && <td className="py-3 px-4 text-slate-600">{row.subjects}</td>}
+                    {visibleColumns.maruza && <td className="py-3 px-4 text-right text-slate-600">{row.lecture}</td>}
+                    {visibleColumns.amaliy && <td className="py-3 px-4 text-right text-slate-600">{row.practice}</td>}
+                    {visibleColumns.lab && <td className="py-3 px-4 text-right text-slate-600">{row.lab}</td>}
+                    {visibleColumns.seminar && <td className="py-3 px-4 text-right text-slate-600">{row.seminar}</td>}
+                    {visibleColumns.reyting && (
+                      <td className="py-3 px-4 text-right text-slate-600">
+                        {row.ratingHours}
+                      </td>
+                    )}
+                    {visibleColumns.jami && <td className="py-3 px-4 text-right font-medium text-slate-800">{row.total}</td>}
+                    {visibleColumns.mustaqil && <td className="py-3 px-4 text-right text-slate-600">{row.independent}</td>}
+                    {visibleColumns.guruhlar && <td className="py-3 px-4 text-right text-slate-600">{row.groups}</td>}
+                    {visibleColumns.talabalar && <td className="py-3 px-4 text-right text-slate-600">{row.students}</td>}
+                    {visibleColumns.holat && (
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                          {row.status}
+                        </span>
+                      </td>
+                    )}
+                    <td className="py-3 px-4 text-center">
+                      <div className="relative inline-flex">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenActionId(openActionId === row.id ? null : row.id)
+                          }}
+                          className="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2.5 text-slate-700 hover:text-slate-800 hover:bg-slate-100 transition-colors shadow-sm bg-white"
+                          aria-label="Amallar menyusi"
+                        >
+                          <SlidersHorizontal className="h-5 w-5" strokeWidth={1.9} aria-hidden />
+                        </button>
+
+                        {openActionId === row.id && (
+                          <div
+                            className={`absolute right-0 ${isBottom ? "bottom-full mb-2" : "top-full mt-2"} z-50 min-w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => {
+                                setSelectedTeacher(row)
+                                setOpenActionId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50 transition-colors"
+                            >
+                              <Eye className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Ko'rish
+                            </button>
+                            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors">
+                              <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Tahrirlash
+                            </button>
+                            <button
+                              onClick={() => {
+                                exportToExcel(row)
+                                setOpenActionId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-teal-700 hover:bg-teal-50 transition-colors"
+                            >
+                              <FileSpreadsheet className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Excel
+                            </button>
+                            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors">
+                              <History className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> Tarix
+                            </button>
+                            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50 transition-colors">
+                              <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden /> O'chirish
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
-      
+
       {/* Teacher Details Modal */}
       {selectedTeacher && (
-        <TeacherDetailsModal 
-          teacher={selectedTeacher} 
-          onClose={() => setSelectedTeacher(null)} 
+        <TeacherDetailsModal
+          teacher={selectedTeacher}
+          onClose={() => setSelectedTeacher(null)}
         />
       )}
     </div>

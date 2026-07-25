@@ -18,6 +18,10 @@ import {
 import { BarChart } from "@mui/x-charts/BarChart"
 import { PieChart } from "@mui/x-charts/PieChart"
 import { LineChart } from "@mui/x-charts/LineChart"
+import Subjects from "./Subjects"
+import KafedraWorkload from "./KafedraWorkload"
+import TeachersWorkload from "./TeachersWorkload"
+
 export default function WorkloadDashboard({ currentUser, isDark }) {
   const [semester, setSemester] = useState("Kuzki semestr")
   const [activeTab, setActiveTab] = useState("Fakultet")
@@ -640,6 +644,15 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
             </table>
           </div>
         </div>
+
+        {/* Fanlar */}
+        <Subjects dark={isDark} isAdmin={currentUser?.role === "admin"} />
+
+        {/* Kafedra yuklamasi */}
+        <KafedraWorkload isDark={isDark} className="" />
+
+        {/* O'qituvchilar */}
+        <TeachersWorkload className="" />
 
       </div>
     </div>
