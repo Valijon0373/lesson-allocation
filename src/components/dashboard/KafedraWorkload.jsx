@@ -356,14 +356,26 @@ export default function KafedraWorkload({ isDark }) {
 
       {/* Modal dialog block */}
       {selectedWorkload && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 animate-in fade-in duration-200 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transition-all duration-300 flex flex-col w-full max-w-[95vw] h-[90vh] max-h-[90vh]">
+        <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center z-50 animate-in fade-in duration-300 p-4 overflow-y-auto">
+          <div 
+            className={`bg-white rounded-3xl shadow-2xl border border-slate-100/80 overflow-hidden transition-all duration-500 ease-out flex flex-col w-full my-auto ${
+              isTaqsimlashOpen 
+                ? "max-w-5xl h-[640px] max-h-[90vh]" 
+                : "max-w-2xl h-auto max-h-[90vh]"
+            }`}
+          >
             <div className="flex flex-col md:flex-row h-full overflow-hidden">
               {/* Left Side: Subject Workload Details */}
-              <div className={`p-6 flex-1 flex flex-col justify-between overflow-y-auto h-full ${isTaqsimlashOpen ? "border-r border-slate-100" : ""}`}>
+              <div 
+                className={`p-6 flex flex-col justify-between overflow-y-auto h-full transition-all duration-500 ${
+                  isTaqsimlashOpen 
+                    ? "w-full md:w-[400px] shrink-0 border-r border-slate-200/80 bg-slate-50/50" 
+                    : "w-full"
+                }`}
+              >
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
+                  <div className="flex items-center justify-between mb-3.5">
+                    <span className="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-150 px-3 py-1 rounded-full shadow-2xs">
                       {selectedWorkload.semester}
                     </span>
                     <button 
@@ -371,95 +383,157 @@ export default function KafedraWorkload({ isDark }) {
                         setSelectedWorkload(null);
                         setIsTaqsimlashOpen(false);
                       }}
-                      className="text-slate-400 hover:text-slate-650 text-base font-semibold"
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 flex items-center justify-center transition-colors font-bold text-sm shadow-2xs"
+                      title="Yopish"
                     >
                       ✕
                     </button>
                   </div>
-                  <h3 className="text-base font-bold text-slate-800 mb-2">
+                  <h3 className="text-lg font-black text-slate-850 mb-1 leading-snug tracking-tight">
                     {selectedWorkload.subjectName}
                   </h3>
-                  <p className="text-xs text-slate-500 mb-6">
-                    Fakultet: <span className="font-semibold text-slate-700">{selectedWorkload.faculty}</span> • Kafedra: <span className="font-semibold text-slate-700">{selectedWorkload.name}</span>
+                  <p className="text-xs text-slate-500 mb-5 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1 bg-slate-100/90 px-2.5 py-1 rounded-md text-slate-650 font-medium">
+                      Fakultet: <strong className="text-slate-800 font-bold">{selectedWorkload.faculty}</strong>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="inline-flex items-center gap-1 bg-slate-100/90 px-2.5 py-1 rounded-md text-slate-650 font-medium">
+                      Kafedra: <strong className="text-slate-800 font-bold">{selectedWorkload.name}</strong>
+                    </span>
                   </p>
 
-                  <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className={`grid gap-2.5 mb-5 ${isTaqsimlashOpen ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4 gap-3 mb-6"}`}>
                     {/* Ma'ruza */}
-                    <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-4 flex flex-col justify-center items-center text-center shadow-xs hover:border-indigo-200 hover:shadow-xs transition-all duration-200">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Ma'ruza</span>
-                      <span className="text-lg font-extrabold text-slate-800">{selectedWorkload.lecture} soat</span>
-                      <span className="text-[10px] text-emerald-600 font-bold mt-1">Mavjud: {selectedWorkload.lecture - selectedWorkload.allocated.lecture} soat</span>
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-indigo-300 hover:shadow-sm transition-all duration-200 group">
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5 group-hover:text-indigo-600 transition-colors">Ma'ruza</span>
+                      <span className="text-base font-black text-slate-800 my-0.5">{selectedWorkload.lecture} <span className="text-[11px] font-semibold text-slate-500 font-normal">soat</span></span>
+                      {selectedWorkload.lecture - (selectedWorkload.allocated?.lecture || 0) > 0 ? (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50/90 px-2 py-0.5 rounded-md mt-1 border border-emerald-200/60 w-full truncate">
+                          Mavjud: {selectedWorkload.lecture - (selectedWorkload.allocated?.lecture || 0)} soat
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-md mt-1 border border-slate-200/60 w-full truncate">
+                          Mavjud: 0 soat
+                        </span>
+                      )}
                     </div>
 
                     {/* Seminar */}
-                    <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-4 flex flex-col justify-center items-center text-center shadow-xs hover:border-indigo-200 hover:shadow-xs transition-all duration-200">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Seminar</span>
-                      <span className="text-lg font-extrabold text-slate-800">{selectedWorkload.seminar || 0} soat</span>
-                      <span className="text-[10px] text-emerald-600 font-bold mt-1">Mavjud: {(selectedWorkload.seminar || 0) - (selectedWorkload.allocated.seminar || 0)} soat</span>
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-indigo-300 hover:shadow-sm transition-all duration-200 group">
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5 group-hover:text-indigo-600 transition-colors">Seminar</span>
+                      <span className="text-base font-black text-slate-800 my-0.5">{selectedWorkload.seminar || 0} <span className="text-[11px] font-semibold text-slate-500 font-normal">soat</span></span>
+                      {(selectedWorkload.seminar || 0) - (selectedWorkload.allocated?.seminar || 0) > 0 ? (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50/90 px-2 py-0.5 rounded-md mt-1 border border-emerald-200/60 w-full truncate">
+                          Mavjud: {(selectedWorkload.seminar || 0) - (selectedWorkload.allocated?.seminar || 0)} soat
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-md mt-1 border border-slate-200/60 w-full truncate">
+                          Mavjud: 0 soat
+                        </span>
+                      )}
                     </div>
 
                     {/* Laboratoriya */}
-                    <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-4 flex flex-col justify-center items-center text-center shadow-xs hover:border-indigo-200 hover:shadow-xs transition-all duration-200">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Laboratoriya</span>
-                      <span className="text-lg font-extrabold text-slate-800">{selectedWorkload.lab} soat</span>
-                      <span className="text-[10px] text-emerald-600 font-bold mt-1">Mavjud: {selectedWorkload.lab - selectedWorkload.allocated.lab} soat</span>
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-indigo-300 hover:shadow-sm transition-all duration-200 group">
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5 group-hover:text-indigo-600 transition-colors">Laboratoriya</span>
+                      <span className="text-base font-black text-slate-800 my-0.5">{selectedWorkload.lab || 0} <span className="text-[11px] font-semibold text-slate-500 font-normal">soat</span></span>
+                      {(selectedWorkload.lab || 0) - (selectedWorkload.allocated?.lab || 0) > 0 ? (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50/90 px-2 py-0.5 rounded-md mt-1 border border-emerald-200/60 w-full truncate">
+                          Mavjud: {(selectedWorkload.lab || 0) - (selectedWorkload.allocated?.lab || 0)} soat
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-md mt-1 border border-slate-200/60 w-full truncate">
+                          Mavjud: 0 soat
+                        </span>
+                      )}
                     </div>
 
                     {/* Amaliy */}
-                    <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-4 flex flex-col justify-center items-center text-center shadow-xs hover:border-indigo-200 hover:shadow-xs transition-all duration-200">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Amaliy</span>
-                      <span className="text-lg font-extrabold text-slate-800">{selectedWorkload.practice} soat</span>
-                      <span className="text-[10px] text-emerald-600 font-bold mt-1">Mavjud: {selectedWorkload.practice - selectedWorkload.allocated.practice} soat</span>
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-indigo-300 hover:shadow-sm transition-all duration-200 group">
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5 group-hover:text-indigo-600 transition-colors">Amaliy</span>
+                      <span className="text-base font-black text-slate-800 my-0.5">{selectedWorkload.practice || 0} <span className="text-[11px] font-semibold text-slate-500 font-normal">soat</span></span>
+                      {(selectedWorkload.practice || 0) - (selectedWorkload.allocated?.practice || 0) > 0 ? (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50/90 px-2 py-0.5 rounded-md mt-1 border border-emerald-200/60 w-full truncate">
+                          Mavjud: {(selectedWorkload.practice || 0) - (selectedWorkload.allocated?.practice || 0)} soat
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-md mt-1 border border-slate-200/60 w-full truncate">
+                          Mavjud: 0 soat
+                        </span>
+                      )}
                     </div>
 
                     {/* Reyting */}
-                    <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-4 flex flex-col justify-center items-center text-center shadow-xs hover:border-indigo-200 hover:shadow-xs transition-all duration-200">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Reyting</span>
-                      <span className="text-lg font-extrabold text-slate-800">{selectedWorkload.rating || 0} soat</span>
-                      <span className="text-[10px] text-emerald-600 font-bold mt-1">Mavjud: {(selectedWorkload.rating || 0) - (selectedWorkload.allocated.rating || 0)} soat</span>
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-indigo-300 hover:shadow-sm transition-all duration-200 group">
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5 group-hover:text-indigo-600 transition-colors">Reyting</span>
+                      <span className="text-base font-black text-slate-800 my-0.5">{selectedWorkload.rating || 0} <span className="text-[11px] font-semibold text-slate-500 font-normal">soat</span></span>
+                      {(selectedWorkload.rating || 0) - (selectedWorkload.allocated?.rating || 0) > 0 ? (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50/90 px-2 py-0.5 rounded-md mt-1 border border-emerald-200/60 w-full truncate">
+                          Mavjud: {(selectedWorkload.rating || 0) - (selectedWorkload.allocated?.rating || 0)} soat
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-md mt-1 border border-slate-200/60 w-full truncate">
+                          Mavjud: 0 soat
+                        </span>
+                      )}
                     </div>
 
-                    {/* Jami soat */}
-                    <div className="bg-blue-50/40 border border-blue-150 rounded-xl p-4 flex flex-col justify-center items-center text-center shadow-xs">
-                      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Jami soat</span>
-                      <span className="text-lg font-extrabold text-blue-700">{selectedWorkload.total} soat</span>
-                    </div>
-                  </div>
-
-                  {/* Centered bottom row for independent study and credits */}
-                  <div className="grid grid-cols-2 gap-4 max-w-xl mx-auto mb-6">
                     {/* Mustaqil ta'lim */}
-                    <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-4 flex flex-col justify-center items-center text-center shadow-xs hover:border-indigo-200 hover:shadow-xs transition-all duration-200">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Mustaqil ta'lim</span>
-                      <span className="text-lg font-extrabold text-slate-800">{selectedWorkload.independent || 0} soat</span>
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-slate-300 transition-all duration-200">
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Mustaqil ta'lim</span>
+                      <span className="text-base font-black text-slate-800 my-0.5">{selectedWorkload.independent || 0} <span className="text-[11px] font-normal text-slate-500">soat</span></span>
+                      <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-md mt-1 border border-slate-200/60 w-full truncate">
+                        Yuklama
+                      </span>
                     </div>
 
                     {/* Kredit */}
-                    <div className="bg-indigo-50/40 border border-indigo-150 rounded-xl p-4 flex flex-col justify-center items-center text-center shadow-xs">
-                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">Kredit</span>
-                      <span className="text-lg font-extrabold text-indigo-700">{(selectedWorkload.total / 30).toFixed(1)}</span>
+                    <div className="bg-indigo-50/40 rounded-2xl border border-indigo-150 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-indigo-300 transition-all duration-200">
+                      <span className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-wider mb-0.5">Kredit</span>
+                      <span className="text-base font-black text-indigo-700 my-0.5">{(selectedWorkload.total / 30).toFixed(1)} <span className="text-[11px] font-normal text-indigo-500">kredit</span></span>
+                      <span className="text-[10px] text-indigo-700 font-bold bg-indigo-100/60 px-2 py-0.5 rounded-md mt-1 border border-indigo-200/60 w-full truncate">
+                        30 soat/kredit
+                      </span>
+                    </div>
+
+                    {/* Jami soat */}
+                    <div className="bg-slate-100 rounded-2xl border border-slate-300 p-3 flex flex-col justify-between items-center text-center shadow-2xs hover:border-slate-400 transition-all duration-200">
+                      <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Jami soat</span>
+                      <span className="text-base font-black text-slate-800 my-0.5">{selectedWorkload.total} <span className="text-[11px] font-semibold text-slate-500 font-normal">soat</span></span>
+                      <span className="text-[10px] text-slate-700 font-bold bg-slate-200/80 px-2 py-0.5 rounded-md mt-1 border border-slate-300/60 w-full truncate">
+                        Umumiy
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 flex gap-3">
-                  {!isTaqsimlashOpen && (
+                <div className="mt-auto pt-4 border-t border-slate-200/60 flex items-center gap-3">
+                  {!isTaqsimlashOpen ? (
+                    <>
+                      <button
+                        onClick={() => setIsTaqsimlashOpen(true)}
+                        className="flex-1 py-2.5 px-5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl text-xs font-extrabold transition-all duration-200 shadow-md hover:shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transform active:scale-[0.98]"
+                      >
+                        <span>⚡</span> Taqsimlash
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedWorkload(null);
+                          setIsTaqsimlashOpen(false);
+                        }}
+                        className="py-2.5 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors duration-200"
+                      >
+                        Yopish
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={() => setIsTaqsimlashOpen(true)}
-                      className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors duration-200 shadow-sm flex items-center justify-center gap-2"
+                      onClick={() => setIsTaqsimlashOpen(false)}
+                      className="w-full py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-colors duration-200 flex items-center justify-center gap-2 shadow-2xs"
                     >
-                      Taqsimlash
+                      <span>←</span> Taqsimlashni yopish
                     </button>
                   )}
-                  <button
-                    onClick={() => {
-                      setSelectedWorkload(null);
-                      setIsTaqsimlashOpen(false);
-                    }}
-                    className={`py-2 px-4 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-colors duration-200 ${isTaqsimlashOpen ? "w-full" : "w-1/3"}`}
-                  >
-                    Yopish
-                  </button>
                 </div>
               </div>
 
@@ -467,167 +541,266 @@ export default function KafedraWorkload({ isDark }) {
               {isTaqsimlashOpen && (
                 <>
                   {selectedTeacherToAssign ? (
-                    <div className="w-full md:flex-1 p-6 flex flex-col bg-slate-50/50 justify-between overflow-y-auto h-full border-l border-slate-100">
-                      <div>
-                        <div className="flex items-center gap-2 mb-4">
-                          <button 
-                            onClick={() => setSelectedTeacherToAssign(null)}
-                            className="text-xs text-indigo-650 hover:text-indigo-855 font-semibold flex items-center gap-1"
-                          >
-                            ← Ortga
-                          </button>
-                          <span className="text-slate-350 font-light">|</span>
-                          <h4 className="text-xs font-bold text-slate-800">Taqsimlash: {selectedTeacherToAssign.name}</h4>
+                    <div className="w-full md:flex-1 p-6 flex flex-col bg-slate-50/70 justify-between h-full overflow-hidden border-l border-slate-200/80 animate-in fade-in slide-in-from-right-4 duration-300">
+                      <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200/80">
+                          <div className="flex items-center gap-2.5">
+                            <button 
+                              onClick={() => setSelectedTeacherToAssign(null)}
+                              className="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition-colors text-xs font-bold shadow-2xs"
+                              title="Ortga"
+                            >
+                              ←
+                            </button>
+                            <div>
+                              <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider block">Ajratiladigan soat miqdori</span>
+                              <h4 className="text-sm font-black text-slate-800">{selectedTeacherToAssign.name}</h4>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-150 px-2 py-1 rounded-md">
+                            {selectedTeacherToAssign.status}
+                          </span>
                         </div>
 
-                        <p className="text-[11px] text-slate-500 mb-4 bg-indigo-50/40 p-2.5 rounded-xl border border-indigo-100/50">
-                          Ushbu o'qituvchiga dars yuklamasidan qancha soat berilishini belgilang. Qavs ichida fanning taqsimlanmagan (mavjud) soatlari ko'rsatilgan.
-                        </p>
+                        <div className="bg-indigo-50/80 border border-indigo-150 p-3 rounded-xl mb-4 text-[11px] text-indigo-950 flex gap-2 items-start shadow-2xs">
+                          <span className="text-sm">💡</span>
+                          <p className="leading-relaxed font-medium">
+                            Ushbu o'qituvchiga dars yuklamasidan qancha soat berilishini belgilang. Qavs ichida fanning taqsimlanmagan (mavjud) soatlari ko'rsatilgan.
+                          </p>
+                        </div>
 
-                        <div className="space-y-3 overflow-y-auto max-h-[480px] pr-1 mb-4">
+                        <div className="space-y-2.5 mb-4">
                           {/* Lecture input */}
                           {selectedWorkload.lecture > 0 && (
-                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-300 transition-colors flex items-center justify-between gap-4">
+                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-400 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all flex items-center justify-between gap-4">
                               <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Ma'ruza</span>
-                                <span className="text-[10.5px] text-emerald-600 font-bold">Mavjud: {selectedWorkload.lecture - selectedWorkload.allocated.lecture} soat</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                                  <span className="text-xs font-bold text-slate-800">Ma'ruza</span>
+                                </div>
+                                <span className="text-[11px] text-slate-500 font-medium mt-0.5 pl-4">
+                                  Umumiy: {selectedWorkload.lecture} soat • <strong className="text-emerald-600">Mavjud: {selectedWorkload.lecture - selectedWorkload.allocated.lecture} soat</strong>
+                                </span>
                               </div>
-                              <input 
-                                type="number"
-                                min="0"
-                                max={selectedWorkload.lecture - selectedWorkload.allocated.lecture}
-                                value={assignHours.lecture}
-                                onChange={(e) => handleAssignHoursChange("lecture", e.target.value)}
-                                className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:border-indigo-500 outline-none"
-                              />
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  max={selectedWorkload.lecture - selectedWorkload.allocated.lecture}
+                                  value={assignHours.lecture}
+                                  onChange={(e) => handleAssignHoursChange("lecture", e.target.value)}
+                                  placeholder="0"
+                                  className="w-20 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                                />
+                                <span className="text-xs font-bold text-slate-400">soat</span>
+                              </div>
                             </div>
                           )}
 
                           {/* Seminar input */}
                           {selectedWorkload.seminar > 0 && (
-                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-300 transition-colors flex items-center justify-between gap-4">
+                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-400 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all flex items-center justify-between gap-4">
                               <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Seminar</span>
-                                <span className="text-[10.5px] text-emerald-600 font-bold">Mavjud: {selectedWorkload.seminar - selectedWorkload.allocated.seminar} soat</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-purple-500 inline-block"></span>
+                                  <span className="text-xs font-bold text-slate-800">Seminar</span>
+                                </div>
+                                <span className="text-[11px] text-slate-500 font-medium mt-0.5 pl-4">
+                                  Umumiy: {selectedWorkload.seminar} soat • <strong className="text-emerald-600">Mavjud: {selectedWorkload.seminar - selectedWorkload.allocated.seminar} soat</strong>
+                                </span>
                               </div>
-                              <input 
-                                type="number"
-                                min="0"
-                                max={selectedWorkload.seminar - selectedWorkload.allocated.seminar}
-                                value={assignHours.seminar}
-                                onChange={(e) => handleAssignHoursChange("seminar", e.target.value)}
-                                className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:border-indigo-500 outline-none"
-                              />
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  max={selectedWorkload.seminar - selectedWorkload.allocated.seminar}
+                                  value={assignHours.seminar}
+                                  onChange={(e) => handleAssignHoursChange("seminar", e.target.value)}
+                                  placeholder="0"
+                                  className="w-20 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                                />
+                                <span className="text-xs font-bold text-slate-400">soat</span>
+                              </div>
                             </div>
                           )}
 
                           {/* Practice input */}
                           {selectedWorkload.practice > 0 && (
-                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-300 transition-colors flex items-center justify-between gap-4">
+                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-400 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all flex items-center justify-between gap-4">
                               <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Amaliy</span>
-                                <span className="text-[10.5px] text-emerald-600 font-bold">Mavjud: {selectedWorkload.practice - selectedWorkload.allocated.practice} soat</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                                  <span className="text-xs font-bold text-slate-800">Amaliy</span>
+                                </div>
+                                <span className="text-[11px] text-slate-500 font-medium mt-0.5 pl-4">
+                                  Umumiy: {selectedWorkload.practice} soat • <strong className="text-emerald-600">Mavjud: {selectedWorkload.practice - selectedWorkload.allocated.practice} soat</strong>
+                                </span>
                               </div>
-                              <input 
-                                type="number"
-                                min="0"
-                                max={selectedWorkload.practice - selectedWorkload.allocated.practice}
-                                value={assignHours.practice}
-                                onChange={(e) => handleAssignHoursChange("practice", e.target.value)}
-                                className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:border-indigo-500 outline-none"
-                              />
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  max={selectedWorkload.practice - selectedWorkload.allocated.practice}
+                                  value={assignHours.practice}
+                                  onChange={(e) => handleAssignHoursChange("practice", e.target.value)}
+                                  placeholder="0"
+                                  className="w-20 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                                />
+                                <span className="text-xs font-bold text-slate-400">soat</span>
+                              </div>
                             </div>
                           )}
 
                           {/* Lab input */}
                           {selectedWorkload.lab > 0 && (
-                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-300 transition-colors flex items-center justify-between gap-4">
+                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-400 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all flex items-center justify-between gap-4">
                               <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Laboratoriya</span>
-                                <span className="text-[10.5px] text-emerald-600 font-bold">Mavjud: {selectedWorkload.lab - selectedWorkload.allocated.lab} soat</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                                  <span className="text-xs font-bold text-slate-800">Laboratoriya</span>
+                                </div>
+                                <span className="text-[11px] text-slate-500 font-medium mt-0.5 pl-4">
+                                  Umumiy: {selectedWorkload.lab} soat • <strong className="text-emerald-600">Mavjud: {selectedWorkload.lab - selectedWorkload.allocated.lab} soat</strong>
+                                </span>
                               </div>
-                              <input 
-                                type="number"
-                                min="0"
-                                max={selectedWorkload.lab - selectedWorkload.allocated.lab}
-                                value={assignHours.lab}
-                                onChange={(e) => handleAssignHoursChange("lab", e.target.value)}
-                                className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:border-indigo-500 outline-none"
-                              />
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  max={selectedWorkload.lab - selectedWorkload.allocated.lab}
+                                  value={assignHours.lab}
+                                  onChange={(e) => handleAssignHoursChange("lab", e.target.value)}
+                                  placeholder="0"
+                                  className="w-20 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                                />
+                                <span className="text-xs font-bold text-slate-400">soat</span>
+                              </div>
                             </div>
                           )}
 
                           {/* Rating input */}
                           {selectedWorkload.rating > 0 && (
-                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-300 transition-colors flex items-center justify-between gap-4">
+                            <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 shadow-2xs hover:border-indigo-400 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all flex items-center justify-between gap-4">
                               <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Reyting</span>
-                                <span className="text-[10.5px] text-emerald-600 font-bold">Mavjud: {selectedWorkload.rating - selectedWorkload.allocated.rating} soat</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+                                  <span className="text-xs font-bold text-slate-800">Reyting</span>
+                                </div>
+                                <span className="text-[11px] text-slate-500 font-medium mt-0.5 pl-4">
+                                  Umumiy: {selectedWorkload.rating} soat • <strong className="text-emerald-600">Mavjud: {selectedWorkload.rating - selectedWorkload.allocated.rating} soat</strong>
+                                </span>
                               </div>
-                              <input 
-                                type="number"
-                                min="0"
-                                max={selectedWorkload.rating - selectedWorkload.allocated.rating}
-                                value={assignHours.rating}
-                                onChange={(e) => handleAssignHoursChange("rating", e.target.value)}
-                                className="w-24 px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:border-indigo-500 outline-none"
-                              />
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  max={selectedWorkload.rating - selectedWorkload.allocated.rating}
+                                  value={assignHours.rating}
+                                  onChange={(e) => handleAssignHoursChange("rating", e.target.value)}
+                                  placeholder="0"
+                                  className="w-20 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-extrabold text-slate-800 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                                />
+                                <span className="text-xs font-bold text-slate-400">soat</span>
+                              </div>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <button
-                        onClick={submitAssignment}
-                        className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors duration-200 shadow-sm"
-                      >
-                        Saqlash
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-full md:flex-1 p-6 flex flex-col bg-slate-50/50 overflow-y-auto h-full border-l border-slate-100">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-bold text-slate-800">O'qituvchilar ro'yxati</h4>
-                        <button 
-                          onClick={() => setIsTaqsimlashOpen(false)}
-                          className="text-xs text-indigo-600 hover:text-indigo-850 font-semibold"
+                      <div className="pt-3 border-t border-slate-200/80 shrink-0 flex items-center gap-2.5">
+                        <button
+                          onClick={() => setSelectedTeacherToAssign(null)}
+                          className="py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-colors duration-200 shrink-0 shadow-2xs"
                         >
-                          Yopish
+                          Bekor qilish
+                        </button>
+                        <button
+                          onClick={submitAssignment}
+                          className="flex-1 py-2.5 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md hover:shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-[0.98]"
+                        >
+                          <span>✓</span> Taqsimotni saqlash
                         </button>
                       </div>
+                    </div>
+                  ) : (
+                    <div className="w-full md:flex-1 p-6 flex flex-col bg-slate-50/70 justify-between h-full overflow-hidden border-l border-slate-200/80 animate-in fade-in slide-in-from-right-4 duration-300">
+                      <div className="flex items-center justify-between mb-4 shrink-0">
+                        <div>
+                          <h4 className="text-sm font-black text-slate-800 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block"></span>
+                            O'qituvchini tanlang
+                          </h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Dars soatlarini taqsimlash uchun o'qituvchi tanlang</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-150 px-2.5 py-1 rounded-lg">
+                            {filteredTeachers.length} nafar
+                          </span>
+                          <button 
+                            onClick={() => setIsTaqsimlashOpen(false)}
+                            className="text-slate-400 hover:text-slate-600 text-base font-semibold px-1"
+                            title="Yopish"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
 
-                      <input 
-                        type="text"
-                        placeholder="O'qituvchini qidirish..."
-                        value={teacherSearch}
-                        onChange={(e) => setTeacherSearch(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs outline-none bg-white text-slate-700 mb-4 focus:border-indigo-500 transition-colors shadow-xs"
-                      />
+                      <div className="relative mb-3 shrink-0">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                        <input 
+                          type="text"
+                          placeholder="O'qituvchi ism-sharifi bo'yicha qidirish..."
+                          value={teacherSearch}
+                          onChange={(e) => setTeacherSearch(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200/80 pl-9 pr-8 py-2.5 text-xs outline-none bg-white text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all shadow-2xs font-medium"
+                        />
+                        {teacherSearch && (
+                          <button 
+                            onClick={() => setTeacherSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
 
-                      <div className="flex-1 overflow-y-auto space-y-2 max-h-[500px]">
+                      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 -mr-1">
                         {filteredTeachers.length === 0 ? (
-                          <p className="text-xs text-slate-500 text-center py-6">O'qituvchilar topilmadi</p>
+                          <div className="text-center py-12 bg-white/60 rounded-2xl border border-dashed border-slate-200 m-2">
+                            <span className="text-2xl block mb-2">🔍</span>
+                            <p className="text-xs font-bold text-slate-600">O'qituvchi topilmadi</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Qidiruv so'zini o'zgartirib ko'ring</p>
+                          </div>
                         ) : (
                           filteredTeachers.map((teacher) => (
                             <div 
                               key={teacher.id}
                               onClick={() => handleAssignTeacherClick(teacher)}
-                              className="p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-xs cursor-pointer transition-all duration-200 group flex items-center justify-between"
+                              className="p-3.5 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all duration-200 group flex items-center justify-between"
                             >
-                              <div className="min-w-0 flex-1 pr-3">
-                                <h5 className="text-xs font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
-                                  {teacher.name}
-                                </h5>
-                                <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                                  {teacher.department} • {teacher.status}
-                                </p>
+                              <div className="min-w-0 flex-1 pr-3 flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                  {teacher.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h5 className="text-xs font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
+                                    {teacher.name}
+                                  </h5>
+                                  <p className="text-[10px] text-slate-500 truncate mt-0.5 font-medium">
+                                    {teacher.department} • <span className="text-indigo-600 font-semibold">{teacher.status}</span>
+                                  </p>
+                                </div>
                               </div>
-                              <div className="text-right shrink-0">
-                                <span className="text-[10px] font-bold text-slate-650 bg-slate-100 px-2 py-0.5 rounded">
-                                  {teacher.total} soat
-                                </span>
-                                <div className="text-[9px] text-indigo-500 font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  Tanlash →
+                              <div className="text-right shrink-0 flex items-center gap-2">
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                                    {teacher.total} soat
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 font-medium mt-0.5">Yuklamasi</span>
+                                </div>
+                                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:bg-indigo-600 group-hover:text-white transition-all transform group-hover:translate-x-0 -translate-x-2 font-bold text-xs">
+                                  →
                                 </div>
                               </div>
                             </div>
