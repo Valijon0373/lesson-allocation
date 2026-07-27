@@ -7,7 +7,7 @@ import { PiecewiseColorLegend } from "@mui/x-charts/ChartsLegend"
 import { interpolateObject } from "@mui/x-charts-vendor/d3-interpolate"
 import Box from "@mui/material/Box"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
-import { fetchFileCountByFaculty } from "../../data/mockApi"
+import { fetchFileCountByFaculty, getAuthUsername, fetchUserByUsername, mockFaculties } from "../../data/mockApi"
 
 const lightTheme = createTheme({ palette: { mode: "light" } })
 const darkTheme = createTheme({
@@ -97,12 +97,34 @@ export default function FacultyFileBarChart({ dark = false }) {
 
   useEffect(() => {
     let cancelled = false
-    fetchFileCountByFaculty().then((rows) => {
-      if (!cancelled) {
-        setData(rows)
-        setLoading(false)
+    async function loadData() {
+      try {
+        const rows = await fetchFileCountByFaculty()
+        const username = getAuthUsername()
+        let user = null
+        if (username) {
+          user = await fetchUserByUsername(username)
+        }
+
+        if (!cancelled) {
+          if (user && user.facultyId && !user.roles?.includes("ADMIN")) {
+            const faculty = mockFaculties.find(f => f.id === user.facultyId)
+            if (faculty) {
+              const filtered = rows.filter(r => r.facultyName === faculty.nameUz || r.facultyName.includes(faculty.nameUz.split(" ")[0]))
+              setData(filtered)
+            } else {
+              setData(rows)
+            }
+          } else {
+            setData(rows)
+          }
+          setLoading(false)
+        }
+      } catch (err) {
+        if (!cancelled) setLoading(false)
       }
-    })
+    }
+    loadData()
     return () => {
       cancelled = true
     }

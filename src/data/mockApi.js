@@ -30,6 +30,13 @@ const DEMO_PASSWORDS = {
   dekan: "dekan123",
   teacher1: "teacher123",
   teacher2: "teacher123",
+  filologiya: "filologiya123",
+  pedagogika: "pedagogika123",
+  tabiiy: "tabiiy123",
+  aniq: "aniq123",
+  boshlangich: "boshlangich123",
+  ijtimoiy: "ijtimoiy123",
+  magistratura: "magistratura123",
 }
 
 // --- MOCK DATA ---
@@ -39,6 +46,7 @@ export let mockFaculties = [
   { id: "f3", nameUz: "Aniq va tabiiy fanlar" },
   { id: "f4", nameUz: "Boshlang'ich ta'lim" },
   { id: "f5", nameUz: "Ijtimoiy va amaliy fanlar" },
+  { id: "f6", nameUz: "Magistratura bo'limi" },
 ]
 
 export let mockDepartments = [
@@ -57,6 +65,7 @@ export let mockDepartments = [
   { id: "d13", facultyId: "f5", nameUz: "Milliy g'oya va falsafa" },
   { id: "d14", facultyId: "f5", nameUz: "San'atshunoslik" },
   { id: "d15", facultyId: "f5", nameUz: "Jismoniy madaniyat" },
+  { id: "d16", facultyId: "f6", nameUz: "Magistratura mutaxassisliklari" },
 ]
 
 export let mockPositions = [
@@ -75,11 +84,23 @@ export let mockSubjects = [
   { id: "s8", departmentId: "d2", nameUz: "Jahon adabiyoti", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 5, groups: 2, students: 60 },
   { id: "s9", departmentId: "d4", nameUz: "Ijtimoiy psixologiya", lecture: 30, practice: 20, lab: 0, seminar: 10, independent: 30, credits: 4, groups: 3, students: 75 },
   { id: "s10", departmentId: "d2", nameUz: "Tilshunoslik asoslari", lecture: 40, practice: 20, lab: 0, seminar: 10, independent: 20, credits: 5, groups: 2, students: 50 },
+  // Ijtimoiy va amaliy fanlar (f5)
+  { id: "s11", departmentId: "d12", nameUz: "O'zbekiston tarixi", lecture: 60, practice: 30, lab: 0, seminar: 30, independent: 40, credits: 6, groups: 3, students: 90 },
+  { id: "s12", departmentId: "d13", nameUz: "Falsafa asoslari", lecture: 40, practice: 20, lab: 0, seminar: 20, independent: 30, credits: 4, groups: 2, students: 60 },
+  { id: "s13", departmentId: "d14", nameUz: "Tasviriy san'at", lecture: 20, practice: 40, lab: 20, seminar: 0, independent: 20, credits: 4, groups: 2, students: 50 },
+  { id: "s14", departmentId: "d15", nameUz: "Jismoniy madaniyat nazariyasi", lecture: 30, practice: 60, lab: 0, seminar: 10, independent: 30, credits: 5, groups: 4, students: 120 },
 ]
 
 export let mockUsers = [
   { id: "u1", username: "admin", fio: "Administrator", login: "admin", izoh: "", roles: ["ADMIN"], permissions: ["teacher_view", "teacher_create", "teacher_edit", "teacher_delete", "user_view"] },
   { id: "u2", username: "dekan", fio: "Dekan Foydalanuvchi", login: "dekan", izoh: "", roles: ["DEAN"], permissions: [] },
+  { id: "u3", username: "filologiya", fio: "Filologiya fakulteti dekanati", login: "filologiya", facultyId: "f1", izoh: "Filologiya fakulteti", roles: ["DEAN"], permissions: [] },
+  { id: "u4", username: "pedagogika", fio: "Pedagogika fakulteti dekanati", login: "pedagogika", facultyId: "f2", izoh: "Pedagogika fakulteti", roles: ["DEAN"], permissions: [] },
+  { id: "u5", username: "tabiiy", fio: "Aniq va tabiiy fanlar dekanati", login: "tabiiy", facultyId: "f3", izoh: "Aniq va tabiiy fanlar fakulteti", roles: ["DEAN"], permissions: [] },
+  { id: "u6", username: "aniq", fio: "Aniq va tabiiy fanlar dekanati", login: "aniq", facultyId: "f3", izoh: "Aniq va tabiiy fanlar fakulteti", roles: ["DEAN"], permissions: [] },
+  { id: "u7", username: "boshlangich", fio: "Boshlang'ich ta'lim dekanati", login: "boshlangich", facultyId: "f4", izoh: "Boshlang'ich ta'lim fakulteti", roles: ["DEAN"], permissions: [] },
+  { id: "u8", username: "ijtimoiy", fio: "Ijtimoiy va amaliy fanlar dekanati", login: "ijtimoiy", facultyId: "f5", izoh: "Ijtimoiy va amaliy fanlar fakulteti", roles: ["DEAN"], permissions: [] },
+  { id: "u9", username: "magistratura", fio: "Magistratura bo'limi", login: "magistratura", facultyId: "f6", izoh: "Magistratura bo'limi", roles: ["DEAN"], permissions: [] },
 ]
 
 export let mockTeachers = [
@@ -219,7 +240,7 @@ function isStaffApiRoles(roles) {
 /** @param {string[]} roles */
 function hasAdminRole(roles) {
   if (!Array.isArray(roles)) return false
-  const allowed = new Set(["ADMIN", "MODERATOR", "COMMISSION", "KOMISSIYA", "TEACHER", "USER"])
+  const allowed = new Set(["ADMIN", "MODERATOR", "COMMISSION", "KOMISSIYA", "TEACHER", "USER", "DEAN", "HEAD"])
   return roles.some((r) => allowed.has(normalizeApiRoleToken(r)))
 }
 

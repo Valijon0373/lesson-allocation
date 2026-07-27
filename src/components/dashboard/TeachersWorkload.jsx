@@ -15,7 +15,7 @@ const baseTeachers = [
   {
     id: 1,
     name: "Karimov Alisher Akbarovich",
-    department: "Dasturiy injiniring",
+    department: "Rus tili va adabiyoti",
     subjects: 4,
     lecture: 72,
     practice: 48,
@@ -31,39 +31,39 @@ const baseTeachers = [
   {
     id: 2,
     name: "Saidova Nilufar Bahodirovna",
-    department: "Kompyuter fanlari",
+    department: "O'zbek tili va adabiyoti",
     subjects: 3,
     lecture: 54,
     practice: 36,
-    lab: 24,
+    lab: 18,
     seminar: 12,
-    independent: 42,
+    independent: 48,
     total: 168,
     credits: 14,
-    groups: 4,
-    students: 112,
+    groups: 5,
+    students: 135,
     status: "Kam yuklangan",
   },
   {
     id: 3,
     name: "Rahimov Davron Choriovich",
-    department: "Dasturiy injiniring",
+    department: "Matematika va komp. texn.",
     subjects: 5,
     lecture: 90,
     practice: 60,
-    lab: 48,
-    seminar: 24,
+    lab: 54,
+    seminar: 18,
     independent: 72,
     total: 294,
     credits: 22,
-    groups: 8,
-    students: 224,
+    groups: 7,
+    students: 195,
     status: "Kam yuklangan",
   },
   {
     id: 4,
     name: "Yusupova Mohira Dilshodovna",
-    department: "Buxgalteriya hisobi",
+    department: "Pedagogika va psixologiya",
     subjects: 2,
     lecture: 36,
     practice: 24,
@@ -73,17 +73,17 @@ const baseTeachers = [
     total: 96,
     credits: 8,
     groups: 3,
-    students: 84,
+    students: 75,
     status: "Kam yuklangan",
   },
   {
     id: 5,
     name: "Toshmatov Bekzod Rustamovich",
-    department: "Kompyuter fanlari",
+    department: "Tarix",
     subjects: 4,
     lecture: 64,
-    practice: 40,
-    lab: 32,
+    practice: 48,
+    lab: 24,
     seminar: 16,
     independent: 48,
     total: 200,
@@ -95,7 +95,7 @@ const baseTeachers = [
   {
     id: 6,
     name: "Ergasheva Zulfiya Anvarovna",
-    department: "Boshlang'ich ta'lim",
+    department: "Boshlang'ich ta'lim metodikasi",
     subjects: 3,
     lecture: 48,
     practice: 36,
@@ -108,9 +108,25 @@ const baseTeachers = [
     students: 105,
     status: "Kam yuklangan",
   },
+  {
+    id: 7,
+    name: "Usmonov Qodir Bahodirovich",
+    department: "Magistratura mutaxassisliklari",
+    subjects: 2,
+    lecture: 36,
+    practice: 24,
+    lab: 12,
+    seminar: 18,
+    independent: 30,
+    total: 120,
+    credits: 10,
+    groups: 2,
+    students: 45,
+    status: "Kam yuklangan",
+  },
 ]
 
-const teachersWorkloadData = Array.from({ length: 40 }, (_, i) => {
+const teachersWorkloadData = Array.from({ length: 42 }, (_, i) => {
   const base = baseTeachers[i % baseTeachers.length]
   const rates = [1.0, 0.75, 0.5, 1.5, 1.25, 0.25]
   const rate = rates[i % rates.length]
@@ -118,14 +134,25 @@ const teachersWorkloadData = Array.from({ length: 40 }, (_, i) => {
   return {
     ...base,
     id: i + 1,
-    name: i < 6 ? base.name : `${base.name.split(" ")[0]} O'qituvchi ${i + 1}`,
+    name: i < 7 ? base.name : `${base.name.split(" ")[0]} O'qituvchi ${i + 1}`,
     total: base.lecture + base.practice + base.lab + base.seminar + ratingHours,
     rate,
     ratingHours,
   }
 })
 
-export default function TeachersWorkload() {
+export default function TeachersWorkload({ currentUser }) {
+  const departmentsByFaculty = {
+    f1: ["Rus tili", "O'zbek tili", "Xorijiy"],
+    f2: ["Pedagogika", "Maktabgacha"],
+    f3: ["Matematika", "Tabiiy fanlar", "Fizika", "Texnologik"],
+    f4: ["Boshlang'ich"],
+    f5: ["Tarix", "Milliy g'oya", "San'atshunoslik", "Jismoniy"],
+    f6: ["Magistratura mutaxassisliklari"],
+  }
+  const visibleTeachers = currentUser?.facultyId && currentUser?.role !== "admin" && departmentsByFaculty[currentUser.facultyId]
+    ? teachersWorkloadData.filter((t) => departmentsByFaculty[currentUser.facultyId].some((d) => t.department.toLowerCase().includes(d.toLowerCase())))
+    : teachersWorkloadData
   const [openActionId, setOpenActionId] = useState(null)
   const [selectedTeacher, setSelectedTeacher] = useState(null)
   const [isColumnsDropdownOpen, setIsColumnsDropdownOpen] = useState(false)
@@ -214,7 +241,7 @@ export default function TeachersWorkload() {
       return str;
     };
 
-    const rows = teachersWorkloadData.map((teacher, index) => [
+    const rows = visibleTeachers.map((teacher, index) => [
       index + 1,
       teacher.name,
       teacher.department,
@@ -415,8 +442,8 @@ export default function TeachersWorkload() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {teachersWorkloadData.map((row, idx) => {
-                const isBottom = idx > 0 && idx >= Math.floor(teachersWorkloadData.length / 2);
+              {visibleTeachers.map((row, idx) => {
+                const isBottom = idx > 0 && idx >= Math.floor(visibleTeachers.length / 2);
                 return (
                   <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group relative">
                     <td className="py-3 px-4 text-slate-500">{idx + 1}</td>

@@ -91,14 +91,38 @@ const initialTalabnomalar = [
     status: "Kutilmoqda",
     priority: "Yuqori",
     rejectReason: ""
+  },
+  {
+    id: "TL-2026-007",
+    date: "2026-07-20",
+    faculty: "Magistratura bo'limi",
+    department: "Aniq va tabiiy fanlar magistraturasi",
+    subject: "Ilmiy tadqiqot metodologiyasi va zamonaviy texnologiyalar",
+    semester: "Kuzki semestr",
+    hours: { lecture: 40, practice: 40, lab: 20, seminar: 20, total: 120 },
+    reason: "Magistratura yo'nalishi uchun yangi mutaxassislik darsi ajratilishi munosabati bilan.",
+    applicant: "Usmonov Q.B. (Bo'lim boshlig'i)",
+    status: "Kutilmoqda",
+    priority: "Yuqori",
+    rejectReason: ""
   }
 ]
 
-export default function Talabnoma({ isDark }) {
+export default function Talabnoma({ isDark, currentUser }) {
   const [talabnomalar, setTalabnomalar] = useState(initialTalabnomalar)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [facultyFilter, setFacultyFilter] = useState("all")
+
+  const facultyNamesById = {
+    f1: "Filologiya fakulteti",
+    f2: "Pedagogika fakulteti",
+    f3: "Aniq va tabiiy fanlar fakulteti",
+    f4: "Boshlang'ich ta'lim fakulteti",
+    f5: "Ijtimoiy va amaliy fanlar fakulteti",
+    f6: "Magistratura bo'limi",
+  }
+  const myFacultyName = currentUser?.facultyId && currentUser?.role !== "admin" ? facultyNamesById[currentUser.facultyId] : null
+  const [facultyFilter, setFacultyFilter] = useState(myFacultyName || "all")
   const [semesterFilter, setSemesterFilter] = useState("all")
 
   // Modals state
@@ -112,7 +136,7 @@ export default function Talabnoma({ isDark }) {
 
   // New requisition form state
   const [newReq, setNewReq] = useState({
-    faculty: "Filologiya fakulteti",
+    faculty: myFacultyName || "Filologiya fakulteti",
     department: "Rus tili va adabiyoti kafedrasi",
     subject: "",
     semester: "Kuzki semestr",
@@ -133,12 +157,13 @@ export default function Talabnoma({ isDark }) {
 
   // Stats calculation
   const stats = useMemo(() => {
-    const total = talabnomalar.length
-    const pending = talabnomalar.filter((t) => t.status === "Kutilmoqda").length
-    const approved = talabnomalar.filter((t) => t.status === "Tasdiqlangan").length
-    const rejected = talabnomalar.filter((t) => t.status === "Rad etilgan").length
+    const relevantList = myFacultyName ? talabnomalar.filter((t) => t.faculty === myFacultyName) : talabnomalar
+    const total = relevantList.length
+    const pending = relevantList.filter((t) => t.status === "Kutilmoqda").length
+    const approved = relevantList.filter((t) => t.status === "Tasdiqlangan").length
+    const rejected = relevantList.filter((t) => t.status === "Rad etilgan").length
     return { total, pending, approved, rejected }
-  }, [talabnomalar])
+  }, [talabnomalar, myFacultyName])
 
   // Faculties and Departments list for filter
   const facultiesList = useMemo(() => {
@@ -159,12 +184,12 @@ export default function Talabnoma({ isDark }) {
         t.reason.toLowerCase().includes(q)
 
       const matchStatus = statusFilter === "all" || t.status === statusFilter
-      const matchFaculty = facultyFilter === "all" || t.faculty === facultyFilter
+      const matchFaculty = myFacultyName ? t.faculty === myFacultyName : (facultyFilter === "all" || t.faculty === facultyFilter)
       const matchSemester = semesterFilter === "all" || t.semester === semesterFilter
 
       return matchSearch && matchStatus && matchFaculty && matchSemester
     })
-  }, [talabnomalar, searchQuery, statusFilter, facultyFilter, semesterFilter])
+  }, [talabnomalar, searchQuery, statusFilter, facultyFilter, semesterFilter, myFacultyName])
 
   // Handlers
   const handleApprove = (id) => {
@@ -493,16 +518,23 @@ export default function Talabnoma({ isDark }) {
             {/* Faculty Filter */}
             <div className="md:col-span-2">
               <select
-                value={facultyFilter}
+                value={myFacultyName || facultyFilter}
+                disabled={Boolean(myFacultyName)}
                 onChange={(e) => setFacultyFilter(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all ${
+                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all disabled:opacity-75 ${
                   isDark ? "bg-slate-900/60 border-slate-700 text-slate-200 focus:border-indigo-500" : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-600"
                 }`}
               >
-                <option value="all">Barcha fakultetlar</option>
-                {facultiesList.map((f, idx) => (
-                  <option key={idx} value={f}>{f}</option>
-                ))}
+                {myFacultyName ? (
+                  <option value={myFacultyName}>{myFacultyName}</option>
+                ) : (
+                  <>
+                    <option value="all">Barcha fakultetlar</option>
+                    {facultiesList.map((f, idx) => (
+                      <option key={idx} value={f}>{f}</option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
 
@@ -929,16 +961,24 @@ export default function Talabnoma({ isDark }) {
                   </label>
                   <select
                     value={newReq.faculty}
+                    disabled={Boolean(myFacultyName)}
                     onChange={(e) => setNewReq({ ...newReq, faculty: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all disabled:opacity-75 ${
                       isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
                     }`}
                   >
-                    <option value="Filologiya fakulteti">Filologiya fakulteti</option>
-                    <option value="Pedagogika fakulteti">Pedagogika fakulteti</option>
-                    <option value="Aniq va tabiiy fanlar fakulteti">Aniq va tabiiy fanlar fakulteti</option>
-                    <option value="Ijtimoiy va amaliy fanlar fakulteti">Ijtimoiy va amaliy fanlar fakulteti</option>
-                    <option value="Boshlang'ich ta'lim fakulteti">Boshlang&apos;ich ta&apos;lim fakulteti</option>
+                    {myFacultyName ? (
+                      <option value={myFacultyName}>{myFacultyName}</option>
+                    ) : (
+                      <>
+                        <option value="Filologiya fakulteti">Filologiya fakulteti</option>
+                        <option value="Pedagogika fakulteti">Pedagogika fakulteti</option>
+                        <option value="Aniq va tabiiy fanlar fakulteti">Aniq va tabiiy fanlar fakulteti</option>
+                        <option value="Ijtimoiy va amaliy fanlar fakulteti">Ijtimoiy va amaliy fanlar fakulteti</option>
+                        <option value="Boshlang'ich ta'lim fakulteti">Boshlang&apos;ich ta&apos;lim fakulteti</option>
+                        <option value="Magistratura bo'limi">Magistratura bo&apos;limi</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

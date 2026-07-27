@@ -23,12 +23,14 @@ function Modal({ open, onClose, dark, children }) {
   )
 }
 
-export default function Subjects({ dark, permissions = [], isAdmin = false }) {
+export default function Subjects({ dark, permissions = [], isAdmin = false, currentUser }) {
   // Using department permissions as fallback for now since subject permissions might not exist yet
-  const { canView, canAdd, canEdit, canDelete } = useMemo(
-    () => getCrudPermissions(permissions, "department", isAdmin), // Or "subject" if available
-    [permissions, isAdmin]
-  )
+  const { canView, canAdd, canEdit, canDelete } = useMemo(() => {
+    if (isAdmin || currentUser?.role === "dean" || Boolean(currentUser?.facultyId)) {
+      return { canView: true, canAdd: true, canEdit: true, canDelete: true }
+    }
+    return getCrudPermissions(permissions, "department", isAdmin)
+  }, [permissions, isAdmin, currentUser])
   const [rows, setRows] = useState([])
   const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -163,11 +165,17 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
     setLoading(true)
     setLoadError("")
     try {
-      const deptList = await fetchAllDepartments()
+      const allDepts = await fetchAllDepartments()
+      const deptList = currentUser?.facultyId && currentUser?.role !== "admin"
+        ? allDepts.filter((d) => d.facultyId === currentUser.facultyId)
+        : allDepts
       setDepartments(deptList)
       const names = Object.fromEntries(deptList.map((d) => [d.id, d.nameUz]))
       const list = await fetchAllSubjects(names)
-      setRows(list.map((r) => ({ ...r, departmentName: r.departmentName || names[r.departmentId] || "" })))
+      const filteredList = currentUser?.facultyId && currentUser?.role !== "admin"
+        ? list.filter((s) => Object.prototype.hasOwnProperty.call(names, s.departmentId))
+        : list
+      setRows(filteredList.map((r) => ({ ...r, departmentName: r.departmentName || names[r.departmentId] || "" })))
     } catch (err) {
       const message = err instanceof Error ? err.message : "Fanlarni yuklab bo'lmadi"
       setLoadError(message)
@@ -175,7 +183,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [currentUser])
 
   useEffect(() => {
     if (!canView) {

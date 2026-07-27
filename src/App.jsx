@@ -1123,7 +1123,7 @@ function App() {
     )
   }
 
-  if (currentUser?.role === "admin") {
+  if (currentUser?.role === "admin" || currentUser?.role === "dean") {
     return (
       <AdminLayout
         activeTab={adminActiveTab}
@@ -1132,6 +1132,7 @@ function App() {
         setIsDark={setIsDark}
         isRefreshing={isRefreshing}
         handleRefresh={handleRefresh}
+        currentUser={currentUser}
         onLogout={() => {
           clearAuthTokens()
           setCurrentUser(null)
@@ -1147,20 +1148,20 @@ function App() {
           />
         )}
         {adminActiveTab === "kafedra-yuklamasi" && (
-          <KafedraWorkload isDark={isDark} />
+          <KafedraWorkload isDark={isDark} currentUser={currentUser} />
         )}
         {adminActiveTab === "talabnoma" && (
-          <Talabnoma isDark={isDark} />
+          <Talabnoma isDark={isDark} currentUser={currentUser} />
         )}
         {adminActiveTab === "oqituvchilar" && (
-          <TeachersWorkload />
+          <TeachersWorkload currentUser={currentUser} />
         )}
         {adminActiveTab === "fanlar" && (
           <div className="p-6">
-            <Subjects isAdmin dark={isDark} />
+            <Subjects isAdmin={currentUser?.role === "admin"} dark={isDark} currentUser={currentUser} />
           </div>
         )}
-         {adminActiveTab === "sozlamalar" && (
+         {adminActiveTab === "sozlamalar" && currentUser?.role === "admin" && (
           <Sozlamalar isDark={isDark} />
         )}
       </AdminLayout>

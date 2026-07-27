@@ -18,6 +18,7 @@ export default function AdminLayout({
   isRefreshing,
   handleRefresh,
   onLogout,
+  currentUser,
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const menuItems = [
@@ -26,7 +27,7 @@ export default function AdminLayout({
     { id: "kafedra-yuklamasi", label: "Kafedra yuklamasi", icon: Columns },
     { id: "talabnoma", label: "Talabnoma", icon: BsMailboxFlag },
     { id: "oqituvchilar", label: "O'qituvchilar", icon: Users },
-    { id: "sozlamalar", label: "Sozlamalar", icon: Settings },
+    ...(currentUser?.role === "admin" ? [{ id: "sozlamalar", label: "Sozlamalar", icon: Settings }] : []),
   ]
 
   return (

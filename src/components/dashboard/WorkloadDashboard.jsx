@@ -9,8 +9,6 @@ import {
   BookOpen,
   Clock,
   Activity,
-  AlertTriangle,
-  TrendingDown,
   Columns,
   MoreHorizontal,
   ArrowUpDown,
@@ -18,44 +16,80 @@ import {
 import { BarChart } from "@mui/x-charts/BarChart"
 import { PieChart } from "@mui/x-charts/PieChart"
 import { LineChart } from "@mui/x-charts/LineChart"
-import Subjects from "./Subjects"
-import KafedraWorkload from "./KafedraWorkload"
-import TeachersWorkload from "./TeachersWorkload"
+import FacultyWorkloadCards from "./FacultyWorkloadCards"
 
 export default function WorkloadDashboard({ currentUser, isDark }) {
   const [semester, setSemester] = useState("Kuzki semestr")
-  const [activeTab, setActiveTab] = useState("Fakultet")
+  const [activeTab, setActiveTab] = useState(currentUser?.facultyId && currentUser?.role !== "admin" ? "Kafedra" : "Fakultet")
 
-  const fakultetData = [
+  const facultyNamesById = {
+    f1: "Filologiya",
+    f2: "Pedagogika",
+    f3: "Aniq va tabiiy fanlar",
+    f4: "Boshlang'ich ta'lim",
+    f5: "Ijtimoiy va amaliy",
+    f6: "Magistratura bo'limi",
+  }
+  const rawFakultetData = [
     { name: "Filologiya", value: 1248 },
     { name: "Pedagogika", value: 890 },
     { name: "Aniq va tabiiy fanlar", value: 1050 },
     { name: "Ijtimoiy va amaliy", value: 920 },
     { name: "Boshlang'ich ta'lim", value: 720 },
+    { name: "Magistratura bo'limi", value: 450 },
   ]
-  const kafedraData = [
-    { name: "Rus tili va\nadabiyoti", value: 340 },
-    { name: "O'zbek tili va\nadabiyoti", value: 410 },
-    { name: "Xorijiy\nfilologiya", value: 380 },
-    { name: "Pedagogika va\npsixologiya", value: 290 },
-    { name: "Maktabgacha\nta'lim", value: 310 },
-    { name: "Matematika va\nkomp. texn.", value: 180 },
-    { name: "Tabiiy fanlar", value: 450 },
-    { name: "Fizika va\nastronomiya", value: 280 },
-    { name: "Texnologik\nta'lim", value: 320 },
-    { name: "Boshlang'ich ta'lim\nmetodikasi", value: 390 },
-    { name: "Boshlang'ich ta'lim\nnazariyasi", value: 250 },
-    { name: "Tarix", value: 270 },
-    { name: "Milliy g'oya\nva falsafa", value: 420 },
-    { name: "San'atshunoslik", value: 300 },
-    { name: "Jismoniy\nmadaniyat", value: 160 },
-  ]
-  const oqituvchiData = [
-    { name: "Aliyev A.", value: 180 },
-    { name: "Valiyev V.", value: 240 },
-    { name: "Ganiyev G.", value: 150 },
-    { name: "Botirov B.", value: 290 },
-  ]
+  const fakultetData = currentUser?.facultyId && currentUser?.role !== "admin"
+    ? rawFakultetData.filter((d) => d.name === facultyNamesById[currentUser.facultyId] || d.name.includes(facultyNamesById[currentUser.facultyId]?.split(" ")[0]))
+    : rawFakultetData
+
+  const kafedraByFaculty = {
+    f1: [
+      { name: "Rus tili va\nadabiyoti", value: 340 },
+      { name: "O'zbek tili va\nadabiyoti", value: 410 },
+      { name: "Xorijiy\nfilologiya", value: 380 },
+    ],
+    f2: [
+      { name: "Pedagogika va\npsixologiya", value: 290 },
+      { name: "Maktabgacha\nta'lim", value: 310 },
+    ],
+    f3: [
+      { name: "Matematika va komp.\ntexnologiyalari", value: 180 },
+      { name: "Tabiiy fanlar", value: 450 },
+      { name: "Fizika va\nastronomiya", value: 280 },
+      { name: "Texnologik\nta'lim", value: 320 },
+    ],
+    f4: [
+      { name: "Boshlang'ich ta'lim\nmetodikasi", value: 390 },
+      { name: "Boshlang'ich ta'lim\nnazariyasi", value: 250 },
+    ],
+    f5: [
+      { name: "Tarix", value: 270 },
+      { name: "Milliy g'oya\nva falsafa", value: 420 },
+      { name: "San'atshunoslik", value: 300 },
+      { name: "Jismoniy\nmadaniyat", value: 160 },
+    ],
+    f6: [
+      { name: "Magistratura\nmutaxassisliklari", value: 450 },
+    ],
+  }
+  const kafedraData = currentUser?.facultyId && currentUser?.role !== "admin" && kafedraByFaculty[currentUser.facultyId]
+    ? kafedraByFaculty[currentUser.facultyId]
+    : [
+        ...kafedraByFaculty.f1, ...kafedraByFaculty.f2, ...kafedraByFaculty.f3, ...kafedraByFaculty.f4, ...kafedraByFaculty.f5, ...kafedraByFaculty.f6
+      ]
+
+  const facultyStats = {
+    f1: { teachers: "12", subjects: "35", totalHours: "2,450", avgWorkload: "204", remaining: "65" },
+    f2: { teachers: "14", subjects: "42", totalHours: "2,880", avgWorkload: "205", remaining: "60" },
+    f3: { teachers: "18", subjects: "48", totalHours: "3,420", avgWorkload: "190", remaining: "95" },
+    f4: { teachers: "10", subjects: "28", totalHours: "1,950", avgWorkload: "195", remaining: "45" },
+    f5: { teachers: "16", subjects: "44", totalHours: "3,100", avgWorkload: "193", remaining: "85" },
+    f6: { teachers: "8", subjects: "18", totalHours: "1,200", avgWorkload: "150", remaining: "35" },
+  }
+  const myStat = currentUser?.facultyId && currentUser?.role !== "admin" && facultyStats[currentUser.facultyId]
+    ? facultyStats[currentUser.facultyId]
+    : { teachers: "6", subjects: "21", totalHours: "1,136", avgWorkload: "189", remaining: "420" }
+
   const soatTurlariData = [
     { id: 0, value: 45, label: "Ma'ruza" },
     { id: 1, value: 35, label: "Amaliy" },
@@ -71,192 +105,45 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
     { month: "Fev", value: 280 },
   ]
 
-  // Mock data for Yuklama xulosasi
-  const summaryData = [
-    {
-      level: "Kafedra",
-      name: "Matematika va kompyuter texnologiyalari",
-      total: 456,
-      average: 228,
-      min: 162,
-      max: 294,
-      diff: 132,
-    },
-    {
-      level: "Fakultet",
-      name: "Aniq va tabiiy fanlar",
-      total: 1248,
-      average: 208,
-      min: 96,
-      max: 294,
-      diff: 198,
-    },
-    {
-      level: "Institut",
-      name: "Institut bo'yicha jami",
-      total: 2184,
-      average: 182,
-      min: 96,
-      max: 294,
-      diff: 198,
-    },
-  ]
-
   const baseTeachers = [
-    {
-      id: 1,
-      name: "Karimov Alisher Akbarovich",
-      department: "Dasturiy injiniring",
-      subjects: 4,
-      lecture: 72,
-      practice: 48,
-      lab: 36,
-      seminar: 18,
-      independent: 54,
-      total: 228,
-      credits: 18,
-      groups: 6,
-      students: 168,
-      status: "Kam yuklangan",
-    },
-    {
-      id: 2,
-      name: "Saidova Nilufar Bahodirovna",
-      department: "Kompyuter fanlari",
-      subjects: 3,
-      lecture: 54,
-      practice: 36,
-      lab: 24,
-      seminar: 12,
-      independent: 42,
-      total: 168,
-      credits: 14,
-      groups: 4,
-      students: 112,
-      status: "Kam yuklangan",
-    },
-    {
-      id: 3,
-      name: "Rahimov Davron Choriovich",
-      department: "Dasturiy injiniring",
-      subjects: 5,
-      lecture: 90,
-      practice: 60,
-      lab: 48,
-      seminar: 24,
-      independent: 72,
-      total: 294,
-      credits: 22,
-      groups: 8,
-      students: 224,
-      status: "Kam yuklangan",
-    },
-    {
-      id: 4,
-      name: "Yusupova Mohira Dilshodovna",
-      department: "Buxgalteriya hisobi",
-      subjects: 2,
-      lecture: 36,
-      practice: 24,
-      lab: 0,
-      seminar: 12,
-      independent: 24,
-      total: 96,
-      credits: 8,
-      groups: 3,
-      students: 84,
-      status: "Kam yuklangan",
-    },
-    {
-      id: 5,
-      name: "Toshmatov Bekzod Rustamovich",
-      department: "Kompyuter fanlari",
-      subjects: 4,
-      lecture: 64,
-      practice: 40,
-      lab: 32,
-      seminar: 16,
-      independent: 48,
-      total: 200,
-      credits: 16,
-      groups: 5,
-      students: 140,
-      status: "Kam yuklangan",
-    },
-    {
-      id: 6,
-      name: "Ergasheva Zulfiya Anvarovna",
-      department: "Boshlang'ich ta'lim",
-      subjects: 3,
-      lecture: 48,
-      practice: 36,
-      lab: 12,
-      seminar: 18,
-      independent: 36,
-      total: 150,
-      credits: 12,
-      groups: 4,
-      students: 105,
-      status: "Kam yuklangan",
-    },
+    { id: 1, name: "Karimov Alisher Akbarovich", department: "Rus tili va adabiyoti", faculty: "f1", subjects: 4, lecture: 72, practice: 48, lab: 36, seminar: 18, independent: 54, total: 228, credits: 18, groups: 6, students: 168, status: "Kam yuklangan" },
+    { id: 2, name: "Saidova Nilufar Bahodirovna", department: "O'zbek tili va adabiyoti", faculty: "f1", subjects: 3, lecture: 54, practice: 36, lab: 18, seminar: 12, independent: 48, total: 168, credits: 14, groups: 5, students: 135, status: "Kam yuklangan" },
+    { id: 3, name: "Rahimov Davron Choriovich", department: "Matematika va komp. texn.", faculty: "f3", subjects: 5, lecture: 90, practice: 60, lab: 54, seminar: 18, independent: 72, total: 294, credits: 22, groups: 7, students: 195, status: "Kam yuklangan" },
+    { id: 4, name: "Yusupova Mohira Dilshodovna", department: "Pedagogika va psixologiya", faculty: "f2", subjects: 2, lecture: 36, practice: 24, lab: 0, seminar: 12, independent: 24, total: 96, credits: 8, groups: 3, students: 75, status: "Kam yuklangan" },
+    { id: 5, name: "Toshmatov Bekzod Rustamovich", department: "Tarix", faculty: "f5", subjects: 4, lecture: 64, practice: 48, lab: 24, seminar: 16, independent: 48, total: 200, credits: 16, groups: 5, students: 140, status: "Kam yuklangan" },
+    { id: 6, name: "Ergasheva Zulfiya Anvarovna", department: "Boshlang'ich ta'lim metodikasi", faculty: "f4", subjects: 3, lecture: 48, practice: 36, lab: 12, seminar: 18, independent: 36, total: 150, credits: 12, groups: 4, students: 105, status: "Kam yuklangan" },
+    { id: 7, name: "Usmonov Qodir Bahodirovich", department: "Magistratura mutaxassisliklari", faculty: "f6", subjects: 2, lecture: 36, practice: 24, lab: 12, seminar: 18, independent: 30, total: 120, credits: 10, groups: 2, students: 45, status: "Kam yuklangan" },
   ]
+  const relevantBaseTeachers = currentUser?.facultyId && currentUser?.role !== "admin"
+    ? baseTeachers.filter(t => t.faculty === currentUser.facultyId)
+    : baseTeachers
 
   const teachersWorkloadData = Array.from({ length: 40 }, (_, i) => {
-    const base = baseTeachers[i % baseTeachers.length]
+    const base = relevantBaseTeachers[i % relevantBaseTeachers.length] || baseTeachers[0]
     return {
       ...base,
       id: i + 1,
-      name: i < 6 ? base.name : `${base.name.split(" ")[0]} O'qituvchi ${i + 1}`,
+      name: i < relevantBaseTeachers.length ? base.name : `${base.name.split(" ")[0]} O'qituvchi ${i + 1}`,
     }
   })
 
-  // Mock data for Fan taqsimoti
-  const allocationData = [
-    {
-      subject: "Web dasturlash",
-      faculty: "Axborot texnologiyalari",
-      course: 4,
-      group: "SE-401",
-      lecture: 30,
-      practice: 30,
-      lab: 15,
-      seminar: 0,
-      total: 75,
-      teacher: "Karimov A.A.",
-      status: "Tasdiqlangan",
-    },
-    {
-      subject: "Ma'lumotlar bazasi",
-      faculty: "Axborot texnologiyalari",
-      course: 3,
-      group: "CS-301",
-      lecture: 30,
-      practice: 15,
-      lab: 30,
-      seminar: 0,
-      total: 75,
-      teacher: "Saidova N.B.",
-      status: "Tayinlangan",
-    },
-    {
-      subject: "Algoritmlar",
-      faculty: "Axborot texnologiyalari",
-      course: 2,
-      group: "SE-202",
-      lecture: 30,
-      practice: 15,
-      lab: 15,
-      seminar: 15,
-      total: 75,
-      teacher: "Rahimov D.C.",
-      status: "Kutilmoqda",
-    },
-  ]
+  const oqituvchiData = Array.from({ length: 4 }, (_, i) => {
+    const teacher = relevantBaseTeachers[i % relevantBaseTeachers.length]
+    let baseName = teacher?.name ? `${teacher.name.split(" ")[0]} ${teacher.name.split(" ")[1]?.charAt(0) || ""}.` : `O'qituvchi`
+    // Ensure uniqueness
+    if (relevantBaseTeachers.length < 4 && i >= relevantBaseTeachers.length) {
+      baseName = `${baseName} (${i + 1})`
+    }
+    return {
+      name: baseName.trim(),
+      value: 150 + Math.floor(Math.random() * 100)
+    }
+  })
 
   // Mock data for Taqsimot tarixi
   const historyData = [
     {
-      teacher: "Karimov A.A.",
+      teacher: relevantBaseTeachers[0]?.name || "Karimov A.A.",
       field: "Amaliy soatlar",
       oldValue: "24",
       newValue: "30",
@@ -264,27 +151,14 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
       date: "14 Fev 2026, 15:30",
     },
     {
-      teacher: "Saidova N.B.",
+      teacher: relevantBaseTeachers[1]?.name || "Saidova N.B.",
       field: "O'qituvchi",
-      oldValue: "Toshmatov B.R.",
-      newValue: "Saidova N.B.",
+      oldValue: "Boshqa O'qituvchi",
+      newValue: relevantBaseTeachers[1]?.name || "Saidova N.B.",
       by: "Dekanat",
       date: "10 Fev 2026, 19:15",
     },
   ]
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Tasdiqlangan":
-        return isDark ? "bg-green-950/40 text-green-400" : "bg-green-100 text-green-700"
-      case "Tayinlangan":
-        return isDark ? "bg-blue-950/40 text-blue-400" : "bg-blue-100 text-blue-700"
-      case "Kutilmoqda":
-        return isDark ? "bg-amber-950/40 text-amber-400" : "bg-amber-100 text-amber-700"
-      default:
-        return isDark ? "bg-slate-900/60 text-slate-400" : "bg-slate-100 text-slate-700"
-    }
-  }
 
   return (
     <div className={`font-sans p-6 pb-20 transition-colors duration-300 ${isDark ? "bg-slate-900 text-slate-100" : "bg-slate-50 text-slate-800"}`}>
@@ -318,15 +192,13 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {[
-            { label: "Jami o'qituvchilar", value: "6", icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
-            { label: "Jami fanlar", value: "21", icon: BookOpen, color: "text-indigo-500", bg: "bg-indigo-50" },
-            { label: "Jami soatlar", value: "1,136", icon: Clock, color: "text-violet-500", bg: "bg-violet-50" },
-            { label: "O'rtacha yuklama", value: "189", icon: Activity, color: "text-emerald-500", bg: "bg-emerald-50" },
-            { label: "Qolgan soatlar", value: "420", icon: Clock, color: "text-cyan-500", bg: "bg-cyan-50" },
-            { label: "Yuklangan", value: "0", icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-50" },
-            { label: "Kam yuklangan", value: "6", icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-50" },
+            { label: "Jami o'qituvchilar", value: myStat.teachers, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
+            { label: "Jami fanlar", value: myStat.subjects, icon: BookOpen, color: "text-indigo-500", bg: "bg-indigo-50" },
+            { label: "Jami soatlar", value: myStat.totalHours, icon: Clock, color: "text-violet-500", bg: "bg-violet-50" },
+            { label: "O'rtacha yuklama", value: myStat.avgWorkload, icon: Activity, color: "text-emerald-500", bg: "bg-emerald-50" },
+            { label: "Qolgan soatlar", value: myStat.remaining, icon: Clock, color: "text-cyan-500", bg: "bg-cyan-50" },
           ].map((stat, idx) => (
             <div key={idx} className={`p-4 rounded-xl border shadow-[0_2px_8px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden group hover:shadow-md transition-all duration-300 ${
               isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
@@ -373,7 +245,8 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
             <div className={`flex p-1 rounded-lg mb-4 self-start flex-wrap gap-1 transition-colors duration-300 ${
               isDark ? "bg-slate-900" : "bg-slate-100"
             }`}>
-              {["Fakultet", "Kafedra", "O'qituvchi", "Soat turlari", "Dinamika"].map((tab) => (
+              {["Fakultet", "Kafedra", "O'qituvchi", "Soat turlari", "Dinamika"]
+                .map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -530,89 +403,13 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
               )}
             </div>
           </div>
-          <div className={`p-5 rounded-xl border shadow-sm transition-colors duration-300 ${
-            isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
-          }`}>
-            <h3 className={`font-semibold mb-4 transition-colors duration-300 ${isDark ? "text-white" : "text-slate-800"}`}>Yuklama xulosasi</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead>
-                  <tr className={`border-b font-medium transition-colors duration-300 ${isDark ? "border-slate-700 text-slate-400" : "border-slate-200 text-slate-500"}`}>
-                    <th className="pb-3 pr-4 font-medium">Daraja</th>
-                    <th className="pb-3 pr-4 font-medium">Nomi</th>
-                    <th className="pb-3 px-2 font-medium text-right">Jami</th>
-                    <th className="pb-3 px-2 font-medium text-right">O'rtacha</th>
-                    <th className="pb-3 px-2 font-medium text-right">Min</th>
-                    <th className="pb-3 px-2 font-medium text-right">Max</th>
-                    <th className="pb-3 pl-2 font-medium text-right">Farq</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y transition-colors duration-300 ${isDark ? "divide-slate-700" : "divide-slate-100"}`}>
-                  {summaryData.map((row, i) => (
-                    <tr key={i} className={`transition-colors ${isDark ? "hover:bg-slate-700/50" : "hover:bg-slate-50/50"}`}>
-                      <td className={`py-3 pr-4 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.level}</td>
-                      <td className={`py-3 pr-4 font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.name}</td>
-                      <td className={`py-3 px-2 text-right font-medium transition-colors ${isDark ? "text-slate-200" : "text-slate-700"}`}>{row.total}</td>
-                      <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.average}</td>
-                      <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.min}</td>
-                      <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.max}</td>
-                      <td className={`py-3 pl-2 text-right font-medium transition-colors ${isDark ? "text-slate-200" : "text-slate-700"}`}>{row.diff}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+
         </div>
 
-        {/* Fan taqsimoti */}
-        <div className={`p-5 rounded-xl border shadow-sm transition-colors duration-300 ${
-          isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
-        }`}>
-          <h3 className={`font-semibold mb-4 transition-colors duration-300 ${isDark ? "text-white" : "text-slate-800"}`}>Fan taqsimoti</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead>
-                <tr className={`border-b transition-colors duration-300 ${isDark ? "border-slate-700 text-slate-400" : "border-slate-200 text-slate-500"}`}>
-                  <th className="pb-3 pr-4 font-medium">Fan</th>
-                  <th className="pb-3 pr-4 font-medium">Fakultet</th>
-                  <th className="pb-3 px-2 font-medium">Kurs</th>
-                  <th className="pb-3 px-2 font-medium">Guruh</th>
-                  <th className="pb-3 px-2 font-medium text-right">Ma'ruza</th>
-                  <th className="pb-3 px-2 font-medium text-right">Amaliy</th>
-                  <th className="pb-3 px-2 font-medium text-right">Lab</th>
-                  <th className="pb-3 px-2 font-medium text-right">Seminar</th>
-                  <th className="pb-3 px-2 font-medium text-right">Soat</th>
-                  <th className="pb-3 px-4 font-medium">O'qituvchi</th>
-                  <th className="pb-3 pl-2 font-medium">Holat</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y transition-colors duration-300 ${isDark ? "divide-slate-700" : "divide-slate-100"}`}>
-                {allocationData.map((row, i) => (
-                  <tr key={i} className={`transition-colors ${isDark ? "hover:bg-slate-700/50" : "hover:bg-slate-50/50"}`}>
-                    <td className={`py-3 pr-4 font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.subject}</td>
-                    <td className={`py-3 pr-4 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.faculty}</td>
-                    <td className={`py-3 px-2 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.course}</td>
-                    <td className={`py-3 px-2 transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.group}</td>
-                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.lecture}</td>
-                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.practice}</td>
-                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.lab}</td>
-                    <td className={`py-3 px-2 text-right transition-colors ${isDark ? "text-slate-300" : "text-slate-600"}`}>{row.seminar}</td>
-                    <td className={`py-3 px-2 text-right font-medium transition-colors ${isDark ? "text-white" : "text-slate-800"}`}>{row.total}</td>
-                    <td className={`py-3 px-4 transition-colors ${isDark ? "text-slate-200" : "text-slate-700"}`}>{row.teacher}</td>
-                    <td className="py-3 pl-2">
-                      <span className={`px-2.5 py-1 text-[11px] font-semibold rounded-md ${getStatusColor(row.status)}`}>
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Har bir fakultet uchun kafedralar taqsimoti */}
+        <FacultyWorkloadCards isDark={isDark} currentUser={currentUser} />
 
-        {/* Taqsimot tarixi */}
+        {/* Taqqoslash tarixi */}
         <div className={`p-5 rounded-xl border shadow-sm transition-colors duration-300 ${
           isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
         }`}>
@@ -644,15 +441,6 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
             </table>
           </div>
         </div>
-
-        {/* Fanlar */}
-        <Subjects dark={isDark} isAdmin={currentUser?.role === "admin"} />
-
-        {/* Kafedra yuklamasi */}
-        <KafedraWorkload isDark={isDark} className="" />
-
-        {/* O'qituvchilar */}
-        <TeachersWorkload className="" />
 
       </div>
     </div>

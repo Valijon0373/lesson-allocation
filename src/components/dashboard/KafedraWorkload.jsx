@@ -1,33 +1,41 @@
 import React, { useState, useMemo } from "react"
 
 const initialKafedralar = [
-  { name: "Rus tili va adabiyoti", faculty: "Filologiya", semester: "Kuzki semestr", subjectName: "Rus tili grammatikasi", lecture: 100, practice: 80, lab: 40, rating: 30, seminar: 50, total: 300, independent: 80, status: "Taqsimlangan" },
-  { name: "O'zbek tili va adabiyoti", faculty: "Filologiya", semester: "Bahorki semestr", subjectName: "Hozirgi o'zbek adabiyoti", lecture: 120, practice: 100, lab: 60, rating: 40, seminar: 70, total: 390, independent: 100, status: "To'liq taqsimlanmagan" },
-  { name: "Xorijiy filologiya", faculty: "Filologiya", semester: "Kuzki semestr", subjectName: "Ingliz tili fonetikasi", lecture: 110, practice: 90, lab: 50, rating: 35, seminar: 55, total: 340, independent: 90, status: "Taqsimlanmagan" },
-  { name: "Pedagogika va psixologiya", faculty: "Pedagogika", semester: "Kuzki semestr", subjectName: "Umumiy pedagogika", lecture: 80, practice: 70, lab: 30, rating: 30, seminar: 50, total: 260, independent: 70, status: "Taqsimlangan" },
-  { name: "Maktabgacha ta'lim", faculty: "Pedagogika", semester: "Bahorki semestr", subjectName: "Bolalar psixologiyasi", lecture: 90, practice: 80, lab: 30, rating: 30, seminar: 50, total: 280, independent: 75, status: "To'liq taqsimlanmagan" },
-  { name: "Matematika va kompyuter texnologiyalari", faculty: "Aniq va tabiiy fanlar", semester: "Kuzki semestr", subjectName: "Oliy matematika", lecture: 150, practice: 120, lab: 60, rating: 45, seminar: 75, total: 450, independent: 120, status: "Taqsimlanmagan" },
+  // Filologiya Fakulteti
+  { name: "Rus tili va adabiyoti", faculty: "Filologiya", semester: "Kuzki semestr", subjectName: "Rus adabiyoti tarixi", lecture: 80, practice: 60, lab: 0, rating: 20, seminar: 40, total: 200, independent: 60, status: "Taqsimlangan" },
+  { name: "O'zbek tili va adabiyoti", faculty: "Filologiya", semester: "Bahorki semestr", subjectName: "Hozirgi o'zbek adabiyoti", lecture: 100, practice: 80, lab: 0, rating: 30, seminar: 50, total: 260, independent: 70, status: "To'liq taqsimlanmagan" },
+  { name: "Xorijiy filologiya", faculty: "Filologiya", semester: "Kuzki semestr", subjectName: "Chet tili o'qitish metodikasi", lecture: 60, practice: 90, lab: 0, rating: 20, seminar: 30, total: 200, independent: 80, status: "Taqsimlanmagan" },
+  // Pedagogika Fakulteti
+  { name: "Pedagogika va psixologiya", faculty: "Pedagogika", semester: "Bahorki semestr", subjectName: "Umumiy psixologiya", lecture: 120, practice: 80, lab: 20, rating: 40, seminar: 60, total: 320, independent: 100, status: "Taqsimlangan" },
+  { name: "Maktabgacha ta'lim", faculty: "Pedagogika", semester: "Kuzki semestr", subjectName: "Maktabgacha ta'lim pedagogikasi", lecture: 90, practice: 70, lab: 0, rating: 30, seminar: 50, total: 240, independent: 80, status: "To'liq taqsimlanmagan" },
+  // Aniq va tabiiy fanlar Fakulteti
+  { name: "Matematika va kompyuter texnologiyalari", faculty: "Aniq va tabiiy fanlar", semester: "Kuzki semestr", subjectName: "Matematik analiz", lecture: 140, practice: 100, lab: 60, rating: 40, seminar: 0, total: 340, independent: 120, status: "Taqsimlanmagan" },
   { name: "Tabiiy fanlar", faculty: "Aniq va tabiiy fanlar", semester: "Bahorki semestr", subjectName: "Ekologiya asoslari", lecture: 90, practice: 80, lab: 30, rating: 30, seminar: 50, total: 280, independent: 80, status: "Taqsimlangan" },
   { name: "Fizika va astronomiya", faculty: "Aniq va tabiiy fanlar", semester: "Kuzki semestr", subjectName: "Kvant fizikasi", lecture: 100, practice: 90, lab: 50, rating: 30, seminar: 50, total: 320, independent: 90, status: "To'liq taqsimlanmagan" },
   { name: "Texnologik ta'lim", faculty: "Aniq va tabiiy fanlar", semester: "Bahorki semestr", subjectName: "Chizmachilik", lecture: 60, practice: 50, lab: 10, rating: 20, seminar: 40, total: 180, independent: 50, status: "Taqsimlanmagan" },
+  // Boshlang'ich ta'lim Fakulteti
   { name: "Boshlang'ich ta'lim metodikasi", faculty: "Boshlang'ich ta'lim", semester: "Kuzki semestr", subjectName: "O'qish metodikasi", lecture: 110, practice: 90, lab: 40, rating: 40, seminar: 60, total: 340, independent: 90, status: "Taqsimlangan" },
   { name: "Boshlang'ich ta'lim nazariyasi", faculty: "Boshlang'ich ta'lim", semester: "Bahorki semestr", subjectName: "Pedagogik nazariya", lecture: 90, practice: 80, lab: 30, rating: 20, seminar: 50, total: 270, independent: 70, status: "To'liq taqsimlanmagan" },
+  // Ijtimoiy va amaliy fanlar Fakulteti
   { name: "Tarix", faculty: "Ijtimoiy va amaliy fanlar", semester: "Kuzki semestr", subjectName: "O'zbekiston tarixi", lecture: 120, practice: 100, lab: 10, rating: 40, seminar: 80, total: 350, independent: 95, status: "Taqsimlanmagan" },
   { name: "Milliy g'oya va falsafa", faculty: "Ijtimoiy va amaliy fanlar", semester: "Bahorki semestr", subjectName: "Falsafa asoslari", lecture: 70, practice: 60, lab: 20, rating: 20, seminar: 50, total: 220, independent: 60, status: "Taqsimlangan" },
   { name: "San'atshunoslik", faculty: "Ijtimoiy va amaliy fanlar", semester: "Kuzki semestr", subjectName: "Tasviriy san'at", lecture: 80, practice: 70, lab: 40, rating: 20, seminar: 30, total: 240, independent: 65, status: "To'liq taqsimlanmagan" },
   { name: "Jismoniy madaniyat", faculty: "Ijtimoiy va amaliy fanlar", semester: "Bahorki semestr", subjectName: "Sport o'yinlari", lecture: 140, practice: 120, lab: 60, rating: 40, seminar: 60, total: 420, independent: 110, status: "Taqsimlanmagan" },
+  // Magistratura bo'limi
+  { name: "Magistratura mutaxassisliklari", faculty: "Magistratura bo'limi", semester: "Kuzki semestr", subjectName: "Ilmiy tadqiqot metodologiyasi", lecture: 140, practice: 100, lab: 40, rating: 50, seminar: 70, total: 400, independent: 110, status: "To'liq taqsimlanmagan" },
 ]
 
 const mockTeachers = [
-  { id: 1, name: "Karimov Alisher Akbarovich", department: "Dasturiy injiniring", status: "Kam yuklangan", total: 228 },
-  { id: 2, name: "Saidova Nilufar Bahodirovna", department: "Kompyuter fanlari", status: "Kam yuklangan", total: 168 },
-  { id: 3, name: "Rahimov Davron Choriovich", department: "Dasturiy injiniring", status: "Kam yuklangan", total: 294 },
-  { id: 4, name: "Yusupova Mohira Dilshodovna", department: "Buxgalteriya hisobi", status: "Kam yuklangan", total: 96 },
-  { id: 5, name: "Toshmatov Bekzod Rustamovich", department: "Kompyuter fanlari", status: "Kam yuklangan", total: 200 },
-  { id: 6, name: "Ergasheva Zulfiya Anvarovna", department: "Boshlang'ich ta'lim", status: "Kam yuklangan", total: 150 },
+  { id: 1, name: "Karimov Alisher Akbarovich", department: "Rus tili va adabiyoti", status: "Kam yuklangan", total: 228 },
+  { id: 2, name: "Saidova Nilufar Bahodirovna", department: "O'zbek tili va adabiyoti", status: "Kam yuklangan", total: 168 },
+  { id: 3, name: "Rahimov Davron Choriovich", department: "Matematika va komp. texn.", status: "Kam yuklangan", total: 294 },
+  { id: 4, name: "Yusupova Mohira Dilshodovna", department: "Pedagogika va psixologiya", status: "Kam yuklangan", total: 96 },
+  { id: 5, name: "Toshmatov Bekzod Rustamovich", department: "Tarix", status: "Kam yuklangan", total: 200 },
+  { id: 6, name: "Ergasheva Zulfiya Anvarovna", department: "Boshlang'ich ta'lim metodikasi", status: "Kam yuklangan", total: 150 },
+  { id: 7, name: "Usmonov Qodir Bahodirovich", department: "Magistratura mutaxassisliklari", status: "Kam yuklangan", total: 120 },
 ];
 
-export default function KafedraWorkload({ isDark }) {
+export default function KafedraWorkload({ isDark, currentUser }) {
   const [kafedralar, setKafedralar] = useState(() => 
     initialKafedralar.map(item => {
       let allocated = { lecture: 0, practice: 0, lab: 0, rating: 0, seminar: 0 };
@@ -51,8 +59,17 @@ export default function KafedraWorkload({ isDark }) {
       return { ...item, allocated };
     })
   )
+  const facultyNamesById = {
+    f1: "Filologiya",
+    f2: "Pedagogika",
+    f3: "Aniq va tabiiy fanlar",
+    f4: "Boshlang'ich ta'lim",
+    f5: "Ijtimoiy va amaliy fanlar",
+    f6: "Magistratura bo'limi",
+  }
+  const myFacultyName = currentUser?.facultyId && currentUser?.role !== "admin" ? facultyNamesById[currentUser.facultyId] : null
   const [kafedraFilter, setKafedraFilter] = useState("all")
-  const [facultyFilter, setFacultyFilter] = useState("all")
+  const [facultyFilter, setFacultyFilter] = useState(myFacultyName || "all")
   const [semesterFilter, setSemesterFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
 
@@ -65,8 +82,9 @@ export default function KafedraWorkload({ isDark }) {
   const [assignHours, setAssignHours] = useState({ lecture: 0, practice: 0, lab: 0, rating: 0, seminar: 0 })
 
   const availableKafedralar = useMemo(() => {
-    return [...new Set(kafedralar.map(item => item.name))].sort()
-  }, [kafedralar])
+    const list = myFacultyName ? kafedralar.filter(k => k.faculty === myFacultyName) : kafedralar
+    return [...new Set(list.map(item => item.name))].sort()
+  }, [kafedralar, myFacultyName])
 
   const getStatusColor = (status) => {
     if (isDark) {
@@ -97,12 +115,12 @@ export default function KafedraWorkload({ isDark }) {
   const filteredData = useMemo(() => {
     return kafedralar.filter((item) => {
       const matchesKafedra = kafedraFilter === "all" || item.name === kafedraFilter
-      const matchesFaculty = facultyFilter === "all" || item.faculty === facultyFilter
+      const matchesFaculty = myFacultyName ? item.faculty === myFacultyName : (facultyFilter === "all" || item.faculty === facultyFilter)
       const matchesSemester = semesterFilter === "all" || item.semester === semesterFilter
       const matchesStatus = statusFilter === "all" || item.status === statusFilter
       return matchesKafedra && matchesFaculty && matchesSemester && matchesStatus
     })
-  }, [kafedralar, kafedraFilter, facultyFilter, semesterFilter, statusFilter])
+  }, [kafedralar, kafedraFilter, facultyFilter, semesterFilter, statusFilter, myFacultyName])
 
   const filteredTeachers = useMemo(() => {
     return mockTeachers.filter(t => 
@@ -217,16 +235,24 @@ export default function KafedraWorkload({ isDark }) {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Fakultet</label>
             <select
-              value={facultyFilter}
+              value={myFacultyName || facultyFilter}
+              disabled={Boolean(myFacultyName)}
               onChange={(e) => setFacultyFilter(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white disabled:bg-slate-100 disabled:text-slate-500"
             >
-              <option value="all">Barchasi</option>
-              <option value="Filologiya">Filologiya</option>
-              <option value="Pedagogika">Pedagogika</option>
-              <option value="Aniq va tabiiy fanlar">Aniq va tabiiy fanlar</option>
-              <option value="Boshlang'ich ta'lim">Boshlang'ich ta'lim</option>
-              <option value="Ijtimoiy va amaliy fanlar">Ijtimoiy va amaliy fanlar</option>
+              {myFacultyName ? (
+                <option value={myFacultyName}>{myFacultyName}</option>
+              ) : (
+                <>
+                  <option value="all">Barchasi</option>
+                  <option value="Filologiya">Filologiya</option>
+                  <option value="Pedagogika">Pedagogika</option>
+                  <option value="Aniq va tabiiy fanlar">Aniq va tabiiy fanlar</option>
+                  <option value="Boshlang'ich ta'lim">Boshlang'ich ta'lim</option>
+                  <option value="Ijtimoiy va amaliy fanlar">Ijtimoiy va amaliy fanlar</option>
+                  <option value="Magistratura bo'limi">Magistratura bo'limi</option>
+                </>
+              )}
             </select>
           </div>
           <div>

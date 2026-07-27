@@ -772,7 +772,7 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <ShieldCheck className={`h-9 w-9 shrink-0 ${dark ? "text-violet-400" : "text-violet-600"}`} strokeWidth={1.85} aria-hidden />
-                <h3 className="text-2xl font-bold tracking-tight">Ruxsatlar</h3>
+                <h3 className="text-2xl font-bold tracking-tight">Ruxsat</h3>
               </div>
               <button type="button" onClick={closeModal} aria-label="Yopish" className={`-mt-2 rounded-lg p-2 transition-colors ${dark ? "hover:bg-slate-700/70" : "hover:bg-slate-100"}`}>
                 <CircleX className={`h-7 w-7 ${dark ? "text-white" : "text-slate-900"}`} strokeWidth={2.25} aria-hidden />
@@ -929,22 +929,7 @@ export default function Users({ dark, permissions = [], isAdmin = false }) {
                     : "translate(-100%, -100%)",
               }}
             >
-              {canOpenPermissionsFor(rows.find((r) => r.id === actionsMenu.rowId)) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeActionsMenu()
-                    const row = rows.find((r) => r.id === actionsMenu.rowId)
-                    if (row) openPermissions(row)
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                    dark ? "text-violet-400 hover:bg-slate-700/80" : "text-violet-700 hover:bg-violet-50"
-                  }`}
-                >
-                  <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                  Ruxsatlar
-                </button>
-              )}
+
               {canPassword && (
                 <button
                   type="button"
