@@ -73,7 +73,6 @@ export default function Subjects({ dark, permissions = [], isAdmin = false, curr
   const [filterEduForm, setFilterEduForm] = useState("all")
   const [filterEduType, setFilterEduType] = useState("all")
   const [filterLanguage, setFilterLanguage] = useState("all")
-  const [sortBy, setSortBy] = useState("name-asc")
 
   const departmentNames = useMemo(() => {
     const map = {}
@@ -115,25 +114,11 @@ export default function Subjects({ dark, permissions = [], isAdmin = false, curr
       list = list.filter((row) => (row.language || "O'zbek") === filterLanguage)
     }
 
-    // 5. Sorting
-    list = [...list].sort((a, b) => {
-      if (sortBy === "name-asc") {
-        return a.nameUz.localeCompare(b.nameUz)
-      }
-      if (sortBy === "name-desc") {
-        return b.nameUz.localeCompare(a.nameUz)
-      }
-      if (sortBy === "total-desc") {
-        return (b.total || 0) - (a.total || 0)
-      }
-      if (sortBy === "total-asc") {
-        return (a.total || 0) - (b.total || 0)
-      }
-      return 0
-    })
+    // 5. Sorting (default: name-asc)
+    list = [...list].sort((a, b) => a.nameUz.localeCompare(b.nameUz))
 
     return list
-  }, [rows, searchApplied, departmentNames, filterSemester, filterDepartment, filterEduForm, filterEduType, filterLanguage, sortBy])
+  }, [rows, searchApplied, departmentNames, filterSemester, filterDepartment, filterEduForm, filterEduType, filterLanguage])
 
   const cardBase = dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white shadow-sm"
   const subtitle = dark ? "text-slate-400" : "text-slate-500"
@@ -577,8 +562,8 @@ export default function Subjects({ dark, permissions = [], isAdmin = false, curr
           </button>
         </div>
 
-        {/* Filters and Sorting */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+        {/* Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
           <div className="flex flex-col gap-1.5">
             <label className={`text-xs font-semibold ${subtitle}`}>Semestr bo'yicha</label>
             <div className={`flex p-1 rounded-lg shadow-sm border transition-colors duration-300 w-fit ${dark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
@@ -655,20 +640,6 @@ export default function Subjects({ dark, permissions = [], isAdmin = false, curr
               <option value="all">Barchasi</option>
               <option value="O'zbek">O&apos;zbek tili</option>
               <option value="Rus">Rus tili</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className={`text-xs font-semibold ${subtitle}`}>Tartiblash</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`}
-            >
-              <option value="name-asc">Nomi bo'yicha (A-Z)</option>
-              <option value="name-desc">Nomi bo'yicha (Z-A)</option>
-              <option value="total-desc">Jami soat (Kamayish)</option>
-              <option value="total-asc">Jami soat (O'sish)</option>
             </select>
           </div>
         </div>
