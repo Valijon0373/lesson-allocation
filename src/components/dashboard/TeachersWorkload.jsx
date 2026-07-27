@@ -144,8 +144,7 @@ export default function TeachersWorkload() {
       "Jami soat",
       "Mustaqil",
       "Guruhlar soni",
-      "Talabalar soni",
-      "Holati"
+      "Talabalar soni"
     ];
 
     const dataRow = [
@@ -161,8 +160,7 @@ export default function TeachersWorkload() {
       teacher.total,
       teacher.independent,
       teacher.groups,
-      teacher.students,
-      teacher.status
+      teacher.students
     ];
 
     const escapeCsv = (val) => {
@@ -204,8 +202,7 @@ export default function TeachersWorkload() {
       "Jami soat",
       "Mustaqil",
       "Guruhlar soni",
-      "Talabalar soni",
-      "Holati"
+      "Talabalar soni"
     ];
 
     const escapeCsv = (val) => {
@@ -231,8 +228,7 @@ export default function TeachersWorkload() {
       teacher.total,
       teacher.independent,
       teacher.groups,
-      teacher.students,
-      teacher.status
+      teacher.students
     ]);
 
     const csvContent = 
@@ -264,7 +260,6 @@ export default function TeachersWorkload() {
     reyting: true,
     guruhlar: true,
     talabalar: true,
-    holat: true,
   })
 
   const columnsList = [
@@ -281,7 +276,6 @@ export default function TeachersWorkload() {
     { id: "mustaqil", label: "Mustaqil" },
     { id: "guruhlar", label: "Guruhlar" },
     { id: "talabalar", label: "Talabalar" },
-    { id: "holat", label: "Holat" },
   ]
 
   useEffect(() => {
@@ -417,7 +411,6 @@ export default function TeachersWorkload() {
                 {visibleColumns.mustaqil && <th className="py-3 px-4 font-medium text-right">Mustaqil</th>}
                 {visibleColumns.guruhlar && <th className="py-3 px-4 font-medium text-right">Guruhlar</th>}
                 {visibleColumns.talabalar && <th className="py-3 px-4 font-medium text-right">Talabalar</th>}
-                {visibleColumns.holat && <th className="py-3 px-4 font-medium">Holat</th>}
                 <th className="py-3 px-4 font-medium text-center">Amallar</th>
               </tr>
             </thead>
@@ -454,13 +447,6 @@ export default function TeachersWorkload() {
                     {visibleColumns.mustaqil && <td className="py-3 px-4 text-right text-slate-600">{row.independent}</td>}
                     {visibleColumns.guruhlar && <td className="py-3 px-4 text-right text-slate-600">{row.groups}</td>}
                     {visibleColumns.talabalar && <td className="py-3 px-4 text-right text-slate-600">{row.students}</td>}
-                    {visibleColumns.holat && (
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
-                          {row.status}
-                        </span>
-                      </td>
-                    )}
                     <td className="py-3 px-4 text-center">
                       <div className="relative inline-flex">
                         <button

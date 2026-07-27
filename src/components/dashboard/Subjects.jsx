@@ -47,6 +47,9 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
     departmentId: "",
     nameUz: "",
     semester: "Kuzki semestr",
+    eduForm: "Kunduzgi",
+    eduType: "Bakalavr",
+    language: "O'zbek",
     total: 0,
     lecture: 0,
     practice: 0,
@@ -65,6 +68,9 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
   const noticeTimeoutRef = useRef(null)
   const [filterSemester, setFilterSemester] = useState("Kuzki semestr")
   const [filterDepartment, setFilterDepartment] = useState("all")
+  const [filterEduForm, setFilterEduForm] = useState("all")
+  const [filterEduType, setFilterEduType] = useState("all")
+  const [filterLanguage, setFilterLanguage] = useState("all")
   const [sortBy, setSortBy] = useState("name-asc")
 
   const departmentNames = useMemo(() => {
@@ -96,7 +102,18 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
       list = list.filter((row) => row.departmentId === filterDepartment)
     }
 
-    // 4. Sorting
+    // 4. EduForm, EduType & Language filters
+    if (filterEduForm !== "all") {
+      list = list.filter((row) => (row.eduForm || "Kunduzgi") === filterEduForm)
+    }
+    if (filterEduType !== "all") {
+      list = list.filter((row) => (row.eduType || "Bakalavr") === filterEduType)
+    }
+    if (filterLanguage !== "all") {
+      list = list.filter((row) => (row.language || "O'zbek") === filterLanguage)
+    }
+
+    // 5. Sorting
     list = [...list].sort((a, b) => {
       if (sortBy === "name-asc") {
         return a.nameUz.localeCompare(b.nameUz)
@@ -114,7 +131,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
     })
 
     return list
-  }, [rows, searchApplied, departmentNames, filterSemester, filterDepartment, sortBy])
+  }, [rows, searchApplied, departmentNames, filterSemester, filterDepartment, filterEduForm, filterEduType, filterLanguage, sortBy])
 
   const cardBase = dark ? "border-slate-600 bg-slate-800" : "border-slate-200 bg-white shadow-sm"
   const subtitle = dark ? "text-slate-400" : "text-slate-500"
@@ -219,7 +236,6 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
     const activeHoursSum = (draft.lecture || 0) + 
                            (draft.practice || 0) + 
                            (draft.lab || 0) + 
-                           (draft.rating || 0) + 
                            (draft.seminar || 0)
     return activeHoursSum > (draft.total || 0)
   }
@@ -232,7 +248,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
     if (!nextName || !nextDepartmentId) return
 
     if (isWorkloadInvalid(editDraft)) {
-      showNotice("Ma'ruza + Amaliy + Laboratoriya + Reyting + Seminar soatlari yig'indisi Jami soatdan oshib ketmasligi kerak!", "danger")
+      showNotice("Ma'ruza + Amaliy + Laboratoriya + Seminar soatlari yig'indisi Jami soatdan oshib ketmasligi kerak!", "danger")
       return
     }
 
@@ -242,9 +258,9 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
       const withLabel = { ...updated, departmentName: updated.departmentName || departmentLabel(updated.departmentId) }
       setRows((prev) => prev.map((r) => (r.id === row.id ? withLabel : r)))
       closeModal()
-      showNotice("Fan tahrirlandi")
+      showNotice("Fan yangilandi")
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Saqlab bo'lmadi"
+      const message = err instanceof Error ? err.message : "Yangilab bo'lmadi"
       showNotice(message, "danger")
     } finally {
       setBusy(false)
@@ -276,7 +292,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
     if (!nextName || !nextDepartmentId) return
 
     if (isWorkloadInvalid(createDraft)) {
-      showNotice("Ma'ruza + Amaliy + Laboratoriya + Reyting + Seminar soatlari yig'indisi Jami soatdan oshib ketmasligi kerak!", "danger")
+      showNotice("Ma'ruza + Amaliy + Laboratoriya + Seminar soatlari yig'indisi Jami soatdan oshib ketmasligi kerak!", "danger")
       return
     }
 
@@ -319,8 +335,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
       : (draft.lecture || 0) + 
         (draft.practice || 0) + 
         (draft.lab || 0) + 
-        (draft.seminar || 0) + 
-        (draft.independent || 0)
+        (draft.seminar || 0)
   }
 
   const handleTotalHoursChange = (value, draft, setDraft) => {
@@ -336,7 +351,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
 
   const handleHoursFieldChange = (field, value, draft, setDraft) => {
     let numValue = Number(value) || 0
-    if (["lecture", "practice", "lab", "rating", "seminar"].includes(field)) {
+    if (["lecture", "practice", "lab", "seminar"].includes(field)) {
       if (draft.total && numValue > draft.total) {
         numValue = draft.total
       }
@@ -353,7 +368,6 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
         (field === "lecture" ? 0 : Number(draft.lecture || 0)) +
         (field === "practice" ? 0 : Number(draft.practice || 0)) +
         (field === "lab" ? 0 : Number(draft.lab || 0)) +
-        (field === "rating" ? 0 : Number(draft.rating || 0)) +
         (field === "seminar" ? 0 : Number(draft.seminar || 0));
       return Math.max(0, (draft.total || 0) - sumOthers);
     };
@@ -437,24 +451,6 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
         </div>
         <div className="space-y-1 group">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold">Reyting (soat)</label>
-            {draft.total > 0 && (
-              <span className="text-[11.5px] font-bold text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
-                Mavjud: {getAvailable("rating")}
-              </span>
-            )}
-          </div>
-          <input 
-            type="number" 
-            min="0" 
-            max={draft.total || undefined}
-            value={draft.rating || ""} 
-            onChange={(e) => handleHoursFieldChange("rating", e.target.value, draft, setDraft)} 
-            className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`} 
-          />
-        </div>
-        <div className="space-y-1 group">
-          <div className="flex items-center justify-between">
             <label className="text-xs font-semibold">Seminar (soat)</label>
             {draft.total > 0 && (
               <span className="text-[11.5px] font-bold text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
@@ -468,16 +464,6 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
             max={draft.total || undefined}
             value={draft.seminar || ""} 
             onChange={(e) => handleHoursFieldChange("seminar", e.target.value, draft, setDraft)} 
-            className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`} 
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-semibold">Mustaqil ta'lim (soat)</label>
-          <input 
-            type="number" 
-            min="0" 
-            value={draft.independent || ""} 
-            onChange={(e) => handleHoursFieldChange("independent", e.target.value, draft, setDraft)} 
             className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`} 
           />
         </div>
@@ -498,6 +484,26 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
             min="0" 
             value={draft.students || ""} 
             onChange={(e) => setDraft(p => ({ ...p, students: Number(e.target.value) }))} 
+            className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`} 
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold">Reyting (soat)</label>
+          <input 
+            type="number" 
+            min="0" 
+            value={draft.rating || ""} 
+            onChange={(e) => handleHoursFieldChange("rating", e.target.value, draft, setDraft)} 
+            className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`} 
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold">Mustaqil ta'lim (soat)</label>
+          <input 
+            type="number" 
+            min="0" 
+            value={draft.independent || ""} 
+            onChange={(e) => handleHoursFieldChange("independent", e.target.value, draft, setDraft)} 
             className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`} 
           />
         </div>
@@ -564,7 +570,7 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
         </div>
 
         {/* Filters and Sorting */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
           <div className="flex flex-col gap-1.5">
             <label className={`text-xs font-semibold ${subtitle}`}>Semestr bo'yicha</label>
             <div className={`flex p-1 rounded-lg shadow-sm border transition-colors duration-300 w-fit ${dark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
@@ -600,6 +606,47 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
                   {d.nameUz}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-xs font-semibold ${subtitle}`}>Ta&apos;lim shakli</label>
+            <select
+              value={filterEduForm}
+              onChange={(e) => setFilterEduForm(e.target.value)}
+              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`}
+            >
+              <option value="all">Barchasi</option>
+              <option value="Kunduzgi">Kunduzgi ta&apos;lim</option>
+              <option value="Sirtqi">Sirtqi ta&apos;lim</option>
+              <option value="Kechki">Kechki ta&apos;lim</option>
+              <option value="Masofaviy">Masofaviy</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-xs font-semibold ${subtitle}`}>Ta&apos;lim turi</label>
+            <select
+              value={filterEduType}
+              onChange={(e) => setFilterEduType(e.target.value)}
+              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`}
+            >
+              <option value="all">Barchasi</option>
+              <option value="Bakalavr">Bakalavriat</option>
+              <option value="Magistratura">Magistratura</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-xs font-semibold ${subtitle}`}>Ta&apos;lim tili</label>
+            <select
+              value={filterLanguage}
+              onChange={(e) => setFilterLanguage(e.target.value)}
+              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${input}`}
+            >
+              <option value="all">Barchasi</option>
+              <option value="O'zbek">O&apos;zbek tili</option>
+              <option value="Rus">Rus tili</option>
             </select>
           </div>
 
@@ -675,10 +722,10 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
                     <td className="py-3 px-4 text-right text-slate-600">{row.lab}</td>
                     <td className="py-3 px-4 text-right text-slate-600">{row.rating || 0}</td>
                     <td className="py-3 px-4 text-right text-slate-600">{row.seminar}</td>
-                    <td className="py-3 px-4 text-right font-bold text-slate-800 bg-slate-50/50">{row.total}</td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-800 bg-slate-50/50">{(row.total || 0) + (row.rating || 0)}</td>
                     <td className="py-3 px-4 text-right text-slate-600">{row.credits}</td>
                     <td className="py-3 px-4 text-right text-slate-600">{row.independent}</td>
-                    <td className="py-3 px-4 text-right font-bold text-indigo-700 bg-indigo-50/20">{(row.total || 0) + (row.independent || 0)}</td>
+                    <td className="py-3 px-4 text-right font-bold text-indigo-700 bg-indigo-50/20">{(row.total || 0) + (row.rating || 0) + (row.independent || 0)}</td>
                     <td className="py-3 px-4 text-center">
                       <div className="relative inline-flex">
                         <button
@@ -793,6 +840,18 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
                       <p className="mt-1 font-semibold">{modal.row.departmentName || departmentLabel(modal.row.departmentId)}</p>
                     </div>
                     <div>
+                      <p className={`text-xs font-semibold ${meta}`}>Ta&apos;lim shakli:</p>
+                      <p className="mt-1 font-semibold">{modal.row.eduForm || "Kunduzgi ta'lim"}</p>
+                    </div>
+                    <div>
+                      <p className={`text-xs font-semibold ${meta}`}>Ta&apos;lim turi:</p>
+                      <p className="mt-1 font-semibold">{modal.row.eduType || "Bakalavriat"}</p>
+                    </div>
+                    <div>
+                      <p className={`text-xs font-semibold ${meta}`}>Ta&apos;lim tili:</p>
+                      <p className="mt-1 font-semibold">{modal.row.language || "O'zbek"}</p>
+                    </div>
+                    <div>
                       <p className={`text-xs font-semibold ${meta}`}>Semestr:</p>
                       <p className="mt-1 font-semibold">{modal.row.semester || "Kuzki semestr"}</p>
                     </div>
@@ -801,8 +860,12 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
                       <p className="mt-1 font-semibold">{modal.row.credits}</p>
                     </div>
                     <div>
+                      <p className={`text-xs font-semibold ${meta}`}>Jami soat:</p>
+                      <p className="mt-1 font-bold text-slate-800">{(modal.row.total || 0) + (modal.row.rating || 0)}</p>
+                    </div>
+                    <div>
                       <p className={`text-xs font-semibold ${meta}`}>Umumiy soat:</p>
-                      <p className="mt-1 font-bold text-teal-600">{modal.row.total}</p>
+                      <p className="mt-1 font-bold text-indigo-600">{(modal.row.total || 0) + (modal.row.rating || 0) + (modal.row.independent || 0)}</p>
                     </div>
                   </div>
                   
@@ -820,20 +883,24 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
                       <div className="font-semibold">{modal.row.lab}</div>
                     </div>
                     <div className="p-3 border rounded-lg text-center bg-white shadow-sm">
-                      <div className="text-xs text-slate-500 mb-1">Reyting</div>
-                      <div className="font-semibold">{modal.row.rating || 0}</div>
-                    </div>
-                    <div className="p-3 border rounded-lg text-center bg-white shadow-sm">
                       <div className="text-xs text-slate-500 mb-1">Seminar</div>
                       <div className="font-semibold">{modal.row.seminar}</div>
                     </div>
                     <div className="p-3 border rounded-lg text-center bg-white shadow-sm">
+                      <div className="text-xs text-slate-500 mb-1">Guruhlar soni</div>
+                      <div className="font-semibold">{modal.row.groups || 0}</div>
+                    </div>
+                    <div className="p-3 border rounded-lg text-center bg-white shadow-sm">
+                      <div className="text-xs text-slate-500 mb-1">Talabalar soni</div>
+                      <div className="font-semibold">{modal.row.students || 0}</div>
+                    </div>
+                    <div className="p-3 border rounded-lg text-center bg-white shadow-sm">
+                      <div className="text-xs text-slate-500 mb-1">Reyting</div>
+                      <div className="font-semibold">{modal.row.rating || 0}</div>
+                    </div>
+                    <div className="p-3 border rounded-lg text-center bg-white shadow-sm">
                       <div className="text-xs text-slate-500 mb-1">Mustaqil t.</div>
                       <div className="font-semibold">{modal.row.independent}</div>
-                    </div>
-                    <div className="p-3 border rounded-lg text-center bg-white shadow-sm col-span-3">
-                      <div className="text-xs text-slate-500 mb-1">Guruhlar/Talaba</div>
-                      <div className="font-semibold">{modal.row.groups} / {modal.row.students}</div>
                     </div>
                   </div>
                 </>
@@ -871,6 +938,43 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
               <div className="space-y-1">
                 <label className="text-sm font-semibold">Kafedra</label>
                 {departmentSelect(editDraft.departmentId, (e) => setEditDraft((p) => ({ ...p, departmentId: e.target.value })))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold">Ta&apos;lim shakli</label>
+                  <select
+                    value={editDraft.eduForm || "Kunduzgi"}
+                    onChange={(e) => setEditDraft((p) => ({ ...p, eduForm: e.target.value }))}
+                    className={`w-full rounded-lg border px-4 py-3 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                  >
+                    <option value="Kunduzgi">Kunduzgi ta&apos;lim</option>
+                    <option value="Sirtqi">Sirtqi ta&apos;lim</option>
+                    <option value="Kechki">Kechki ta&apos;lim</option>
+                    <option value="Masofaviy">Masofaviy ta&apos;lim</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold">Ta&apos;lim turi</label>
+                  <select
+                    value={editDraft.eduType || "Bakalavr"}
+                    onChange={(e) => setEditDraft((p) => ({ ...p, eduType: e.target.value }))}
+                    className={`w-full rounded-lg border px-4 py-3 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                  >
+                    <option value="Bakalavr">Bakalavriat</option>
+                    <option value="Magistratura">Magistratura</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold">Ta&apos;lim tili</label>
+                  <select
+                    value={editDraft.language || "O'zbek"}
+                    onChange={(e) => setEditDraft((p) => ({ ...p, language: e.target.value }))}
+                    className={`w-full rounded-lg border px-4 py-3 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                  >
+                    <option value="O'zbek">O&apos;zbek</option>
+                    <option value="Rus">Rus</option>
+                  </select>
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-semibold">Fan nomi</label>
@@ -976,6 +1080,43 @@ export default function Subjects({ dark, permissions = [], isAdmin = false }) {
               <div className="space-y-1">
                 <label className="text-sm font-semibold">Kafedra</label>
                 {departmentSelect(createDraft.departmentId, (e) => setCreateDraft((p) => ({ ...p, departmentId: e.target.value })))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold">Ta&apos;lim shakli</label>
+                  <select
+                    value={createDraft.eduForm || "Kunduzgi"}
+                    onChange={(e) => setCreateDraft((p) => ({ ...p, eduForm: e.target.value }))}
+                    className={`w-full rounded-lg border px-4 py-3 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                  >
+                    <option value="Kunduzgi">Kunduzgi ta&apos;lim</option>
+                    <option value="Sirtqi">Sirtqi ta&apos;lim</option>
+                    <option value="Kechki">Kechki ta&apos;lim</option>
+                    <option value="Masofaviy">Masofaviy ta&apos;lim</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold">Ta&apos;lim turi</label>
+                  <select
+                    value={createDraft.eduType || "Bakalavr"}
+                    onChange={(e) => setCreateDraft((p) => ({ ...p, eduType: e.target.value }))}
+                    className={`w-full rounded-lg border px-4 py-3 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                  >
+                    <option value="Bakalavr">Bakalavriat</option>
+                    <option value="Magistratura">Magistratura</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold">Ta&apos;lim tili</label>
+                  <select
+                    value={createDraft.language || "O'zbek"}
+                    onChange={(e) => setCreateDraft((p) => ({ ...p, language: e.target.value }))}
+                    className={`w-full rounded-lg border px-4 py-3 text-sm outline-none ring-teal-500/0 transition-shadow focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${input}`}
+                  >
+                    <option value="O'zbek">O&apos;zbek</option>
+                    <option value="Rus">Rus</option>
+                  </select>
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-semibold">Fan nomi</label>

@@ -27,18 +27,21 @@ import {
 const TEAL_BG = "bg-teal-500"
 const ROLES = [
   "System Admin",
+  "O'quv ishlari bo'yicha prorektor",
+  "O'quv uslubiy boshqarma",
   "Fakultet dekani",
   "Dekan o'rinbosari",
   "Ta'lim sifati",
-  "O‘quv ishlari bo‘yicha prorektor",
   "Foydalanuvchi",
   "Komissiya"
 ]
 const EDITABLE_PERMISSION_ROLES = new Set([
+  "O'quv ishlari bo'yicha prorektor",
+  "O‘quv ishlari bo‘yicha prorektor",
+  "O'quv uslubiy boshqarma",
   "Fakultet dekani",
   "Dekan o'rinbosari",
   "Ta'lim sifati",
-  "O‘quv ishlari bo‘yicha prorektor",
   "Foydalanuvchi",
   "Komissiya"
 ])

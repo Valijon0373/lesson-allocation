@@ -13,6 +13,8 @@ import TeachersWorkload from "./components/dashboard/TeachersWorkload.jsx"
 import Subjects from "./components/dashboard/Subjects.jsx"
 import AdminLayout from "./components/dashboard/AdminLayout.jsx"
 import KafedraWorkload from "./components/dashboard/KafedraWorkload.jsx"
+import Talabnoma from "./components/dashboard/Talabnoma.jsx"
+import Sozlamalar from "./components/dashboard/Sozlamalar.jsx"
 import {
   fetchAllCriterionRows,
   fetchAllSections,
@@ -1147,6 +1149,9 @@ function App() {
         {adminActiveTab === "kafedra-yuklamasi" && (
           <KafedraWorkload isDark={isDark} />
         )}
+        {adminActiveTab === "talabnoma" && (
+          <Talabnoma isDark={isDark} />
+        )}
         {adminActiveTab === "oqituvchilar" && (
           <TeachersWorkload />
         )}
@@ -1156,7 +1161,7 @@ function App() {
           </div>
         )}
          {adminActiveTab === "sozlamalar" && (
-          <div className="flex items-center justify-center min-h-screen text-slate-500 font-medium">Sozlamalar sahifasi (Tez kunda...)</div>
+          <Sozlamalar isDark={isDark} />
         )}
       </AdminLayout>
     )

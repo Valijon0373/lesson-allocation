@@ -525,7 +525,8 @@ export async function fetchAllSubjects(names) {
   return mockSubjects.map((s) => ({
     ...s,
     departmentName: names?.[s.departmentId] || "Kafedra",
-    total: s.total !== undefined ? s.total : (s.lecture || 0) + (s.practice || 0) + (s.lab || 0) + (s.rating || 0) + (s.seminar || 0) + (s.independent || 0),
+    language: s.language || "O'zbek",
+    total: s.total !== undefined ? s.total : (s.lecture || 0) + (s.practice || 0) + (s.lab || 0) + (s.seminar || 0),
   }))
 }
 export async function fetchSubjectById(id, names) {
@@ -534,16 +535,17 @@ export async function fetchSubjectById(id, names) {
   return {
     ...s,
     departmentName: names?.[s.departmentId] || "Kafedra",
-    total: s.total !== undefined ? s.total : (s.lecture || 0) + (s.practice || 0) + (s.lab || 0) + (s.rating || 0) + (s.seminar || 0) + (s.independent || 0),
+    language: s.language || "O'zbek",
+    total: s.total !== undefined ? s.total : (s.lecture || 0) + (s.practice || 0) + (s.lab || 0) + (s.seminar || 0),
   }
 }
 export async function saveSubject(body, names) {
-  const newS = { ...body, id: "s" + Date.now() }
+  const newS = { ...body, id: "s" + Date.now(), language: body.language || "O'zbek" }
   mockSubjects.push(newS)
   return {
     ...newS,
     departmentName: names?.[newS.departmentId] || "Kafedra",
-    total: newS.total !== undefined ? newS.total : (newS.lecture || 0) + (newS.practice || 0) + (newS.lab || 0) + (newS.rating || 0) + (newS.seminar || 0) + (newS.independent || 0),
+    total: newS.total !== undefined ? newS.total : (newS.lecture || 0) + (newS.practice || 0) + (newS.lab || 0) + (newS.seminar || 0),
   }
 }
 export async function updateSubject(id, body, names) {
@@ -554,7 +556,8 @@ export async function updateSubject(id, body, names) {
     return {
       ...s,
       departmentName: names?.[s.departmentId] || "Kafedra",
-      total: s.total !== undefined ? s.total : (s.lecture || 0) + (s.practice || 0) + (s.lab || 0) + (s.rating || 0) + (s.seminar || 0) + (s.independent || 0),
+      language: s.language || "O'zbek",
+      total: s.total !== undefined ? s.total : (s.lecture || 0) + (s.practice || 0) + (s.lab || 0) + (s.seminar || 0),
     }
   }
   throw new Error("Topilmadi")
