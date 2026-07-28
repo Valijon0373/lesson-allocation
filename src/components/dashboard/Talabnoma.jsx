@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from "react"
-import { 
-  Search, Plus, Filter, Eye, CheckCircle2, XCircle, Clock, 
-  AlertCircle, FileSpreadsheet, Trash2, Calendar, User, 
+import {
+  Search, Plus, Filter, Eye, CheckCircle2, XCircle, Clock,
+  AlertCircle, FileSpreadsheet, Trash2, Calendar, User,
   Building2, BookOpen, AlertTriangle, Check, X, ArrowUpDown,
   MessageSquare, Sparkles, HelpCircle, ChevronRight
 } from "lucide-react"
 import { BsMailboxFlag } from "react-icons/bs"
 
-const initialTalabnomalar = [
+export const initialTalabnomalar = [
   {
     id: "TL-2026-001",
     date: "2026-07-25",
@@ -108,8 +108,7 @@ const initialTalabnomalar = [
   }
 ]
 
-export default function Talabnoma({ isDark, currentUser }) {
-  const [talabnomalar, setTalabnomalar] = useState(initialTalabnomalar)
+export default function Talabnoma({ isDark, currentUser, talabnomalar, setTalabnomalar }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
@@ -175,12 +174,12 @@ export default function Talabnoma({ isDark, currentUser }) {
   const filteredList = useMemo(() => {
     return talabnomalar.filter((t) => {
       const q = searchQuery.toLowerCase().trim()
-      const matchSearch = 
-        !q || 
-        t.id.toLowerCase().includes(q) || 
-        t.subject.toLowerCase().includes(q) || 
-        t.department.toLowerCase().includes(q) || 
-        t.applicant.toLowerCase().includes(q) || 
+      const matchSearch =
+        !q ||
+        t.id.toLowerCase().includes(q) ||
+        t.subject.toLowerCase().includes(q) ||
+        t.department.toLowerCase().includes(q) ||
+        t.applicant.toLowerCase().includes(q) ||
         t.reason.toLowerCase().includes(q)
 
       const matchStatus = statusFilter === "all" || t.status === statusFilter
@@ -193,7 +192,7 @@ export default function Talabnoma({ isDark, currentUser }) {
 
   // Handlers
   const handleApprove = (id) => {
-    setTalabnomalar((prev) => 
+    setTalabnomalar((prev) =>
       prev.map((item) => item.id === id ? { ...item, status: "Tasdiqlangan", rejectReason: "" } : item)
     )
     showToast("Talabnoma muvaffaqiyatli tasdiqlandi!", "success")
@@ -211,7 +210,7 @@ export default function Talabnoma({ isDark, currentUser }) {
     if (!rejectModalData) return
     const id = rejectModalData.id
     const reason = rejectComment.trim() || "Sabab ko'rsatilmadi"
-    setTalabnomalar((prev) => 
+    setTalabnomalar((prev) =>
       prev.map((item) => item.id === id ? { ...item, status: "Rad etilgan", rejectReason: reason } : item)
     )
     showToast("Talabnoma rad etildi!", "warning")
@@ -269,7 +268,7 @@ export default function Talabnoma({ isDark, currentUser }) {
     setTalabnomalar((prev) => [createdItem, ...prev])
     setCreateModalOpen(false)
     showToast("Yangi talabnoma muvaffaqiyatli yuborildi!", "success")
-    
+
     // Reset form
     setNewReq({
       faculty: "Filologiya fakulteti",
@@ -302,7 +301,7 @@ export default function Talabnoma({ isDark, currentUser }) {
       `"${t.applicant}"`,
       t.status
     ])
-    
+
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n")
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
@@ -319,13 +318,12 @@ export default function Talabnoma({ isDark, currentUser }) {
       {/* Toast Notification */}
       {toast.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce-short">
-          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border backdrop-blur-md ${
-            toast.type === "success" 
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border backdrop-blur-md ${toast.type === "success"
               ? isDark ? "bg-emerald-900/90 border-emerald-700 text-emerald-200" : "bg-emerald-50 border-emerald-200 text-emerald-800 shadow-emerald-500/10"
               : toast.type === "warning"
-              ? isDark ? "bg-amber-900/90 border-amber-700 text-amber-200" : "bg-amber-50 border-amber-200 text-amber-800 shadow-amber-500/10"
-              : isDark ? "bg-blue-900/90 border-blue-700 text-blue-200" : "bg-blue-50 border-blue-200 text-blue-800 shadow-blue-500/10"
-          }`}>
+                ? isDark ? "bg-amber-900/90 border-amber-700 text-amber-200" : "bg-amber-50 border-amber-200 text-amber-800 shadow-amber-500/10"
+                : isDark ? "bg-blue-900/90 border-blue-700 text-blue-200" : "bg-blue-50 border-blue-200 text-blue-800 shadow-blue-500/10"
+            }`}>
             {toast.type === "success" && <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-500" />}
             {toast.type === "warning" && <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500" />}
             {toast.type === "info" && <AlertCircle className="w-5 h-5 shrink-0 text-blue-500" />}
@@ -339,14 +337,13 @@ export default function Talabnoma({ isDark, currentUser }) {
 
       {/* Header Banner */}
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className={`relative overflow-hidden rounded-3xl p-6 md:p-8 border shadow-sm transition-all duration-300 ${
-          isDark 
-            ? "bg-gradient-to-br from-indigo-950/80 via-slate-850 to-slate-900 border-indigo-500/20 shadow-indigo-950/30" 
+        <div className={`relative overflow-hidden rounded-3xl p-6 md:p-8 border shadow-sm transition-all duration-300 ${isDark
+            ? "bg-gradient-to-br from-indigo-950/80 via-slate-850 to-slate-900 border-indigo-500/20 shadow-indigo-950/30"
             : "bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-800 border-indigo-400/20 text-white shadow-indigo-500/10"
-        }`}>
+          }`}>
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 right-1/3 -mb-12 w-48 h-48 rounded-full bg-blue-400/15 blur-2xl pointer-events-none" />
-          
+
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-white/15 text-white backdrop-blur-md border border-white/20">
@@ -382,13 +379,12 @@ export default function Talabnoma({ isDark, currentUser }) {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div 
+          <div
             onClick={() => setStatusFilter("all")}
-            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${
-              statusFilter === "all"
+            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${statusFilter === "all"
                 ? isDark ? "bg-indigo-950/60 border-indigo-500/50 shadow-lg shadow-indigo-950/50" : "bg-indigo-50 border-indigo-300 shadow-md shadow-indigo-100"
                 : isDark ? "bg-slate-800/80 border-slate-700 hover:border-slate-600" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -405,13 +401,12 @@ export default function Talabnoma({ isDark, currentUser }) {
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => setStatusFilter("Kutilmoqda")}
-            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${
-              statusFilter === "Kutilmoqda"
+            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${statusFilter === "Kutilmoqda"
                 ? isDark ? "bg-amber-950/60 border-amber-500/50 shadow-lg shadow-amber-950/50" : "bg-amber-50 border-amber-300 shadow-md shadow-amber-100"
                 : isDark ? "bg-slate-800/80 border-slate-700 hover:border-slate-600" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -428,13 +423,12 @@ export default function Talabnoma({ isDark, currentUser }) {
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => setStatusFilter("Tasdiqlangan")}
-            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${
-              statusFilter === "Tasdiqlangan"
+            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${statusFilter === "Tasdiqlangan"
                 ? isDark ? "bg-emerald-950/60 border-emerald-500/50 shadow-lg shadow-emerald-950/50" : "bg-emerald-50 border-emerald-300 shadow-md shadow-emerald-100"
                 : isDark ? "bg-slate-800/80 border-slate-700 hover:border-slate-600" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -451,13 +445,12 @@ export default function Talabnoma({ isDark, currentUser }) {
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => setStatusFilter("Rad etilgan")}
-            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${
-              statusFilter === "Rad etilgan"
+            className={`cursor-pointer group relative overflow-hidden rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-0.5 ${statusFilter === "Rad etilgan"
                 ? isDark ? "bg-rose-950/60 border-rose-500/50 shadow-lg shadow-rose-950/50" : "bg-rose-50 border-rose-300 shadow-md shadow-rose-100"
                 : isDark ? "bg-slate-800/80 border-slate-700 hover:border-slate-600" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -486,11 +479,10 @@ export default function Talabnoma({ isDark, currentUser }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="ID, Fan nomi, Kafedra yoki talabgor bo'yicha qidirish..."
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${
-                  isDark 
-                    ? "bg-slate-900/60 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" 
+                className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${isDark
+                    ? "bg-slate-900/60 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                     : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-600/10"
-                }`}
+                  }`}
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100">
@@ -504,9 +496,8 @@ export default function Talabnoma({ isDark, currentUser }) {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all ${
-                  isDark ? "bg-slate-900/60 border-slate-700 text-slate-200 focus:border-indigo-500" : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-600"
-                }`}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all ${isDark ? "bg-slate-900/60 border-slate-700 text-slate-200 focus:border-indigo-500" : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-600"
+                  }`}
               >
                 <option value="all">Barcha holatlar</option>
                 <option value="Kutilmoqda">⏳ Kutilmoqda</option>
@@ -521,9 +512,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                 value={myFacultyName || facultyFilter}
                 disabled={Boolean(myFacultyName)}
                 onChange={(e) => setFacultyFilter(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all disabled:opacity-75 ${
-                  isDark ? "bg-slate-900/60 border-slate-700 text-slate-200 focus:border-indigo-500" : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-600"
-                }`}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all disabled:opacity-75 ${isDark ? "bg-slate-900/60 border-slate-700 text-slate-200 focus:border-indigo-500" : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-600"
+                  }`}
               >
                 {myFacultyName ? (
                   <option value={myFacultyName}>{myFacultyName}</option>
@@ -543,9 +533,8 @@ export default function Talabnoma({ isDark, currentUser }) {
               <select
                 value={semesterFilter}
                 onChange={(e) => setSemesterFilter(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all ${
-                  isDark ? "bg-slate-900/60 border-slate-700 text-slate-200 focus:border-indigo-500" : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-600"
-                }`}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-medium border outline-none transition-all ${isDark ? "bg-slate-900/60 border-slate-700 text-slate-200 focus:border-indigo-500" : "bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-600"
+                  }`}
               >
                 <option value="all">Barcha semestrlar</option>
                 <option value="Kuzki semestr">Kuzki semestr</option>
@@ -599,22 +588,20 @@ export default function Talabnoma({ isDark, currentUser }) {
                     const isRejected = item.status === "Rad etilgan"
 
                     return (
-                      <tr 
-                        key={item.id} 
-                        className={`group transition-colors ${
-                          isDark ? "hover:bg-slate-700/40" : "hover:bg-slate-50/80"
-                        }`}
+                      <tr
+                        key={item.id}
+                        className={`group transition-colors ${isDark ? "hover:bg-slate-700/40" : "hover:bg-slate-50/80"
+                          }`}
                       >
                         {/* ID and Date */}
                         <td className="py-4 px-5 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
-                            <div className={`p-2 rounded-xl shrink-0 ${
-                              isPending 
+                            <div className={`p-2 rounded-xl shrink-0 ${isPending
                                 ? isDark ? "bg-amber-500/15 text-amber-400" : "bg-amber-100 text-amber-700"
-                                : isApproved 
-                                ? isDark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-100 text-emerald-700"
-                                : isDark ? "bg-rose-500/15 text-rose-400" : "bg-rose-100 text-rose-700"
-                            }`}>
+                                : isApproved
+                                  ? isDark ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-100 text-emerald-700"
+                                  : isDark ? "bg-rose-500/15 text-rose-400" : "bg-rose-100 text-rose-700"
+                              }`}>
                               <BsMailboxFlag className="w-4 h-4" />
                             </div>
                             <div>
@@ -644,11 +631,10 @@ export default function Talabnoma({ isDark, currentUser }) {
                           <p className={`font-extrabold line-clamp-1 ${isDark ? "text-white" : "text-black"}`} title={item.subject}>
                             {item.subject}
                           </p>
-                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
-                            item.semester === "Kuzki semestr"
+                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[11px] font-semibold ${item.semester === "Kuzki semestr"
                               ? isDark ? "bg-orange-500/15 text-orange-400" : "bg-orange-50 text-orange-700 border border-orange-200"
                               : isDark ? "bg-blue-500/15 text-blue-400" : "bg-blue-50 text-blue-700 border border-blue-200"
-                          }`}>
+                            }`}>
                             {item.semester}
                           </span>
                         </td>
@@ -668,9 +654,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                         {/* Talabgor */}
                         <td className="py-4 px-5 max-w-[180px]">
                           <div className="flex items-center gap-2">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${
-                              isDark ? "bg-slate-700 text-white" : "bg-slate-300 text-black"
-                            }`}>
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${isDark ? "bg-slate-700 text-white" : "bg-slate-300 text-black"
+                              }`}>
                               {item.applicant.slice(0, 1)}
                             </div>
                             <span className={`font-bold text-xs truncate ${isDark ? "text-white" : "text-black"}`} title={item.applicant}>
@@ -681,13 +666,12 @@ export default function Talabnoma({ isDark, currentUser }) {
 
                         {/* Status */}
                         <td className="py-4 px-5 text-center whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${
-                            isPending
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${isPending
                               ? isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "bg-amber-50 text-amber-700 border border-amber-200"
                               : isApproved
-                              ? isDark ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : isDark ? "bg-rose-500/15 text-rose-400 border border-rose-500/30" : "bg-rose-50 text-rose-700 border border-rose-200"
-                          }`}>
+                                ? isDark ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : isDark ? "bg-rose-500/15 text-rose-400 border border-rose-500/30" : "bg-rose-50 text-rose-700 border border-rose-200"
+                            }`}>
                             {isPending && <Clock className="w-3.5 h-3.5 animate-spin-slow" />}
                             {isApproved && <CheckCircle2 className="w-3.5 h-3.5" />}
                             {isRejected && <XCircle className="w-3.5 h-3.5" />}
@@ -702,11 +686,10 @@ export default function Talabnoma({ isDark, currentUser }) {
                             <button
                               onClick={() => setViewModalData(item)}
                               title="Batafsil ko'rish"
-                              className={`p-2 rounded-xl border transition-colors ${
-                                isDark 
-                                  ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white" 
+                              className={`p-2 rounded-xl border transition-colors ${isDark
+                                  ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
                                   : "bg-white border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-                              }`}
+                                }`}
                             >
                               <Eye className="w-4 h-4" />
                             </button>
@@ -735,11 +718,10 @@ export default function Talabnoma({ isDark, currentUser }) {
                             <button
                               onClick={() => handleDelete(item.id)}
                               title="O'chirish"
-                              className={`p-2 rounded-xl transition-colors ${
-                                isDark 
-                                  ? "text-slate-500 hover:bg-rose-950/50 hover:text-rose-400" 
+                              className={`p-2 rounded-xl transition-colors ${isDark
+                                  ? "text-slate-500 hover:bg-rose-950/50 hover:text-rose-400"
                                   : "text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                              }`}
+                                }`}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -758,18 +740,16 @@ export default function Talabnoma({ isDark, currentUser }) {
       {/* VIEW DETAILS MODAL */}
       {viewModalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className={`relative w-full max-w-2xl rounded-3xl p-6 md:p-8 border shadow-2xl overflow-hidden ${
-            isDark ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
+          <div className={`relative w-full max-w-2xl rounded-3xl p-6 md:p-8 border shadow-2xl overflow-hidden ${isDark ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+            }`}>
             <div className="flex items-start justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-2xl ${
-                  viewModalData.status === "Tasdiqlangan" 
+                <div className={`p-3 rounded-2xl ${viewModalData.status === "Tasdiqlangan"
                     ? isDark ? "bg-emerald-500/20 text-emerald-400" : "bg-emerald-100 text-emerald-700"
                     : viewModalData.status === "Rad etilgan"
-                    ? isDark ? "bg-rose-500/20 text-rose-400" : "bg-rose-100 text-rose-700"
-                    : isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700"
-                }`}>
+                      ? isDark ? "bg-rose-500/20 text-rose-400" : "bg-rose-100 text-rose-700"
+                      : isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700"
+                  }`}>
                   <BsMailboxFlag className="w-7 h-7" />
                 </div>
                 <div>
@@ -789,13 +769,12 @@ export default function Talabnoma({ isDark, currentUser }) {
 
             <div className="py-6 space-y-6 max-h-[70vh] overflow-y-auto pr-1">
               {/* Status Banner */}
-              <div className={`p-4 rounded-2xl border flex items-center justify-between ${
-                viewModalData.status === "Tasdiqlangan"
+              <div className={`p-4 rounded-2xl border flex items-center justify-between ${viewModalData.status === "Tasdiqlangan"
                   ? isDark ? "bg-emerald-950/40 border-emerald-800 text-emerald-200" : "bg-emerald-50 border-emerald-200 text-emerald-900"
                   : viewModalData.status === "Rad etilgan"
-                  ? isDark ? "bg-rose-950/40 border-rose-800 text-rose-200" : "bg-rose-50 border-rose-200 text-rose-900"
-                  : isDark ? "bg-amber-950/40 border-amber-800 text-amber-200" : "bg-amber-50 border-amber-200 text-amber-900"
-              }`}>
+                    ? isDark ? "bg-rose-950/40 border-rose-800 text-rose-200" : "bg-rose-50 border-rose-200 text-rose-900"
+                    : isDark ? "bg-amber-950/40 border-amber-800 text-amber-200" : "bg-amber-50 border-amber-200 text-amber-900"
+                }`}>
                 <div className="flex items-center gap-3">
                   {viewModalData.status === "Tasdiqlangan" && <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />}
                   {viewModalData.status === "Rad etilgan" && <XCircle className="w-6 h-6 text-rose-500 shrink-0" />}
@@ -916,9 +895,8 @@ export default function Talabnoma({ isDark, currentUser }) {
               )}
               <button
                 onClick={() => setViewModalData(null)}
-                className={`px-5 py-2.5 rounded-xl font-semibold text-sm border transition-colors ${
-                  isDark ? "border-slate-700 bg-slate-700/50 hover:bg-slate-700" : "border-slate-200 bg-slate-100 hover:bg-slate-200"
-                }`}
+                className={`px-5 py-2.5 rounded-xl font-semibold text-sm border transition-colors ${isDark ? "border-slate-700 bg-slate-700/50 hover:bg-slate-700" : "border-slate-200 bg-slate-100 hover:bg-slate-200"
+                  }`}
               >
                 Yopish
               </button>
@@ -930,9 +908,8 @@ export default function Talabnoma({ isDark, currentUser }) {
       {/* CREATE NEW REQUISITION MODAL */}
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className={`relative w-full max-w-2xl rounded-3xl p-6 md:p-8 border shadow-2xl overflow-hidden ${
-            isDark ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
+          <div className={`relative w-full max-w-2xl rounded-3xl p-6 md:p-8 border shadow-2xl overflow-hidden ${isDark ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+            }`}>
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-slate-950">
@@ -963,9 +940,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                     value={newReq.faculty}
                     disabled={Boolean(myFacultyName)}
                     onChange={(e) => setNewReq({ ...newReq, faculty: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all disabled:opacity-75 ${
-                      isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all disabled:opacity-75 ${isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
+                      }`}
                   >
                     {myFacultyName ? (
                       <option value={myFacultyName}>{myFacultyName}</option>
@@ -992,9 +968,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                     value={newReq.department}
                     onChange={(e) => setNewReq({ ...newReq, department: e.target.value })}
                     placeholder="Masalan: Rus tili va adabiyoti kafedrasi"
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${
-                      isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
+                      }`}
                   />
                 </div>
               </div>
@@ -1010,9 +985,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                     value={newReq.subject}
                     onChange={(e) => setNewReq({ ...newReq, subject: e.target.value })}
                     placeholder="Masalan: Rus tili grammatikasi"
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${
-                      isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
+                      }`}
                   />
                 </div>
 
@@ -1023,9 +997,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                   <select
                     value={newReq.semester}
                     onChange={(e) => setNewReq({ ...newReq, semester: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${
-                      isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
+                      }`}
                   >
                     <option value="Kuzki semestr">Kuzki semestr</option>
                     <option value="Bahorki semestr">Bahorki semestr</option>
@@ -1047,9 +1020,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                       value={newReq.lecture}
                       onChange={(e) => setNewReq({ ...newReq, lecture: e.target.value })}
                       placeholder="0"
-                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${
-                        isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
-                      }`}
+                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
+                        }`}
                     />
                   </div>
                   <div>
@@ -1060,9 +1032,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                       value={newReq.practice}
                       onChange={(e) => setNewReq({ ...newReq, practice: e.target.value })}
                       placeholder="0"
-                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${
-                        isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
-                      }`}
+                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
+                        }`}
                     />
                   </div>
                   <div>
@@ -1073,9 +1044,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                       value={newReq.lab}
                       onChange={(e) => setNewReq({ ...newReq, lab: e.target.value })}
                       placeholder="0"
-                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${
-                        isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
-                      }`}
+                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
+                        }`}
                     />
                   </div>
                   <div>
@@ -1086,9 +1056,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                       value={newReq.seminar}
                       onChange={(e) => setNewReq({ ...newReq, seminar: e.target.value })}
                       placeholder="0"
-                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${
-                        isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
-                      }`}
+                      className={`w-full px-3 py-2 rounded-xl text-sm font-bold border text-center outline-none ${isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
+                        }`}
                     />
                   </div>
                 </div>
@@ -1105,9 +1074,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                     value={newReq.applicant}
                     onChange={(e) => setNewReq({ ...newReq, applicant: e.target.value })}
                     placeholder="Masalan: Karimova Z.A. (Kafedra mudiri)"
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${
-                      isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all ${isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
+                      }`}
                   />
                 </div>
 
@@ -1123,9 +1091,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                   value={newReq.reason}
                   onChange={(e) => setNewReq({ ...newReq, reason: e.target.value })}
                   placeholder="Masalan: Yangi qabul qilingan guruhlar soni ortganligi hamda o'qituvchi yetishmovchiligi sababli..."
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all resize-none ${
-                    isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
-                  }`}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-sm border font-medium outline-none transition-all resize-none ${isDark ? "bg-slate-900/80 border-slate-700 text-white focus:border-indigo-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-600"
+                    }`}
                 />
               </div>
 
@@ -1133,9 +1100,8 @@ export default function Talabnoma({ isDark, currentUser }) {
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className={`px-5 py-2.5 rounded-xl font-semibold text-sm border transition-colors ${
-                    isDark ? "border-slate-700 bg-slate-700/50 hover:bg-slate-700" : "border-slate-200 bg-slate-100 hover:bg-slate-200"
-                  }`}
+                  className={`px-5 py-2.5 rounded-xl font-semibold text-sm border transition-colors ${isDark ? "border-slate-700 bg-slate-700/50 hover:bg-slate-700" : "border-slate-200 bg-slate-100 hover:bg-slate-200"
+                    }`}
                 >
                   Bekor qilish
                 </button>
@@ -1154,9 +1120,8 @@ export default function Talabnoma({ isDark, currentUser }) {
       {/* REJECT MODAL */}
       {rejectModalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className={`relative w-full max-w-md rounded-3xl p-6 border shadow-2xl overflow-hidden ${
-            isDark ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
+          <div className={`relative w-full max-w-md rounded-3xl p-6 border shadow-2xl overflow-hidden ${isDark ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+            }`}>
             <div className="flex items-center gap-3 pb-4 border-b border-slate-200 dark:border-slate-700">
               <div className="p-3 rounded-2xl bg-rose-500/15 text-rose-500">
                 <AlertTriangle className="w-6 h-6" />
@@ -1178,18 +1143,16 @@ export default function Talabnoma({ isDark, currentUser }) {
                 value={rejectComment}
                 onChange={(e) => setRejectComment(e.target.value)}
                 placeholder="Masalan: Soatlar kafedra ichki yuklamasi hisobidan qoplangani sababli..."
-                className={`w-full p-3 rounded-xl text-sm border font-medium outline-none resize-none ${
-                  isDark ? "bg-slate-900 border-slate-700 text-white focus:border-rose-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-rose-600"
-                }`}
+                className={`w-full p-3 rounded-xl text-sm border font-medium outline-none resize-none ${isDark ? "bg-slate-900 border-slate-700 text-white focus:border-rose-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-rose-600"
+                  }`}
               />
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
               <button
                 onClick={() => setRejectModalData(null)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm border transition-colors ${
-                  isDark ? "border-slate-700 bg-slate-700/50 hover:bg-slate-700" : "border-slate-200 bg-slate-100 hover:bg-slate-200"
-                }`}
+                className={`px-4 py-2 rounded-xl font-semibold text-sm border transition-colors ${isDark ? "border-slate-700 bg-slate-700/50 hover:bg-slate-700" : "border-slate-200 bg-slate-100 hover:bg-slate-200"
+                  }`}
               >
                 Bekor qilish
               </button>

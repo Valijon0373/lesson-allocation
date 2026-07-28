@@ -13,7 +13,7 @@ import TeachersWorkload from "./components/dashboard/TeachersWorkload.jsx"
 import Subjects from "./components/dashboard/Subjects.jsx"
 import AdminLayout from "./components/dashboard/AdminLayout.jsx"
 import KafedraWorkload from "./components/dashboard/KafedraWorkload.jsx"
-import Talabnoma from "./components/dashboard/Talabnoma.jsx"
+import Talabnoma, { initialTalabnomalar } from "./components/dashboard/Talabnoma.jsx"
 import Sozlamalar from "./components/dashboard/Sozlamalar.jsx"
 import {
   fetchAllCriterionRows,
@@ -255,6 +255,20 @@ function App() {
   }, [isDark])
   const [newTeacherPasswordVisible, setNewTeacherPasswordVisible] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  
+  const [talabnomalar, setTalabnomalar] = useState(initialTalabnomalar)
+  const facultyNamesById = {
+    f1: "Filologiya fakulteti",
+    f2: "Pedagogika fakulteti",
+    f3: "Aniq va tabiiy fanlar fakulteti",
+    f4: "Boshlang'ich ta'lim fakulteti",
+    f5: "Ijtimoiy va amaliy fanlar fakulteti",
+    f6: "Magistratura bo'limi",
+  }
+  const myFacultyName = currentUser?.facultyId && currentUser?.role !== "admin" ? facultyNamesById[currentUser.facultyId] : null
+  const relevantTalabnomalar = myFacultyName ? talabnomalar.filter(t => t.faculty === myFacultyName) : talabnomalar
+  const hasPendingTalabnomalar = relevantTalabnomalar.some(t => t.status === "Kutilmoqda")
+
   const [selectedTeacherId, setSelectedTeacherId] = useState("")
   const [viewingTeacher, setViewingTeacher] = useState(null)
   const [teachers, setTeachers] = useState([])
@@ -1130,6 +1144,7 @@ function App() {
         isRefreshing={isRefreshing}
         handleRefresh={handleRefresh}
         currentUser={currentUser}
+        hasPendingTalabnomalar={hasPendingTalabnomalar}
         onLogout={() => {
           clearAuthTokens()
           setCurrentUser(null)
@@ -1148,7 +1163,7 @@ function App() {
           <KafedraWorkload isDark={isDark} currentUser={currentUser} />
         )}
         {adminActiveTab === "talabnoma" && (
-          <Talabnoma isDark={isDark} currentUser={currentUser} />
+          <Talabnoma isDark={isDark} currentUser={currentUser} talabnomalar={talabnomalar} setTalabnomalar={setTalabnomalar} />
         )}
         {adminActiveTab === "oqituvchilar" && (
           <TeachersWorkload currentUser={currentUser} />

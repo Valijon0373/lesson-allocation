@@ -19,13 +19,14 @@ export default function AdminLayout({
   handleRefresh,
   onLogout,
   currentUser,
+  hasPendingTalabnomalar
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "fanlar", label: "Fanlar", icon: BookOpen },
     { id: "kafedra-yuklamasi", label: "Kafedra yuklamasi", icon: Columns },
-    { id: "talabnoma", label: "Talabnoma", icon: BsMailboxFlag },
+    { id: "talabnoma", label: "Talabnoma", icon: BsMailboxFlag, isNew: hasPendingTalabnomalar },
     { id: "oqituvchilar", label: "O'qituvchilar", icon: Users },
     ...(currentUser?.role === "admin" ? [{ id: "sozlamalar", label: "Sozlamalar", icon: Settings }] : []),
   ]
@@ -53,7 +54,7 @@ export default function AdminLayout({
                 <button
                   key={item.id}
                   onClick={() => onTabChange(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all relative ${
                     isActive
                       ? "bg-indigo-50 text-indigo-700"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
@@ -63,6 +64,11 @@ export default function AdminLayout({
                     <item.icon className={`w-5 h-5 shrink-0 ${isActive ? "text-indigo-700" : "text-slate-400"}`} />
                     <span className="text-sm font-medium">{item.label}</span>
                   </div>
+                  {item.isNew && (
+                    <span className="absolute top-1 right-2 text-[10px] font-bold text-red-500 lowercase tracking-wider bg-red-50 px-1 rounded">
+                      yangi
+                    </span>
+                  )}
                   {isActive && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-sm" />}
                 </button>
               )
