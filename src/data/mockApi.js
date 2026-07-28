@@ -245,7 +245,14 @@ function hasAdminRole(roles) {
 }
 
 function buildMockToken(username, roles) {
-  const payload = btoa(JSON.stringify({ sub: username, roles }))
+  const user = mockUsers.find((u) => u.username === username)
+  const payload = btoa(
+    JSON.stringify({
+      sub: username,
+      roles,
+      ...(user?.facultyId ? { facultyId: user.facultyId } : {}),
+    }),
+  )
   return `mock.${payload}.sig`
 }
 
@@ -353,6 +360,8 @@ function mapUserRow(user) {
     role: primaryRole,
     roles,
     permissions: user.permissions ?? [],
+    facultyId: user.facultyId ?? "",
+    departmentId: user.departmentId ?? "",
   }
 }
 
@@ -602,6 +611,8 @@ export async function fetchUserByUsername(username) {
         role: "O'qituvchi",
         roles: ["TEACHER"],
         permissions: [],
+        facultyId: teacher.facultyId ?? "",
+        departmentId: teacher.departmentId ?? "",
       }
     }
     throw new Error("Foydalanuvchi topilmadi")

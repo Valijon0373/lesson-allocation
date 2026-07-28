@@ -27,14 +27,14 @@ export default function WorkloadDashboard({ currentUser, isDark }) {
     f2: "Pedagogika",
     f3: "Aniq va tabiiy fanlar",
     f4: "Boshlang'ich ta'lim",
-    f5: "Ijtimoiy va amaliy",
+    f5: "Ijtimoiy va amaliy fanlar",
     f6: "Magistratura bo'limi",
   }
   const rawFakultetData = [
     { name: "Filologiya", value: 1248 },
     { name: "Pedagogika", value: 890 },
     { name: "Aniq va tabiiy fanlar", value: 1050 },
-    { name: "Ijtimoiy va amaliy", value: 920 },
+    { name: "Ijtimoiy va amaliy fanlar", value: 920 },
     { name: "Boshlang'ich ta'lim", value: 720 },
     { name: "Magistratura bo'limi", value: 450 },
   ]

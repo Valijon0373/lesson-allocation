@@ -26,8 +26,11 @@ function Modal({ open, onClose, dark, children }) {
 export default function Subjects({ dark, permissions = [], isAdmin = false, currentUser }) {
   // Using department permissions as fallback for now since subject permissions might not exist yet
   const { canView, canAdd, canEdit, canDelete } = useMemo(() => {
-    if (isAdmin || currentUser?.role === "dean" || Boolean(currentUser?.facultyId)) {
+    if (isAdmin) {
       return { canView: true, canAdd: true, canEdit: true, canDelete: true }
+    }
+    if (currentUser?.role === "dean" || (currentUser?.facultyId && currentUser?.role !== "admin")) {
+      return { canView: true, canAdd: false, canEdit: false, canDelete: false }
     }
     return getCrudPermissions(permissions, "department", isAdmin)
   }, [permissions, isAdmin, currentUser])

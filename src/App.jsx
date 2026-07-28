@@ -179,6 +179,31 @@ async function resolveLoginIdentity(loginTrim, tokens, teacherList) {
   return { matched, updatedTeachers, user, tokenRoles }
 }
 
+function buildAppUser({ matched, user, appRole, tokenRoles }) {
+  if (matched) {
+    return {
+      ...matched,
+      role: appRole,
+      facultyId: matched.facultyId || user?.facultyId || "",
+      departmentId: matched.departmentId || user?.departmentId || "",
+      roles: user?.roles ?? tokenRoles,
+    }
+  }
+  if (!user) return null
+  return {
+    id: user.id,
+    fullName: user.fio,
+    role: appRole,
+    login: user.login,
+    password: "",
+    departmentId: user.departmentId ?? "",
+    department: "",
+    positionId: "",
+    facultyId: user.facultyId ?? "",
+    roles: user.roles ?? tokenRoles,
+  }
+}
+
 function useCountAnimation(target, duration = 800) {
   const [display, setDisplay] = useState(0)
 
@@ -458,21 +483,7 @@ function App() {
       }
 
       const appRole = resolveMainAppRole({ user, matchedTeacher: matched, tokenRoles })
-      const restoredUser =
-        matched ??
-        (user
-          ? {
-              id: user.id,
-              fullName: user.fio,
-              role: appRole,
-              login: user.login,
-              password: "",
-              departmentId: "",
-              department: "",
-              positionId: "",
-              roles: user.roles,
-            }
-          : null)
+      const restoredUser = buildAppUser({ matched, user, appRole, tokenRoles })
 
       if (!restoredUser || cancelled) return
 
@@ -726,21 +737,7 @@ function App() {
       })
 
       const appRole = resolveMainAppRole({ user, matchedTeacher: matched, tokenRoles })
-      const appUser =
-        matched ??
-        (user
-          ? {
-              id: user.id,
-              fullName: user.fio,
-              role: appRole,
-              login: user.login,
-              password: "",
-              departmentId: "",
-              department: "",
-              positionId: "",
-              roles: user.roles ?? tokenRoles,
-            }
-          : null)
+      const appUser = buildAppUser({ matched, user, appRole, tokenRoles })
 
       if (!appUser) {
         clearAuthTokens()
